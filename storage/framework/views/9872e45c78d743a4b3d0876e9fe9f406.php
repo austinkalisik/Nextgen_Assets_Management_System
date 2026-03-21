@@ -1,0 +1,1 @@
+<?php /**PATH C:\Users\akalisik\Project\backend\resources\views/settings.blade.php ENDPATH**/ ?>

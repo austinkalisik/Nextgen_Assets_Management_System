@@ -1,4 +1,13 @@
-<x-app-layout>
+<?php if (isset($component)) { $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54 = $attributes; } ?>
+<?php $component = App\View\Components\AppLayout::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('app-layout'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\App\View\Components\AppLayout::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
 
     <div class="space-y-10">
 
@@ -25,17 +34,17 @@
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700">
                 <p class="text-sm opacity-80">Total Assets</p>
-                <h2 class="text-3xl font-bold">{{ $totalItems }}</h2>
+                <h2 class="text-3xl font-bold"><?php echo e($totalItems); ?></h2>
             </div>
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-purple-500 to-purple-700">
                 <p class="text-sm opacity-80">Total Brands</p>
-                <h2 class="text-3xl font-bold">{{ $totalBrands }}</h2>
+                <h2 class="text-3xl font-bold"><?php echo e($totalBrands); ?></h2>
             </div>
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-green-500 to-green-700">
                 <p class="text-sm opacity-80">Recently Added</p>
-                <h2 class="text-3xl font-bold">{{ $latestItems->count() }}</h2>
+                <h2 class="text-3xl font-bold"><?php echo e($latestItems->count()); ?></h2>
             </div>
 
         </div>
@@ -58,29 +67,32 @@
 
                 <div class="space-y-3">
 
-                    @forelse($latestItems as $item)
+                    <?php $__empty_1 = true; $__currentLoopData = $latestItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <div
                             class="flex items-center justify-between p-4 transition rounded-lg bg-slate-50 hover:bg-slate-100">
 
                             <div>
                                 <p class="font-medium text-gray-800">
-                                    {{ $item->part_name }}
+                                    <?php echo e($item->part_name); ?>
+
                                 </p>
                                 <p class="text-xs text-gray-500">
-                                    {{ $item->brand }}
+                                    <?php echo e($item->brand); ?>
+
                                 </p>
                             </div>
 
                             <span class="text-xs text-gray-400">
-                                {{ $item->created_at->diffForHumans() }}
+                                <?php echo e($item->created_at->diffForHumans()); ?>
+
                             </span>
 
                         </div>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <div class="py-6 text-center text-gray-400">
                             No recent assets found
                         </div>
-                    @endforelse
+                    <?php endif; ?>
 
                 </div>
 
@@ -97,12 +109,12 @@
 
                     <div class="flex justify-between">
                         <span class="text-gray-500">Total Assets</span>
-                        <span class="font-semibold">{{ $totalItems }}</span>
+                        <span class="font-semibold"><?php echo e($totalItems); ?></span>
                     </div>
 
                     <div class="flex justify-between">
                         <span class="text-gray-500">Brands</span>
-                        <span class="font-semibold">{{ $totalBrands }}</span>
+                        <span class="font-semibold"><?php echo e($totalBrands); ?></span>
                     </div>
 
                     <div class="flex justify-between">
@@ -113,7 +125,8 @@
                     <div class="flex justify-between">
                         <span class="text-gray-500">Last Update</span>
                         <span class="font-semibold text-gray-700">
-                            {{ now()->format('M d, Y') }}
+                            <?php echo e(now()->format('M d, Y')); ?>
+
                         </span>
                     </div>
 
@@ -140,4 +153,13 @@
 
     </div>
 
-</x-app-layout>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $attributes = $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
+<?php $component = $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
+<?php unset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
+<?php endif; ?><?php /**PATH C:\Users\akalisik\Project\backend\resources\views/dashboard.blade.php ENDPATH**/ ?>

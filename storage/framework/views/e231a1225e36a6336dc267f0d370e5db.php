@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>">
 
 <head>
     <meta charset="utf-8">
@@ -43,29 +43,29 @@
 
                 <a href="/dashboard"
                     class="flex items-center gap-3 px-4 py-2 rounded-lg transition
-                    {{ request()->is('dashboard') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white' }}">
+                    <?php echo e(request()->is('dashboard') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'); ?>">
                     Dashboard
                 </a>
 
                 <a href="/items"
                     class="flex items-center gap-3 px-4 py-2 rounded-lg transition
-                    {{ request()->is('items') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white' }}">
+                    <?php echo e(request()->is('items') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'); ?>">
                     Assets
                 </a>
 
                 <!-- MANAGEMENT -->
                 <p class="mt-6 mb-2 text-xs text-gray-500 uppercase">Management</p>
 
-                {{-- SAFE LINKS --}}
+                
                 <a href="/users"
                     class="flex items-center gap-3 px-4 py-2 rounded-lg transition
-                    {{ request()->is('users') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white' }}">
+                    <?php echo e(request()->is('users') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'); ?>">
                     Users
                 </a>
 
                 <a href="/settings"
                     class="flex items-center gap-3 px-4 py-2 rounded-lg transition
-                    {{ request()->is('settings') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white' }}">
+                    <?php echo e(request()->is('settings') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'); ?>">
                     Settings
                 </a>
 
@@ -74,7 +74,7 @@
 
                 <a href="/reports"
                     class="flex items-center gap-3 px-4 py-2 rounded-lg transition
-                    {{ request()->is('reports') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white' }}">
+                    <?php echo e(request()->is('reports') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'); ?>">
                     Reports
                 </a>
 
@@ -82,7 +82,7 @@
 
             <!-- FOOTER -->
             <div class="mt-auto text-xs text-gray-500">
-                © {{ date('Y') }} NextGen Assets
+                © <?php echo e(date('Y')); ?> NextGen Assets
             </div>
 
         </aside>
@@ -96,16 +96,17 @@
                 <!-- PAGE TITLE -->
                 <div>
                     <h1 class="text-lg font-semibold text-slate-800">
-                        @if(request()->is('items')) Assets Management
-                        @elseif(request()->is('users')) Users Management
-                        @elseif(request()->is('settings')) Settings
-                        @elseif(request()->is('reports')) Reports
-                        @else Dashboard Overview
-                        @endif
+                        <?php if(request()->is('items')): ?> Assets Management
+                        <?php elseif(request()->is('users')): ?> Users Management
+                        <?php elseif(request()->is('settings')): ?> Settings
+                        <?php elseif(request()->is('reports')): ?> Reports
+                        <?php else: ?> Dashboard Overview
+                        <?php endif; ?>
                     </h1>
 
                     <p class="text-xs text-gray-500">
-                        Welcome back, {{ Auth::user()->name ?? 'User' }}
+                        Welcome back, <?php echo e(Auth::user()->name ?? 'User'); ?>
+
                     </p>
                 </div>
 
@@ -114,13 +115,14 @@
 
                     <div class="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-100">
                         <span class="text-sm font-medium text-gray-700">
-                            {{ Auth::user()->email ?? '' }}
+                            <?php echo e(Auth::user()->email ?? ''); ?>
+
                         </span>
                     </div>
 
                     <!-- SAFE LOGOUT -->
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
+                    <form method="POST" action="<?php echo e(route('logout')); ?>">
+                        <?php echo csrf_field(); ?>
                         <button class="px-3 py-1 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600">
                             Logout
                         </button>
@@ -135,13 +137,15 @@
                 <div class="mx-auto max-w-7xl">
 
                     <!-- SUCCESS MESSAGE -->
-                    @if(session('success'))
+                    <?php if(session('success')): ?>
                         <div class="p-4 mb-6 text-sm text-green-700 bg-green-100 border border-green-200 rounded-lg">
-                            {{ session('success') }}
-                        </div>
-                    @endif
+                            <?php echo e(session('success')); ?>
 
-                    {{ $slot }}
+                        </div>
+                    <?php endif; ?>
+
+                    <?php echo e($slot); ?>
+
 
                 </div>
             </main>
@@ -152,4 +156,4 @@
 
 </body>
 
-</html>
+</html><?php /**PATH C:\Users\akalisik\Project\backend\resources\views/layouts/app.blade.php ENDPATH**/ ?>
