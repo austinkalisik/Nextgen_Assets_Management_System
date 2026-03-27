@@ -79,7 +79,7 @@ class InventoryController extends Controller
 
         $item->update($validated);
 
-        return redirect()->route('items')
+        return redirect()->route('products')
             ->with('success', 'Product updated successfully');
     }
 

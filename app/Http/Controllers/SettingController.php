@@ -3,28 +3,33 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SettingController extends Controller
 {
     public function index()
     {
-        return view('settings');
+        $settings = DB::table('settings')->first();
+        return view('settings', compact('settings'));
     }
 
     public function store(Request $request)
     {
-        // Validate input
         $request->validate([
             'app_name' => 'required',
             'admin_email' => 'required|email',
         ]);
 
-        // Save to session (temporary storage)
-        session([
-            'app_name' => $request->app_name,
-            'admin_email' => $request->admin_email,
-        ]);
+        DB::table('settings')->updateOrInsert(
+            ['id' => 1],
+            [
+                'app_name' => $request->app_name,
+                'admin_email' => $request->admin_email,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
 
-        return back()->with('success', 'Settings saved successfully!');
+        return back()->with('success', 'Settings updated successfully!');
     }
 }

@@ -28,7 +28,7 @@
         <div class="p-6 space-y-4 bg-white border shadow rounded-xl">
 
             <!-- SEARCH -->
-            <form method="GET" action="{{ route('items') }}" class="flex gap-2">
+            <form method="GET" action="{{ route('products') }}" class="flex gap-2">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search products..."
                     class="w-full px-4 py-2 border rounded-lg">
 
@@ -38,7 +38,7 @@
             </form>
 
             <!-- ADD PRODUCT -->
-            <form method="POST" action="{{ route('items.store') }}" class="grid grid-cols-1 gap-3 md:grid-cols-5">
+            <form method="POST" action="{{ route('products.store') }}" class="grid grid-cols-1 gap-3 md:grid-cols-5">
                 @csrf
 
                 <input name="part_no" placeholder="Code" class="px-3 py-2 border rounded-lg" required>
@@ -62,7 +62,7 @@
                 <h3 class="font-semibold text-gray-700">All Products</h3>
 
                 <!-- FILTER -->
-                <form method="GET" action="{{ route('items') }}" class="flex gap-2">
+                <form method="GET" action="{{ route('products') }}" class="flex gap-2">
 
                     <input type="text" name="part_no" value="{{ request('part_no') }}" placeholder="Filter by Code"
                         class="px-3 py-2 text-sm border rounded-lg">
@@ -107,7 +107,7 @@
                                         Edit
                                     </a>
 
-                                    <form method="POST" action="{{ route('items.destroy', $item->id) }}">
+                                    <form method="POST" action="{{ route('products.destroy', $item->id) }}">
                                         @csrf
                                         @method('DELETE')
 

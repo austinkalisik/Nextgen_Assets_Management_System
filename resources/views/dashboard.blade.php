@@ -1,3 +1,4 @@
+
 <x-app-layout>
 
     <div class="space-y-10">
@@ -14,7 +15,7 @@
             </div>
 
             <!-- QUICK ACTION -->
-            <a href="/items"
+            <a href="/products"
                 class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow hover:bg-blue-700">
                 + Add Asset
             </a>
@@ -25,7 +26,7 @@
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700">
                 <p class="text-sm opacity-80">Total Assets</p>
-                <h2 class="text-3xl font-bold">{{ $totalItems }}</h2>
+                <h2 class="text-3xl font-bold">{{ $totalProducts }}</h2>
             </div>
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-purple-500 to-purple-700">
@@ -35,7 +36,7 @@
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-green-500 to-green-700">
                 <p class="text-sm opacity-80">Recently Added</p>
-                <h2 class="text-3xl font-bold">{{ $latestItems->count() }}</h2>
+                <h2 class="text-3xl font-bold">{{ $latestProducts->count() }}</h2>
             </div>
 
         </div>
@@ -51,28 +52,28 @@
                         Recent Assets
                     </h3>
 
-                    <a href="/items" class="text-sm text-blue-500 hover:underline">
+                    <a href="/products" class="text-sm text-blue-500 hover:underline">
                         View all →
                     </a>
                 </div>
 
                 <div class="space-y-3">
 
-                    @forelse($latestItems as $item)
+                    @forelse($latestProducts as $product)
                         <div
                             class="flex items-center justify-between p-4 transition rounded-lg bg-slate-50 hover:bg-slate-100">
 
                             <div>
                                 <p class="font-medium text-gray-800">
-                                    {{ $item->part_name }}
+                                    {{ $product->part_name }}
                                 </p>
                                 <p class="text-xs text-gray-500">
-                                    {{ $item->brand }}
+                                    {{ $product->brand }}
                                 </p>
                             </div>
 
                             <span class="text-xs text-gray-400">
-                                {{ optional($item->created_at)->diffForHumans() ?? 'N/A' }}
+                                {{ optional($product->created_at)->diffForHumans() ?? 'N/A' }}
                             </span>
 
                         </div>
@@ -97,7 +98,7 @@
 
                     <div class="flex justify-between">
                         <span class="text-gray-500">Total Assets</span>
-                        <span class="font-semibold">{{ $totalItems }}</span>
+                        <span class="font-semibold">{{ $totalProducts }}</span>
                     </div>
 
                     <div class="flex justify-between">
@@ -119,24 +120,18 @@
 
                 </div>
 
-                <!-- MINI ACTIONS -->
+                <!-- ACTIONS -->
                 <div class="mt-6 space-y-2">
 
-                    <a href="/items"
+                    <a href="/products"
                         class="block w-full px-4 py-2 text-sm text-center rounded-lg bg-slate-100 hover:bg-slate-200">
                         Manage Assets
                     </a>
 
-                
-
-            
-
-                    <!-- SYSTEM SUMMARY-->
                     <a href="/settings"
                         class="block w-full px-4 py-2 text-sm text-center rounded-lg bg-slate-100 hover:bg-slate-200">
                         Settings
                     </a>
-
 
                 </div>
 

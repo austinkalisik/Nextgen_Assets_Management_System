@@ -53,11 +53,10 @@ Route::middleware(['auth'])->group(function () {
      * PRODUCTS (ITEMS)
      * =============================
      */
-    Route::get('/items', [InventoryController::class, 'index'])->name('items');
-    Route::post('/items', [InventoryController::class, 'store'])->name('items.store');
-    Route::put('/items/{id}', [InventoryController::class, 'update'])->name('items.update');
-    Route::delete('/items/{id}', [InventoryController::class, 'destroy'])->name('items.destroy');
-
+    Route::get('/products', [InventoryController::class, 'index'])->name('products');
+    Route::post('/products', [InventoryController::class, 'store'])->name('products.store');
+    Route::put('/products/{id}', [InventoryController::class, 'update'])->name('products.update');
+    Route::delete('/products/{id}', [InventoryController::class, 'destroy'])->name('products.destroy');
     /**
      * =============================
      * USERS

@@ -3,34 +3,49 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\Supplier;
+use App\Models\Category;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $totalItems = Item::count();
+        // =============================
+        // TOTAL COUNTS
+        // =============================
+        $totalProducts = Item::count();
+        $totalSuppliers = Supplier::count();
+        $totalCategories = Category::count();
+
+        // =============================
+        // TOTAL BRANDS
+        // =============================
         $totalBrands = Item::distinct('brand')->count('brand');
-        $latestItems = Item::latest()->take(5)->get();
 
-        // FIXED: correct range //
-        $months = collect(range(0, 5))->map(function ($i) {
-            return now()->subMonths($i)->format('M');
-        })->reverse()->values();
+        // =============================
+        // FIX: LATEST PRODUCTS (IMPORTANT)
+        // =============================
+        $latestProducts = Item::latest()->take(5)->get();
 
-        $itemsPerMonth = collect(range(0, 5))->map(function ($i) {
-            return Item::whereMonth('created_at', now()->subMonths($i)->month)->count();
-        })->reverse()->values();
+        // =============================
+        // MONTHLY DATA
+        // =============================
+        $monthlyProducts = [];
 
-        return view('dashboard', [
-            'totalItems' => $totalItems,
-            'totalBrands' => $totalBrands,
-            'latestItems' => $latestItems,
-            'months' => $months,
-            'itemsPerMonth' => $itemsPerMonth,
-        ]);
+        for ($i = 1; $i <= 12; $i++) {
+            $monthlyProducts[] = Item::whereMonth('created_at', $i)->count();
+        }
+
+        // =============================
+        // SEND DATA TO VIEW
+        // =============================
+        return view('dashboard', compact(
+            'totalProducts',
+            'totalSuppliers',
+            'totalCategories',
+            'totalBrands',
+            'latestProducts', //  CRITICAL
+            'monthlyProducts'
+        ));
     }
 }
-
-
-
-

@@ -38,7 +38,7 @@
         <div class="p-6 space-y-4 bg-white border shadow rounded-xl">
 
             <!-- SEARCH -->
-            <form method="GET" action="<?php echo e(route('items')); ?>" class="flex gap-2">
+            <form method="GET" action="<?php echo e(route('products')); ?>" class="flex gap-2">
                 <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="Search products..."
                     class="w-full px-4 py-2 border rounded-lg">
 
@@ -48,7 +48,7 @@
             </form>
 
             <!-- ADD PRODUCT -->
-            <form method="POST" action="<?php echo e(route('items.store')); ?>" class="grid grid-cols-1 gap-3 md:grid-cols-5">
+            <form method="POST" action="<?php echo e(route('products.store')); ?>" class="grid grid-cols-1 gap-3 md:grid-cols-5">
                 <?php echo csrf_field(); ?>
 
                 <input name="part_no" placeholder="Code" class="px-3 py-2 border rounded-lg" required>
@@ -72,7 +72,7 @@
                 <h3 class="font-semibold text-gray-700">All Products</h3>
 
                 <!-- FILTER -->
-                <form method="GET" action="<?php echo e(route('items')); ?>" class="flex gap-2">
+                <form method="GET" action="<?php echo e(route('products')); ?>" class="flex gap-2">
 
                     <input type="text" name="part_no" value="<?php echo e(request('part_no')); ?>" placeholder="Filter by Code"
                         class="px-3 py-2 text-sm border rounded-lg">
@@ -117,7 +117,7 @@
                                         Edit
                                     </a>
 
-                                    <form method="POST" action="<?php echo e(route('items.destroy', $item->id)); ?>">
+                                    <form method="POST" action="<?php echo e(route('products.destroy', $item->id)); ?>">
                                         <?php echo csrf_field(); ?>
                                         <?php echo method_field('DELETE'); ?>
 

@@ -1,3 +1,4 @@
+
 <?php if (isset($component)) { $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal9ac128a9029c0e4701924bd2d73d7f54 = $attributes; } ?>
 <?php $component = App\View\Components\AppLayout::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -23,7 +24,7 @@
             </div>
 
             <!-- QUICK ACTION -->
-            <a href="/items"
+            <a href="/products"
                 class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow hover:bg-blue-700">
                 + Add Asset
             </a>
@@ -34,7 +35,7 @@
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700">
                 <p class="text-sm opacity-80">Total Assets</p>
-                <h2 class="text-3xl font-bold"><?php echo e($totalItems); ?></h2>
+                <h2 class="text-3xl font-bold"><?php echo e($totalProducts); ?></h2>
             </div>
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-purple-500 to-purple-700">
@@ -44,7 +45,7 @@
 
             <div class="p-6 text-white shadow-lg rounded-2xl bg-gradient-to-r from-green-500 to-green-700">
                 <p class="text-sm opacity-80">Recently Added</p>
-                <h2 class="text-3xl font-bold"><?php echo e($latestItems->count()); ?></h2>
+                <h2 class="text-3xl font-bold"><?php echo e($latestProducts->count()); ?></h2>
             </div>
 
         </div>
@@ -60,30 +61,30 @@
                         Recent Assets
                     </h3>
 
-                    <a href="/items" class="text-sm text-blue-500 hover:underline">
+                    <a href="/products" class="text-sm text-blue-500 hover:underline">
                         View all →
                     </a>
                 </div>
 
                 <div class="space-y-3">
 
-                    <?php $__empty_1 = true; $__currentLoopData = $latestItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                    <?php $__empty_1 = true; $__currentLoopData = $latestProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <div
                             class="flex items-center justify-between p-4 transition rounded-lg bg-slate-50 hover:bg-slate-100">
 
                             <div>
                                 <p class="font-medium text-gray-800">
-                                    <?php echo e($item->part_name); ?>
+                                    <?php echo e($product->part_name); ?>
 
                                 </p>
                                 <p class="text-xs text-gray-500">
-                                    <?php echo e($item->brand); ?>
+                                    <?php echo e($product->brand); ?>
 
                                 </p>
                             </div>
 
                             <span class="text-xs text-gray-400">
-                                <?php echo e(optional($item->created_at)->diffForHumans() ?? 'N/A'); ?>
+                                <?php echo e(optional($product->created_at)->diffForHumans() ?? 'N/A'); ?>
 
                             </span>
 
@@ -109,7 +110,7 @@
 
                     <div class="flex justify-between">
                         <span class="text-gray-500">Total Assets</span>
-                        <span class="font-semibold"><?php echo e($totalItems); ?></span>
+                        <span class="font-semibold"><?php echo e($totalProducts); ?></span>
                     </div>
 
                     <div class="flex justify-between">
@@ -132,24 +133,18 @@
 
                 </div>
 
-                <!-- MINI ACTIONS -->
+                <!-- ACTIONS -->
                 <div class="mt-6 space-y-2">
 
-                    <a href="/items"
+                    <a href="/products"
                         class="block w-full px-4 py-2 text-sm text-center rounded-lg bg-slate-100 hover:bg-slate-200">
                         Manage Assets
                     </a>
 
-                
-
-            
-
-                    <!-- SYSTEM SUMMARY-->
                     <a href="/settings"
                         class="block w-full px-4 py-2 text-sm text-center rounded-lg bg-slate-100 hover:bg-slate-200">
                         Settings
                     </a>
-
 
                 </div>
 
