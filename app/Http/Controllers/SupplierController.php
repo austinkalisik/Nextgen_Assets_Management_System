@@ -61,6 +61,40 @@ class SupplierController extends Controller
             ->with('success', 'Supplier added successfully');
     }
 
+     /**
+     * =============================
+     * UPDATE SUPPLIER
+     * =============================
+     */
+    public function update(Request $request, $id)
+    {
+        $supplier = Supplier::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+        ]);
+
+        $supplier->update($validated);
+
+        return redirect()->route('suppliers')
+            ->with('success', 'Supplier updated successfully');
+    }
+
+     /**
+     * =============================
+     * EDIT SUPPLIER
+     * =============================
+     */
+    public function edit($id)
+{
+    $supplier = Supplier::findOrFail($id);
+
+    return view('suppliers-edit', compact('supplier'));
+}
+
+
+
     /**
      * =============================
      * DELETE SUPPLIER

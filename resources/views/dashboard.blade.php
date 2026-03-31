@@ -1,49 +1,16 @@
 <x-app-layout>
 
+    ```
     <div class="space-y-8">
 
         <!-- HEADER -->
         <div class="flex items-center justify-between">
-       
-            <!--Time -->
-        <div class="flex items-center justify-between mt-2">
-            <p class="text-sm text-gray-500">
-                Asset overview and system activity
-            </p>
-        
-            <!-- PORT MORESBY TIME -->
-            <div class="px-4 py-2 text-sm font-semibold bg-gray-100 rounded-lg shadow">
-                Time
-                <span id="png-time" class="ml-2 text-indigo-600"></span>
-            </div>
-        </div>
 
-            <!-- Function-->
-            <script>
-                function updatePNGTime() {
-                    const options = {
-                        timeZone: "Pacific/Port_Moresby",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: true
-                    };
-
-                    const formatter = new Intl.DateTimeFormat([], options);
-                    document.getElementById("png-time").textContent = formatter.format(new Date());
-                }
-
-                setInterval(updatePNGTime, 1000);
-                updatePNGTime();
-            </script>
-
-            <!--End of Port Moresby Time-->
-
-
+            <!-- LEFT SIDE -->
             <div>
                 @php
-$hour = now()->format('H');
-$greeting = $hour < 12 ? 'Good Morning' : ($hour < 18 ? 'Good Afternoon' : 'Good Evening');
+                    $hour = now()->format('H');
+                    $greeting = $hour < 12 ? 'Good Morning' : ($hour < 18 ? 'Good Afternoon' : 'Good Evening');
                 @endphp
 
                 <h1 class="text-3xl font-bold text-slate-800">
@@ -55,22 +22,49 @@ $greeting = $hour < 12 ? 'Good Morning' : ($hour < 18 ? 'Good Afternoon' : 'Good
                 </p>
             </div>
 
-            <!-- SEARCH -->
-            <form method="GET" action="{{ route('products') }}" class="flex gap-2">
+            <!-- RIGHT SIDE -->
+            <div class="flex items-center gap-4">
 
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search assets..."
-                    class="w-64 px-4 py-2 border rounded-lg">
+                <!-- PORT MORESBY TIME -->
+                <div class="px-4 py-2 text-sm font-semibold bg-gray-100 rounded-lg shadow">
+                    🕒 <span id="png-time" class="text-indigo-600"></span>
+                </div>
 
-                <button class="px-4 py-2 text-white bg-blue-600 rounded-lg">
-                    Search
-                </button>
+                <!-- SEARCH -->
+                <form method="GET" action="{{ route('assets') }}" class="flex gap-2">
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search assets..."
+                        class="w-64 px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200">
 
-            </form>
+                    <button class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                        Search
+                    </button>
+                </form>
+
+            </div>
 
         </div>
 
-        <!-- ALERTS -->
-        @if($lowStockAssets > 0)
+        <!-- TIME SCRIPT -->
+        <script>
+            function updatePNGTime() {
+                const options = {
+                    timeZone: "Pacific/Port_Moresby",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true
+                };
+
+                const formatter = new Intl.DateTimeFormat([], options);
+                document.getElementById("png-time").textContent = formatter.format(new Date());
+            }
+
+            setInterval(updatePNGTime, 1000);
+            updatePNGTime();
+        </script>
+
+        <!-- ALERT -->
+        @if(isset($lowStockAssets) && $lowStockAssets > 0)
             <div class="p-4 text-yellow-800 bg-yellow-100 rounded-lg">
                 ⚠️ {{ $lowStockAssets }} assets are low in stock
             </div>
@@ -128,7 +122,6 @@ $greeting = $hour < 12 ? 'Good Morning' : ($hour < 18 ? 'Good Afternoon' : 'Good
                     <tbody>
                         @forelse($latestAssets as $asset)
                             <tr class="border-b hover:bg-gray-50">
-
                                 <td class="py-3">{{ $asset->part_name }}</td>
                                 <td class="py-3">{{ $asset->brand }}</td>
 
@@ -146,7 +139,6 @@ $greeting = $hour < 12 ? 'Good Morning' : ($hour < 18 ? 'Good Afternoon' : 'Good
                                 <td class="py-3 text-gray-400">
                                     {{ optional($asset->created_at)->diffForHumans() }}
                                 </td>
-
                             </tr>
                         @empty
                             <tr>
@@ -183,21 +175,24 @@ $greeting = $hour < 12 ? 'Good Morning' : ($hour < 18 ? 'Good Afternoon' : 'Good
                     </div>
                 </div>
 
-                <!-- MONTHLY INSIGHT -->
-                <div class="p-6 bg-white shadow rounded-xl">
-                    <h3 class="mb-4 font-semibold text-gray-700">Monthly Activity</h3>
+                <!-- MONTHLY -->
+                @if(isset($monthlyAssets))
+                    <div class="p-6 bg-white shadow rounded-xl">
+                        <h3 class="mb-4 font-semibold text-gray-700">Monthly Activity</h3>
 
-                    <ul class="space-y-1 text-sm text-gray-600">
-                        @foreach($monthlyAssets as $month => $count)
-                            <li>Month {{ $month + 1 }}: {{ $count }} assets</li>
-                        @endforeach
-                    </ul>
-                </div>
+                        <ul class="space-y-1 text-sm text-gray-600">
+                            @foreach($monthlyAssets as $month => $count)
+                                <li>Month {{ $month + 1 }}: {{ $count }} assets</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
             </div>
 
         </div>
 
     </div>
+    ```
 
 </x-app-layout>

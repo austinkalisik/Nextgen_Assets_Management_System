@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     @php
-        try {
-            $appName = \Illuminate\Support\Facades\DB::table('settings')->value('app_name') ?? 'NextGen Assets';
-        } catch (\Exception $e) {
-            $appName = 'NextGen Assets';
-        }
+try {
+    $appName = \Illuminate\Support\Facades\DB::table('settings')->value('app_name') ?? 'NextGen Assets';
+} catch (\Exception $e) {
+    $appName = 'NextGen Assets';
+}
     @endphp
 
     <title>{{ $appName }}</title>
@@ -37,6 +37,8 @@
             </h2>
 
             @php $route = request()->path(); @endphp
+
+            
 
             <nav class="space-y-2 text-sm">
 
@@ -95,7 +97,7 @@
                 <!-- RIGHT -->
                 <div class="flex items-center gap-4">
 
-                    <!-- 🔔 NOTIFICATIONS -->
+                    <!--  NOTIFICATIONS -->
                     <div x-data="{ open: false }" class="relative">
 
                         <button @click="open = !open" class="relative p-2 bg-gray-100 rounded-full hover:bg-gray-200">

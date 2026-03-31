@@ -41,7 +41,7 @@
             <form method="GET" action="<?php echo e(route('suppliers')); ?>" class="flex gap-2">
                 <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="Search suppliers..."
                     class="w-full px-4 py-2 border rounded-lg">
-
+                   
                 <button class="px-4 py-2 text-white bg-blue-600 rounded-lg">
                     Search
                 </button>
@@ -118,9 +118,10 @@
                             <td class="px-6 py-4 text-center">
                                 <div class="flex justify-center gap-2">
 
-                                    <button class="px-3 py-1 text-xs text-white bg-blue-500 rounded-lg">
-                                        Edit
-                                    </button>
+                                <a href="<?php echo e(route('suppliers.edit', $supplier->id)); ?>"
+                                    class="px-3 py-1 text-xs text-white bg-blue-500 rounded-lg hover:bg-blue-600">
+                                    Edit
+                                </a>
 
                                     <form method="POST" action="<?php echo e(route('suppliers.destroy', $supplier->id)); ?>">
                                         <?php echo csrf_field(); ?>
