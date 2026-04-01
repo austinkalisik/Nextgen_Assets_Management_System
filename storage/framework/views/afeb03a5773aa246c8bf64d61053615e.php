@@ -9,7 +9,6 @@
 <?php endif; ?>
 <?php $component->withAttributes([]); ?>
 
-    ```
     <div class="space-y-8">
 
         <!-- HEADER -->
@@ -37,7 +36,7 @@
 
                 <!-- PORT MORESBY TIME -->
                 <div class="px-4 py-2 text-sm font-semibold bg-gray-100 rounded-lg shadow">
-                    🕒 <span id="png-time" class="text-indigo-600"></span>
+                     <span id="png-time" class="text-indigo-600"></span>
                 </div>
 
                 <!-- SEARCH -->
@@ -76,7 +75,7 @@
         <!-- ALERT -->
         <?php if(isset($lowStockAssets) && $lowStockAssets > 0): ?>
             <div class="p-4 text-yellow-800 bg-yellow-100 rounded-lg">
-                ⚠️ <?php echo e($lowStockAssets); ?> assets are low in stock
+                 <?php echo e($lowStockAssets); ?> assets are low in stock
             </div>
         <?php endif; ?>
 
@@ -99,8 +98,8 @@
             </div>
 
             <div class="p-6 text-white bg-red-500 shadow rounded-xl">
-                <p class="text-sm">Maintenance</p>
-                <h2 class="text-3xl font-bold"><?php echo e($maintenanceAssets); ?></h2>
+                <p class="text-sm">Maintenance    </p>
+                
             </div>
 
         </div>
@@ -136,12 +135,12 @@
                                 <td class="py-3"><?php echo e($asset->brand); ?></td>
 
                                 <td class="py-3">
-                                    <span class="px-2 py-1 text-xs rounded
+                                    <spa class="px-2 py-1 text-xs rounded
                                         <?php if($asset->status == 'available'): ?> bg-green-100 text-green-600
                                         <?php elseif($asset->status == 'assigned'): ?> bg-yellow-100 text-yellow-600
                                         <?php elseif($asset->status == 'maintenance'): ?> bg-red-100 text-red-600
-                                        <?php endif; ?>
-                                    ">
+                                        <?php endif; ?> ">
+                                    
                                         <?php echo e(ucfirst($asset->status)); ?>
 
                                     </span>
@@ -205,7 +204,6 @@
         </div>
 
     </div>
-    ```
 
  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>

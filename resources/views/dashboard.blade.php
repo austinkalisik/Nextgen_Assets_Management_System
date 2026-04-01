@@ -1,6 +1,5 @@
 <x-app-layout>
 
-    ```
     <div class="space-y-8">
 
         <!-- HEADER -->
@@ -27,7 +26,7 @@
 
                 <!-- PORT MORESBY TIME -->
                 <div class="px-4 py-2 text-sm font-semibold bg-gray-100 rounded-lg shadow">
-                    🕒 <span id="png-time" class="text-indigo-600"></span>
+                     <span id="png-time" class="text-indigo-600"></span>
                 </div>
 
                 <!-- SEARCH -->
@@ -66,7 +65,7 @@
         <!-- ALERT -->
         @if(isset($lowStockAssets) && $lowStockAssets > 0)
             <div class="p-4 text-yellow-800 bg-yellow-100 rounded-lg">
-                ⚠️ {{ $lowStockAssets }} assets are low in stock
+                 {{ $lowStockAssets }} assets are low in stock
             </div>
         @endif
 
@@ -89,8 +88,8 @@
             </div>
 
             <div class="p-6 text-white bg-red-500 shadow rounded-xl">
-                <p class="text-sm">Maintenance</p>
-                <h2 class="text-3xl font-bold">{{ $maintenanceAssets }}</h2>
+                <p class="text-sm">Maintenance    </p>
+                
             </div>
 
         </div>
@@ -126,12 +125,12 @@
                                 <td class="py-3">{{ $asset->brand }}</td>
 
                                 <td class="py-3">
-                                    <span class="px-2 py-1 text-xs rounded
+                                    <spa class="px-2 py-1 text-xs rounded
                                         @if($asset->status == 'available') bg-green-100 text-green-600
                                         @elseif($asset->status == 'assigned') bg-yellow-100 text-yellow-600
                                         @elseif($asset->status == 'maintenance') bg-red-100 text-red-600
-                                        @endif
-                                    ">
+                                        @endif ">
+                                    
                                         {{ ucfirst($asset->status) }}
                                     </span>
                                 </td>
@@ -193,6 +192,5 @@
         </div>
 
     </div>
-    ```
 
 </x-app-layout>

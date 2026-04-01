@@ -6,11 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Assignment extends Model
 {
-    /**
-     * =============================
-     * MASS ASSIGNABLE
-     * =============================
-     */
     protected $fillable = [
         'item_id',
         'user_id',
@@ -18,11 +13,6 @@ class Assignment extends Model
         'returned_at',
     ];
 
-    /**
-     * =============================
-     * CAST DATES (IMPORTANT)
-     * =============================
-     */
     protected $casts = [
         'assigned_at' => 'datetime',
         'returned_at' => 'datetime',
@@ -42,5 +32,15 @@ class Assignment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * =============================
+     *  HELPERS
+     * =============================
+     */
+    public function isActive()
+    {
+        return is_null($this->returned_at);
     }
 }

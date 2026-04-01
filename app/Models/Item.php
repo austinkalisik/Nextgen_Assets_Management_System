@@ -6,11 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Item extends Model
 {
-    /**
-     * =============================
-     * MASS ASSIGNABLE
-     * =============================
-     */
     protected $fillable = [
         'part_no',
         'brand',
@@ -27,11 +22,6 @@ class Item extends Model
         'quantity'
     ];
 
-    /**
-     * =============================
-     * DEFAULT VALUES ( IMPORTANT)
-     * =============================
-     */
     protected $attributes = [
         'status' => 'available',
         'quantity' => 1,
@@ -58,11 +48,6 @@ class Item extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    /**
-     * =============================
-     * ASSIGNMENTS (REAL SYSTEM)
-     * =============================
-     */
     public function assignments()
     {
         return $this->hasMany(Assignment::class);
@@ -74,31 +59,30 @@ class Item extends Model
             ->whereNull('returned_at');
     }
 
-    /**
-     * =============================
-     * 🔥 ADD THIS (IMPORTANT)
-     * GET CURRENT ASSIGNED USER
-     * =============================
-     */
     public function assignedUser()
     {
         return $this->hasOneThrough(
             User::class,
             Assignment::class,
-            'item_id',   // Foreign key on assignments
-            'id',        // Foreign key on users
-            'id',        // Local key on items
-            'user_id'    // Local key on assignments
+            'item_id',
+            'id',
+            'id',
+            'user_id'
         )->whereNull('assignments.returned_at');
     }
 
     /**
      * =============================
-     * STATUS LABEL ( UI HELPER)
+     *  AUTO STATUS (ERD BASED)
      * =============================
      */
+    public function getComputedStatusAttribute()
+    {
+        return $this->activeAssignment ? 'assigned' : 'available';
+    }
+
     public function getStatusLabelAttribute()
     {
-        return ucfirst($this->status ?? 'unknown');
+        return ucfirst($this->computed_status);
     }
 }

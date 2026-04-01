@@ -80,65 +80,73 @@ class ItemController extends Controller
         return redirect()->back()->with('success', 'Asset created successfully');
     }
 
-    public function update(Request $request, $id)
-    {
-        $item = Item::findOrFail($id);
+  public function update(Request $request, $id)
+{
+    $item = Item::findOrFail($id);
 
-        $oldData = $item->toArray();
+    $oldData = $item->toArray();
 
-        // =============================
-        //  FIXED ASSIGNMENT LOGIC
-        // =============================
-        $userId = $request->assigned_to;
+    $userId = $request->assigned_to;
 
-        if ($request->filled('assigned_to')) {
+    // =============================
+    // ASSIGN
+    // =============================
+    if ($request->filled('assigned_to')) {
 
-            // Close previous assignment
-            if ($item->activeAssignment) {
-                $item->activeAssignment->update([
-                    'returned_at' => now()
-                ]);
-            }
-
-            // Create new assignment
-            Assignment::create([
-                'item_id' => $item->id,
-                'user_id' => $userId,
-                'assigned_at' => now(),
-            ]);
-
-            // Keep compatibility
-            $item->update([
-                'status' => 'assigned',
-                'assigned_to' => $userId
-            ]);
-
-        } else {
-
-            // Unassign
-            if ($item->activeAssignment) {
-                $item->activeAssignment->update([
-                    'returned_at' => now()
-                ]);
-            }
-
-            $item->update([
-                'status' => 'available',
-                'assigned_to' => null
+        // Close previous assignment
+        if ($item->activeAssignment) {
+            $item->activeAssignment->update([
+                'returned_at' => now()
             ]);
         }
+
+        // Create new assignment
+        Assignment::create([
+            'item_id' => $item->id,
+            'user_id' => $userId,
+            'assigned_at' => now(),
+        ]);
+
+        // Compatibility (DO NOT REMOVE)
+        $item->update([
+            'assigned_to' => $userId,
+            'status' => 'assigned'
+        ]);
 
         AssetLog::create([
             'item_id' => $item->id,
             'user_id' => Auth::id(),
-            'action' => 'updated',
-            'old_values' => json_encode($oldData),
-            'new_values' => json_encode($item->fresh()->toArray()),
+            'action' => 'assigned',
+            'new_values' => json_encode([
+                'assigned_to' => $userId
+            ]),
         ]);
 
-        return redirect()->back()->with('success', 'Asset updated successfully');
+    } else {
+
+        // =============================
+        // RETURN
+        // =============================
+        if ($item->activeAssignment) {
+            $item->activeAssignment->update([
+                'returned_at' => now()
+            ]);
+        }
+
+        $item->update([
+            'assigned_to' => null,
+            'status' => 'available'
+        ]);
+
+        AssetLog::create([
+            'item_id' => $item->id,
+            'user_id' => Auth::id(),
+            'action' => 'returned',
+        ]);
     }
 
+    return redirect()->back()->with('success', 'Asset updated successfully');
+}
     public function destroy($id)
     {
         $item = Item::findOrFail($id);

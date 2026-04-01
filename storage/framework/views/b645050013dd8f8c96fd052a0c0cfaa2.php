@@ -11,25 +11,25 @@
 
     <div class="max-w-xl p-6 mx-auto mt-10 bg-white shadow rounded-xl">
 
-        <h2 class="mb-4 text-xl font-bold">Edit Supplier</h2>
+        <h2 class="mb-4 text-xl font-bold">Edit Category</h2>
 
-        <form method="POST" action="<?php echo e(route('suppliers.update', $supplier->id)); ?>">
+        <form method="POST" action="<?php echo e(route('categories.update', $category->id)); ?>">
             <?php echo csrf_field(); ?>
             <?php echo method_field('PUT'); ?>
 
             <div class="mb-3">
                 <label class="text-sm text-gray-600">Name</label>
-                <input type="text" name="name" value="<?php echo e($supplier->name); ?>" class="w-full px-3 py-2 border rounded-lg">
+                <input type="text" name="name" value="<?php echo e($category->name); ?>" class="w-full px-3 py-2 border rounded-lg">
             </div>
 
             <div class="mb-3">
-                <label class="text-sm text-gray-600">Email</label>
-                <input type="email" name="email" value="<?php echo e($supplier->email); ?>"
+                <label class="text-sm text-gray-600">Description</label>
+                <input type="text" name="description" value="<?php echo e($category->description); ?>"
                     class="w-full px-3 py-2 border rounded-lg">
             </div>
 
             <button class="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700">
-                Update Supplier
+                Update Category
             </button>
 
         </form>
@@ -45,4 +45,4 @@
 <?php if (isset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
 <?php $component = $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
 <?php unset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
-<?php endif; ?><?php /**PATH C:\Users\akalisik\Project\backend\resources\views/suppliers-edit.blade.php ENDPATH**/ ?>
+<?php endif; ?><?php /**PATH C:\Users\akalisik\Project\backend\resources\views/categories-edit.blade.php ENDPATH**/ ?>

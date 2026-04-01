@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Item;
 use App\Models\Supplier;
 use App\Models\Category;
+use App\Models\Assignment;
 
 class DashboardController extends Controller
 {
@@ -38,14 +39,19 @@ class DashboardController extends Controller
         $totalCategories = Category::count();
 
         // =============================
-        // STATUS COUNTS (SAFE)
+        // STATUS COUNTS (ACTIVE ASSIGNMENTS)
+        //(ERD BASED)
         // =============================
-        $availableAssets = Item::where('status', 'available')->count();
-        $assignedAssets = Item::where('status', 'assigned')->count();
-        $maintenanceAssets = Item::where('status', 'maintenance')->count();
+       $assignedAssets = Assignment::whereNUll('returned_at')->count();
 
+       //AVAILABLE = TOTAL - ASSIGNED
+       $availableAssets = $totalAssets - $assignedAssets;
+
+       // OPTIONAL (KEEP MAINTENANCE IF YOU STILL USE IT)
+       
+       $maintenanceAssets = Item::where('status', 'maintenance');
         // =============================
-        // LOW STOCK ALERT (🔥 CORPORATE)
+        // LOW STOCK ALERT ( CORPORATE)
         // =============================
         $lowStockAssets = 0;
 
