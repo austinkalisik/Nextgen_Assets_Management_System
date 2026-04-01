@@ -16,7 +16,7 @@ class ItemController extends Controller
     {
         $search = $request->input('search');
 
-        $query = Item::with(['category', 'supplier', 'user']);
+        $query = Item::with(['category', 'supplier']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -165,7 +165,7 @@ class ItemController extends Controller
                     $item->part_name,
                     optional($item->category)->name,
                     optional($item->supplier)->name,
-                    optional($item->user)->name ?? '-',
+                    $item->assigned_to ?? '-',
                     strtoupper($item->status),
                     $item->created_at,
                 ]);

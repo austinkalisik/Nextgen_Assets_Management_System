@@ -15,6 +15,10 @@ class User extends Authenticatable
      * MASS ASSIGNABLE FIELDS
      * =============================
      */
+    public function assignment()
+    {
+        return $this->hasMany(Assignment::class);
+    }
     protected $fillable = [
         'name',
         'email',
