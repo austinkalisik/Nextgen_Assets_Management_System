@@ -3,18 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Assignment extends Model
 {
     protected $fillable = [
         'item_id',
         'user_id',
+        'department_id',
         'assigned_at',
         'returned_at',
-        'department_id',
-        'quantity',
-        'assigned_at',
-        'returned_at'
     ];
 
     protected $casts = [
@@ -22,44 +20,22 @@ class Assignment extends Model
         'returned_at' => 'datetime',
     ];
 
-    /**
-     * =============================
-     * RELATIONSHIPS
-     * =============================
-     */
-
-    
-    /**
-     * =============================
-     * Department
-     * =============================
-     */
-    public function department()
-    {
-        return $this->belongsTo(Department::class);
-    }
-    
-    /**
-     * =============================
-     * Items
-     * =============================
-     */
-    public function item()
+    public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * =============================
-     *  HELPERS
-     * =============================
-     */
-    public function isActive()
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function isActive(): bool
     {
         return is_null($this->returned_at);
     }

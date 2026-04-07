@@ -2,68 +2,44 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    // REGISTER
-    public function register(Request $request)
+    public function showLoginForm(): View
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:6'
-        ]);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password)
-        ]);
-
-        return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user
-        ]);
+        return view('auth.login');
     }
 
-    // LOGIN
-    public function login(Request $request)
+    public function login(Request $request): RedirectResponse
     {
-        $request->validate([
-            'email' => 'required|string|email',
-            'password' => 'required|string'
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Invalid credentials.'],
-            ]);
+        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
+            return back()->withErrors([
+                'email' => 'Invalid credentials.',
+            ])->onlyInput('email');
         }
 
-        // Create token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $request->session()->regenerate();
 
-        return response()->json([
-            'message' => 'Login successful',
-            'token' => $token,
-            'user' => $user
-        ]);
+        return redirect()->route('dashboard');
     }
 
-    // LOGOUT
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::logout();
 
-        return response()->json([
-            'message' => 'Logged out successfully'
-        ]);
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
     }
 }
 

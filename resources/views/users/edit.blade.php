@@ -1,29 +1,34 @@
-<x-app-layout>
+@extends('layouts.app')
 
-    <div class="max-w-xl p-6 mx-auto bg-white shadow rounded-2xl">
+@section('content')
+    <h1 class="text-3xl font-bold mb-6">Edit User</h1>
 
-        <h2 class="mb-4 text-xl font-bold">Edit User</h2>
+    <form method="POST" action="{{ route('users.update', $user) }}"
+        class="rounded-2xl bg-white p-6 shadow grid grid-cols-1 md:grid-cols-2 gap-4">
+        @csrf
+        @method('PUT')
 
-        <form method="POST" action="/users/{{ $user->id }}">
-            @csrf
-            @method('PUT')
+        <input type="text" name="name" value="{{ old('name', $user->name) }}" placeholder="Full Name"
+            class="rounded-lg border px-4 py-2">
+        <input type="email" name="email" value="{{ old('email', $user->email) }}" placeholder="Email"
+            class="rounded-lg border px-4 py-2">
 
-            <div class="mb-4">
-                <label>Name</label>
-                <input type="text" name="name" value="{{ $user->name }}" class="w-full px-4 py-2 border rounded-lg">
-            </div>
+        <select name="role" class="rounded-lg border px-4 py-2">
+            <option value="staff" @selected(old('role', $user->role) === 'staff')>Staff</option>
+            <option value="asset_officer" @selected(old('role', $user->role) === 'asset_officer')>Asset Officer</option>
+            <option value="manager" @selected(old('role', $user->role) === 'manager')>Manager</option>
+            <option value="admin" @selected(old('role', $user->role) === 'admin')>Admin</option>
+        </select>
 
-            <div class="mb-4">
-                <label>Email</label>
-                <input type="email" name="email" value="{{ $user->email }}" class="w-full px-4 py-2 border rounded-lg">
-            </div>
+        <div></div>
 
-            <button class="px-4 py-2 text-white bg-blue-600 rounded-lg">
-                Update User
-            </button>
+        <input type="password" name="password" placeholder="New Password (optional)" class="rounded-lg border px-4 py-2">
+        <input type="password" name="password_confirmation" placeholder="Confirm New Password"
+            class="rounded-lg border px-4 py-2">
 
-        </form>
-
-    </div>
-
-</x-app-layout>
+        <div class="md:col-span-2 flex gap-3">
+            <button class="rounded-lg bg-blue-600 px-4 py-2 text-white font-semibold">Update User</button>
+            <a href="{{ route('users.index') }}" class="rounded-lg bg-slate-200 px-4 py-2 font-semibold">Cancel</a>
+        </div>
+    </form>
+@endsection

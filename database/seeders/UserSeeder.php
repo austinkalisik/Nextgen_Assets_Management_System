@@ -2,29 +2,46 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::insert([
+        $users = [
             [
-                'name' => 'Admin',
-                'email' => 'admin@nextgen.com',
+                'name' => 'System Administrator',
+                'email' => 'admin@nextgen.local',
+                'role' => 'admin',
                 'password' => Hash::make('password'),
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
+                'name' => 'Asset Officer',
+                'email' => 'assets@nextgen.local',
+                'role' => 'asset_officer',
                 'password' => Hash::make('password'),
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
-        ]);
+            [
+                'name' => 'ICT Support',
+                'email' => 'support@nextgen.local',
+                'role' => 'staff',
+                'password' => Hash::make('password'),
+            ],
+            [
+                'name' => 'Operations Manager',
+                'email' => 'operations@nextgen.local',
+                'role' => 'manager',
+                'password' => Hash::make('password'),
+            ],
+        ];
+
+        foreach ($users as $user) {
+            User::updateOrCreate(
+                ['email' => $user['email']],
+                $user
+            );
+        }
     }
 }

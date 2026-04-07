@@ -3,26 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Item;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
-    /**
-     * =============================
-     * MASS ASSIGNABLE FIELDS
-     * =============================
-     */
     protected $fillable = [
         'name',
         'description',
     ];
 
-    /**
-     * =============================
-     * RELATIONSHIP: CATEGORY → ITEMS
-     * =============================
-     */
-    public function items()
+    public function items(): HasMany
     {
         return $this->hasMany(Item::class);
     }

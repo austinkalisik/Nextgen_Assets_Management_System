@@ -2,267 +2,72 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Models\Category;
+use App\Models\Department;
 use App\Models\Item;
+use App\Models\Supplier;
+use Illuminate\Database\Seeder;
 
 class ItemSeeder extends Seeder
 {
     public function run(): void
     {
-        Item::insert([
+        $laptop = Category::where('name', 'Laptops')->first();
+        $network = Category::where('name', 'Networking')->first();
+        $printer = Category::where('name', 'Printers')->first();
 
-            [
-                'part_no' => 'CCTV-001',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
+        $itSupport = Department::where('name', 'IT Support')->first();
+        $networking = Department::where('name', 'Networking')->first();
+        $admin = Department::where('name', 'Administration')->first();
 
-            [
-                'part_no' => 'WEB-001',
-                'brand' => 'Hostinger',
-                'part_name' => 'Hosting Plan',
-                'description' => 'Business hosting',
-                'category_id' => 2,
-                'status' => 'available',
-                'quantity' => 5,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'WEB-002',
-                'brand' => 'Hostinger',
-                'part_name' => 'Hosting Plan',
-                'description' => 'Business hosting',
-                'category_id' => 2,
-                'status' => 'available',
-                'quantity' => 5,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'WEB-003',
-                'brand' => 'Hostinger',
-                'part_name' => 'Hosting Plan',
-                'description' => 'Business hosting',
-                'category_id' => 2,
-                'status' => 'available',
-                'quantity' => 5,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'WEB-004',
-                'brand' => 'Hostinger',
-                'part_name' => 'Hosting Plan',
-                'description' => 'Business hosting',
-                'category_id' => 2,
-                'status' => 'available',
-                'quantity' => 5,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'WEB-005',
-                'brand' => 'Hostinger',
-                'part_name' => 'Hosting Plan',
-                'description' => 'Business hosting',
-                'category_id' => 2,
-                'status' => 'available',
-                'quantity' => 5,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-002',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-003',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-004',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-005',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-006',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-007',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-008',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-009',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-010',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-011',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-012',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-013',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-014',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-015',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            
-            [
-                'part_no' => 'CCTV-016',
-                'brand' => 'Hikvision',
-                'part_name' => 'CCTV Camera',
-                'description' => 'Outdoor surveillance camera',
-                'category_id' => 1,
-                'status' => 'available',
-                'quantity' => 10,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
+        $dell = Supplier::where('email', 'dell@supplier.local')->first();
+        $hp = Supplier::where('email', 'hp@supplier.local')->first();
+        $cisco = Supplier::where('email', 'cisco@supplier.local')->first();
 
-        ]);
+        $rows = [
+            [
+                'name' => 'Dell Latitude 5440',
+                'category_id' => $laptop?->id,
+                'supplier_id' => $dell?->id,
+                'department_id' => $itSupport?->id,
+                'asset_tag' => 'NGA-0001',
+                'serial_number' => 'DL5440-001',
+                'quantity' => 5,
+                'status' => 'available',
+                'location' => 'Port Moresby HQ',
+                'purchase_date' => '2026-01-10',
+            ],
+            [
+                'name' => 'HP LaserJet Pro 4003',
+                'category_id' => $printer?->id,
+                'supplier_id' => $hp?->id,
+                'department_id' => $admin?->id,
+                'asset_tag' => 'NGA-0002',
+                'serial_number' => 'HP4003-002',
+                'quantity' => 2,
+                'status' => 'maintenance',
+                'location' => 'Admin Office',
+                'purchase_date' => '2026-01-12',
+            ],
+            [
+                'name' => 'Cisco Catalyst 9200',
+                'category_id' => $network?->id,
+                'supplier_id' => $cisco?->id,
+                'department_id' => $networking?->id,
+                'asset_tag' => 'NGA-0003',
+                'serial_number' => 'CS9200-003',
+                'quantity' => 1,
+                'status' => 'assigned',
+                'location' => 'Server Room',
+                'purchase_date' => '2026-01-15',
+            ],
+        ];
+
+        foreach ($rows as $row) {
+            Item::updateOrCreate(
+                ['asset_tag' => $row['asset_tag']],
+                $row
+            );
+        }
     }
 }

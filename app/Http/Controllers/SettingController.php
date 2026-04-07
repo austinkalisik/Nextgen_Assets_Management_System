@@ -2,58 +2,59 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class SettingController extends Controller
 {
-    /**
-     * =============================
-     * SHOW SETTINGS PAGE
-     * =============================
-     */
-    public function index()
+    public function index(): View
     {
-        // Get first settings row
-        $settings = DB::table('settings')->first();
+        $settings = DB::table('settings')->orderBy('key')->get();
 
-        return view('settings', compact('settings'));
+        return view('settings.index', compact('settings'));
     }
 
-    /**
-     * =============================
-     * SAVE / UPDATE SETTINGS
-     * =============================
-     */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        //  VALIDATION
-        $request->validate([
-            'app_name' => 'required|string|max:255',
-            'admin_email' => 'required|email',
+        $validated = $request->validate([
+            'key' => ['required', 'string', 'max:255'],
+            'value' => ['nullable', 'string'],
         ]);
 
-        //  CHECK IF SETTINGS EXIST
-        $exists = DB::table('settings')->where('id', 1)->exists();
-
-        if ($exists) {
-            // UPDATE ONLY
-            DB::table('settings')->where('id', 1)->update([
-                'app_name' => $request->app_name,
-                'admin_email' => $request->admin_email,
-                'updated_at' => now(),
-            ]);
-        } else {
-            // INSERT FIRST TIME
-            DB::table('settings')->insert([
-                'id' => 1,
-                'app_name' => $request->app_name,
-                'admin_email' => $request->admin_email,
+        DB::table('settings')->updateOrInsert(
+            ['key' => $validated['key']],
+            [
+                'value' => $validated['value'],
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
-        }
+            ]
+        );
 
-        return back()->with('success', 'Settings updated successfully!');
+        return redirect()->route('settings.index')->with('success', 'Setting saved successfully.');
+    }
+
+    public function update(Request $request, string $key): RedirectResponse
+    {
+        $validated = $request->validate([
+            'value' => ['nullable', 'string'],
+        ]);
+
+        DB::table('settings')
+            ->where('key', $key)
+            ->update([
+                'value' => $validated['value'],
+                'updated_at' => now(),
+            ]);
+
+        return redirect()->route('settings.index')->with('success', 'Setting updated successfully.');
+    }
+
+    public function destroy(string $key): RedirectResponse
+    {
+        DB::table('settings')->where('key', $key)->delete();
+
+        return redirect()->route('settings.index')->with('success', 'Setting deleted successfully.');
     }
 }

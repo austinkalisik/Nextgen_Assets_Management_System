@@ -1,29 +1,26 @@
-<x-app-layout>
+@extends('layouts.app')
 
-    <div class="max-w-xl mx-auto p-6 bg-white shadow rounded-xl mt-6">
-
-        <h2 class="text-xl font-bold mb-4">Edit User</h2>
-
-        <form method="POST" action="{{ route('users.update', $user->id) }}">
-            @csrf
-            @method('PUT')
-
-            <div class="mb-4">
-                <label class="block text-sm">Name</label>
-                <input type="text" name="name" value="{{ $user->name }}" class="w-full border rounded px-3 py-2">
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-sm">Email</label>
-                <input type="email" name="email" value="{{ $user->email }}" class="w-full border rounded px-3 py-2">
-            </div>
-
-            <button class="px-4 py-2 bg-blue-600 text-white rounded">
-                Update User
-            </button>
-
-        </form>
-
+@section('content')
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold">Edit Profile</h1>
+        <p class="text-slate-500">Update your account details</p>
     </div>
 
-</x-app-layout>
+    <form method="POST" action="{{ route('profile.update') }}"
+        class="grid grid-cols-1 gap-4 p-6 bg-white shadow rounded-2xl md:grid-cols-2">
+        @csrf
+        @method('PATCH')
+
+        <input type="text" name="name" value="{{ old('name', $user->name) }}" placeholder="Full Name"
+            class="px-4 py-2 border rounded-lg">
+        <input type="email" name="email" value="{{ old('email', $user->email) }}" placeholder="Email"
+            class="px-4 py-2 border rounded-lg">
+        <input type="password" name="password" placeholder="New Password (optional)" class="px-4 py-2 border rounded-lg">
+        <input type="password" name="password_confirmation" placeholder="Confirm New Password"
+            class="px-4 py-2 border rounded-lg">
+
+        <div class="md:col-span-2">
+            <button class="px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg">Update Profile</button>
+        </div>
+    </form>
+@endsection

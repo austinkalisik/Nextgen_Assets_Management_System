@@ -3,20 +3,19 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-/**
- * MAIN SEEDER
- * This file calls ALL other seeders
- */
+
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         $this->call([
             UserSeeder::class,
-            CategorySeeder::class,          
+            CategorySeeder::class,
             SupplierSeeder::class,
+            DepartmentSeeder::class,
             ItemSeeder::class,
-            ProductsTableSeeder::class,
+            AssignmentSeeder::class,
+            AssetLogSeeder::class,
         ]);
     }
 }

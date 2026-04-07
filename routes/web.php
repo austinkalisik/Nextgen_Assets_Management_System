@@ -1,83 +1,50 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\SettingController;
-use App\Http\Controllers\ItemController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('dashboard'));
+Route::get('/', fn () => redirect()->route('login'));
 
-require __DIR__ . '/auth.php';
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+});
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // =============================
-    // DASHBOARD
-    // =============================
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // =============================
-    // ASSETS
-    // =============================
-    Route::get('/assets', [ItemController::class, 'index'])->name('assets');
-    Route::get('/products', [ItemController::class, 'index'])->name('products');
+    Route::resource('categories', CategoryController::class);
+    Route::resource('suppliers', SupplierController::class);
+    Route::resource('departments', DepartmentController::class);
+    Route::resource('items', ItemController::class);
+    Route::resource('users', UserController::class);
 
-    Route::get('/assets/create', [ItemController::class, 'create'])->name('assets.create');
+    Route::get('/assignments', [AssignmentController::class, 'index'])->name('assignments.index');
+    Route::get('/assignments/create', [AssignmentController::class, 'create'])->name('assignments.create');
+    Route::post('/assignments', [AssignmentController::class, 'store'])->name('assignments.store');
+    Route::post('/assignments/{assignment}/return', [AssignmentController::class, 'return'])->name('assignments.return');
 
-    Route::post('/assets', [ItemController::class, 'store'])->name('assets.store');
-    Route::put('/assets/{id}', [ItemController::class, 'update'])->name('assets.update');
-    Route::delete('/assets/{id}', [ItemController::class, 'destroy'])->name('assets.destroy');
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::post('/inventory/{item}/stock-in', [InventoryController::class, 'stockIn'])->name('inventory.stock-in');
+    Route::post('/inventory/{item}/stock-out', [InventoryController::class, 'stockOut'])->name('inventory.stock-out');
 
-    //  CSV EXPORT (KEEP SIMPLE FOR NOW)
-    Route::get('/assets/export', [ItemController::class, 'export'])->name('assets.export');
-
-    // =============================
-    // CATEGORIES
-    // =============================
-    Route::get('/categories', [CategoryController::class, 'index'])->name('categories');
-    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
-    Route::get('/categories/{id}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
-    Route::put('/categories/{id}', [CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-
-    // =============================
-    // SUPPLIERS
-    // =============================
-    Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers');
-    Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
-    Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
-    Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
-    Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
-
-    // =============================
-    // USERS
-    // =============================
-    Route::get('/users', [UserController::class, 'index'])->name('users');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('/users/{id}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
-
-    // =============================
-    // SETTINGS
-    // =============================
-    Route::get('/settings', [SettingController::class, 'index'])->name('settings');
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+    Route::put('/settings/{key}', [SettingController::class, 'update'])->name('settings.update');
+    Route::delete('/settings/{key}', [SettingController::class, 'destroy'])->name('settings.destroy');
 
-    // ASSIGN (NEW SYSTEM)
-Route::post('/assets/{id}/assign', [ItemController::class, 'assign'])->name('assets.assign');
-
-// RETURN (FIX ERROR HERE)
-Route::post('/assignments/{id}/return', [ItemController::class, 'returnAsset'])->name('assets.return');
-
-// Department Routes
-Route::get('/departments', [DepartmentController::class, 'index']) ->name('departments');
-Route::post('/departments', [DepartmentController::class, 'store']) ->name('departments.store');
-Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']) ->name('departments.destroy');
-
-
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });

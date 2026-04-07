@@ -1,202 +1,124 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    @php
-try {
-    $appName = \Illuminate\Support\Facades\DB::table('settings')->value('app_name') ?? 'NextGen Assets';
-} catch (\Exception $e) {
-    $appName = 'NextGen Assets';
-}
-    @endphp
-
-    <title>{{ $appName }}</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config('app.name', 'NextGen Assets Management System') }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
 </head>
 
-<body x-data="{ darkMode: false }" :class="darkMode ? 'bg-gray-900 text-white' : 'bg-slate-100 text-gray-800'">
-
+<body class="bg-slate-100 text-slate-800">
     <div class="flex min-h-screen">
+        @include('layouts.navigation')
 
-        <!-- SIDEBAR -->
-        <aside class="w-64 p-6 text-gray-300 bg-slate-950">
+        <main class="flex-1 p-6">
+            <div class="mx-auto max-w-7xl">
+                @php
+                    $lowStockCount = \App\Models\Item::where('quantity', '<=', 3)->count();
+                    $activeAssignmentsCount = \App\Models\Assignment::whereNull('returned_at')->count();
+                    $todayActivityCount = \App\Models\AssetLog::whereDate('created_at', today())->count();
 
-            <h2 class="mb-10 text-xl font-bold text-white">
-                {{ $appName }}
-            </h2>
+                    $notificationItems = collect([
+                        $lowStockCount > 0 ? $lowStockCount . ' low stock asset(s)' : null,
+                        $activeAssignmentsCount > 0 ? $activeAssignmentsCount . ' active assignment(s)' : null,
+                        $todayActivityCount > 0 ? $todayActivityCount . ' activity log(s) today' : null,
+                    ])->filter()->values();
 
-            @php $route = request()->path(); @endphp
+                    $notificationCount = $notificationItems->count();
+                @endphp
 
-            
-
-            <nav class="space-y-2 text-sm">
-
-                <a href="/dashboard"
-                    class="block px-4 py-2 rounded {{ str_contains($route, 'dashboard') ? 'bg-blue-600 text-white' : 'hover:bg-slate-800' }}">
-                    Dashboard
-                </a>
-
-                <a href="/products"
-                    class="block px-4 py-2 rounded {{ str_contains($route, 'products') ? 'bg-blue-600 text-white' : 'hover:bg-slate-800' }}">
-                    Products
-                </a>
-
-                <a href="/suppliers"
-                    class="block px-4 py-2 rounded {{ str_contains($route, 'suppliers') ? 'bg-blue-600 text-white' : 'hover:bg-slate-800' }}">
-                    Suppliers
-                </a>
-
-                <a href="/categories"
-                    class="block px-4 py-2 rounded {{ str_contains($route, 'categories') ? 'bg-blue-600 text-white' : 'hover:bg-slate-800' }}">
-                    Categories
-                </a>
-
-                <a href="{{ route('departments') }}" class="block px-4 py-2 text-sm rounded hover:bg-gray-700">
-                    Departments
-                </a>
-
-                <a href="/users"
-                    class="block px-4 py-2 rounded {{ str_contains($route, 'users') ? 'bg-blue-600 text-white' : 'hover:bg-slate-800' }}">
-                    Users
-                </a>
-
-                <a href="/settings"
-                    class="block px-4 py-2 rounded {{ str_contains($route, 'settings') ? 'bg-blue-600 text-white' : 'hover:bg-slate-800' }}">
-                    Settings
-                </a>
-
-            </nav>
-
-            <div class="mt-10 text-xs text-gray-500">
-                © {{ date('Y') }} {{ $appName }}
-            </div>
-
-        </aside>
-
-        <!-- MAIN -->
-        <div class="flex-1">
-
-            <!-- HEADER -->
-            <div class="flex items-center justify-between p-4 bg-white border-b shadow-sm">
-
-                <!-- LEFT -->
-                <div>
-                    <h1 class="text-lg font-semibold">Dashboard</h1>
-                    <p class="text-sm text-gray-500">
-                        Welcome back, {{ Auth::user()->name ?? 'User' }}
-                    </p>
-                </div>
-
-                <!-- RIGHT -->
-                <div class="flex items-center gap-4">
-
-                    <!--  NOTIFICATIONS -->
-                    <div x-data="{ open: false }" class="relative">
-
-                        <button @click="open = !open" class="relative p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-
-                            🔔
-
-                            @if(isset($notifications) && count($notifications) > 0)
-                                <span class="absolute px-1 text-xs text-white bg-red-500 rounded-full -top-1 -right-1">
-                                    {{ count($notifications) }}
-                                </span>
-                            @endif
-                        </button>
-
-                        <div x-show="open" @click.away="open = false"
-                            class="absolute right-0 z-50 mt-2 bg-white border shadow-xl w-80 rounded-xl">
-
-                            <div class="p-4 font-semibold border-b">
-                                Notifications
-                            </div>
-
-                            <div class="overflow-y-auto max-h-80">
-
-                                @if(isset($notifications) && count($notifications))
-                                    @foreach($notifications as $note)
-                                        <div class="p-3 text-sm border-b hover:bg-gray-50">
-
-                                            <div class="font-medium text-gray-800">
-                                                {{ ucfirst($note->action) }}
-                                            </div>
-
-                                            <div class="text-gray-600">
-                                                {{ $note->item->part_name ?? 'Item' }}
-                                                by {{ $note->user->name ?? 'System' }}
-                                            </div>
-
-                                            <div class="text-xs text-gray-400">
-                                                {{ $note->created_at->diffForHumans() }}
-                                            </div>
-
-                                        </div>
-                                    @endforeach
-                                @else
-                                    <div class="p-4 text-sm text-gray-500">
-                                        No notifications yet
-                                    </div>
-                                @endif
-
-                            </div>
-
+                <div class="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
+                    <form method="GET" action="{{ route('items.index') }}" class="w-full max-w-2xl">
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </span>
+                            <input type="text" name="search" value="{{ request('search') }}"
+                                placeholder="Search assets, tags, serial numbers, locations..."
+                                class="w-full py-3 pr-4 bg-white border shadow-sm rounded-2xl border-slate-200 pl-11 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                         </div>
-
-                    </div>
-
-                    <!-- DARK MODE -->
-                    <button @click="darkMode = !darkMode"
-                        class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">
-                        Toggle Mode
-                    </button>
-
-                    <!-- LOGOUT -->
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button class="px-3 py-1 text-white bg-red-500 rounded hover:bg-red-600">
-                            Logout
-                        </button>
                     </form>
 
+                    <div class="flex items-center gap-3">
+                        <div class="relative group">
+                            <button type="button"
+                                class="relative px-4 py-3 bg-white border shadow-sm rounded-2xl border-slate-200 hover:bg-slate-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9" />
+                                </svg>
+
+                                @if($notificationCount > 0)
+                                    <span
+                                        class="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
+                                        {{ $notificationCount }}
+                                    </span>
+                                @endif
+                            </button>
+
+                            <div
+                                class="absolute right-0 z-50 invisible p-4 mt-2 transition bg-white border shadow-xl opacity-0 w-80 rounded-2xl border-slate-200 group-hover:visible group-hover:opacity-100">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-sm font-semibold text-slate-900">Notifications</h3>
+                                    <span class="text-xs text-slate-400">{{ now()->format('d M Y') }}</span>
+                                </div>
+
+                                <div class="space-y-3 text-sm">
+                                    @forelse($notificationItems as $notice)
+                                        <div class="px-3 py-2 rounded-xl bg-slate-50 text-slate-700">
+                                            {{ $notice }}
+                                        </div>
+                                    @empty
+                                        <div class="px-3 py-2 rounded-xl bg-slate-50 text-slate-500">
+                                            No current alerts.
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-4 py-3 bg-white border shadow-sm rounded-2xl border-slate-200">
+                            <div class="text-sm font-semibold text-slate-900">{{ auth()->user()->name ?? 'User' }}</div>
+                            <div class="text-xs text-slate-500">
+                                {{ ucfirst(str_replace('_', ' ', auth()->user()->role ?? 'staff')) }}</div>
+                        </div>
+                    </div>
                 </div>
 
+                @if (session('success'))
+                    <div class="px-4 py-3 mb-4 text-green-700 border border-green-200 rounded-xl bg-green-50">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                @if (session('error'))
+                    <div class="px-4 py-3 mb-4 text-red-700 border border-red-200 rounded-xl bg-red-50">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                @if ($errors->any())
+                    <div class="px-4 py-3 mb-4 text-red-700 border border-red-200 rounded-xl bg-red-50">
+                        <p class="mb-2 font-semibold">Please fix the following errors:</p>
+                        <ul class="text-sm list-disc list-inside">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @yield('content')
             </div>
-
-            <!-- CONTENT -->
-            <main class="p-6">
-                {{ $slot }}
-            </main>
-
-        </div>
-
+        </main>
     </div>
-
-    <script src="https://unpkg.com/alpinejs" defer></script>
-
-    <script>
-        let typing = false;
-
-        document.addEventListener('keydown', () => typing = true);
-        document.addEventListener('keyup', () => typing = false);
-
-        setInterval(() => {
-            if (!typing) {
-                window.location.reload();
-            }
-        }, 30000);
-    </script>
-
 </body>
 
 </html>

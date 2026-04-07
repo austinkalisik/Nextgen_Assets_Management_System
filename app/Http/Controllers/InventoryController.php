@@ -2,97 +2,65 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\AssetLog;
 use App\Models\Item;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class InventoryController extends Controller
 {
-    /**
-     * =============================
-     * DISPLAY ALL PRODUCTS
-     * =============================
-     */
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $query = Item::query();
+        $query = Item::with(['category', 'supplier', 'department'])->latest();
 
-        // SEARCH (name, brand, code)
         if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('part_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('brand', 'like', '%' . $request->search . '%')
-                  ->orWhere('part_no', 'like', '%' . $request->search . '%');
-            });
+            $search = trim($request->search);
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('asset_tag', 'like', "%{$search}%");
         }
 
-        // FILTER: BRAND
-        if ($request->filled('brand')) {
-            $query->where('brand', $request->brand);
-        }
+        $items = $query->paginate(10)->withQueryString();
 
-        // FILTER: PRODUCT CODE
-        if ($request->filled('part_no')) {
-            $query->where('part_no', 'like', '%' . $request->part_no . '%');
-        }
-
-        // PAGINATION
-        $items = $query->latest()->paginate(10)->withQueryString();
-
-        return view('items', compact('items'));
+        return view('inventory.index', compact('items'));
     }
 
-    /**
-     * =============================
-     * STORE NEW PRODUCT
-     * =============================
-     */
-    public function store(Request $request)
+    public function stockIn(Request $request, Item $item): RedirectResponse
     {
         $validated = $request->validate([
-            'part_no' => 'required|string|max:255',
-            'brand' => 'required|string|max:255',
-            'part_name' => 'required|string|max:255',
-            'description' => 'required|string|max:255',
+            'quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        Item::create($validated);
+        $item->increment('quantity', $validated['quantity']);
 
-        return redirect()->route('items')
-            ->with('success', 'Product added successfully');
+        AssetLog::create([
+            'item_id' => $item->id,
+            'user_id' => \Auth::id() ?? 1
+            ,
+            'action' => 'stock_in',
+        ]);
+
+        return back()->with('success', 'Stock added successfully.');
     }
 
-    /**
-     * =============================
-     * UPDATE PRODUCT
-     * =============================
-     */
-    public function update(Request $request, $id)
+    public function stockOut(Request $request, Item $item): RedirectResponse
     {
-        $item = Item::findOrFail($id);
-
         $validated = $request->validate([
-            'part_no' => 'required|string|max:255',
-            'brand' => 'required|string|max:255',
-            'part_name' => 'required|string|max:255',
-            'description' => 'required|string|max:255',
+            'quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $item->update($validated);
+        if ($item->quantity < $validated['quantity']) {
+            return back()->with('error', 'Stock out cannot exceed current quantity.');
+        }
 
-        return redirect()->route('products')
-            ->with('success', 'Product updated successfully');
-    }
+        $item->decrement('quantity', $validated['quantity']);
 
-    /**
-     * =============================
-     * DELETE PRODUCT
-     * =============================
-     */
-    public function destroy($id)
-    {
-        Item::findOrFail($id)->delete();
+        AssetLog::create([
+            'item_id' => $item->id,
+            'user_id' => \Auth::id() ?? 1,
+            'action' => 'stock_out',
+        ]);
 
-        return redirect()->route('items')
-            ->with('success', 'Product deleted successfully');
+        return back()->with('success', 'Stock removed successfully.');
     }
 }

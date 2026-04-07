@@ -2,88 +2,57 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\AssetLog;
+use App\Models\Assignment;
+use App\Models\Category;
+use App\Models\Department;
 use App\Models\Item;
 use App\Models\Supplier;
-use App\Models\Category;
-use App\Models\Assignment;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    public function index(): View
     {
-        // =============================
-        // SEARCH (SAFE + CLEAN)
-        // =============================
-        $search = $request->input('search');
-
-        $query = Item::query();
-
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('part_name', 'like', "%{$search}%")
-                  ->orWhere('brand', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('part_no', 'like', "%{$search}%");
-            });
-        }
-
-        // Latest assets (filtered or not)
-        $latestAssets = $query->latest()->take(5)->get();
-
-        // =============================
-        // CORE COUNTS
-        // =============================
         $totalAssets = Item::count();
-        $totalSuppliers = Supplier::count();
-        $totalCategories = Category::count();
+        $availableAssets = Item::where('status', 'available')->count();
+        $maintenanceAssets = Item::where('status', 'maintenance')->count();
+        $assignedAssets = Assignment::whereNull('returned_at')->count();
+        $lowStockAssets = Item::where('quantity', '<=', 3)->count();
 
-        // =============================
-        //STATUS COUNTS (ACTIVE ASSIGNMENTS)
-        //(ERD BASED)
-        // =============================
-       $assignedAssets = Assignment::whereNUll('returned_at')->count();
+        $recentAssignments = Assignment::with(['item', 'user', 'department'])
+            ->latest('assigned_at')
+            ->take(8)
+            ->get();
 
-       //AVAILABLE = TOTAL - ASSIGNED
-       $availableAssets = $totalAssets - $assignedAssets;
+        $recentActivity = AssetLog::with(['item', 'user'])
+            ->latest()
+            ->take(8)
+            ->get();
 
-       // OPTIONAL (KEEP MAINTENANCE IF YOU STILL USE IT)
-       
-       $maintenanceAssets = Item::where('status', 'maintenance')->count();
-        // =============================
-        // LOW STOCK ALERT ( CORPORATE)
-        // =============================
-        $lowStockAssets = 0;
+        $categorySummary = Category::withCount('items')->orderBy('name')->get();
+        $departmentSummary = Department::withCount('items')->orderBy('name')->get();
 
-        try {
-            $lowStockAssets = Item::where('quantity', '<', 5)->count();
-        } catch (\Exception $e) {
-            $lowStockAssets = 0;
-        }
+        $notificationCount =
+            AssetLog::whereDate('created_at', today())->count() +
+            Item::where('quantity', '<=', 3)->count() +
+            Assignment::whereNull('returned_at')->count();
 
-        // =============================
-        // MONTHLY ANALYTICS ( BIG FEATURE)
-        // =============================
-        $monthlyAssets = [];
-
-        for ($i = 1; $i <= 12; $i++) {
-            $monthlyAssets[] = Item::whereMonth('created_at', $i)->count();
-        }
-
-        // =============================
-        // SEND DATA
-        // =============================
-        return view('dashboard', compact(
+        return view('dashboard.index', compact(
             'totalAssets',
-            'totalSuppliers',
-            'totalCategories',
             'availableAssets',
-            'assignedAssets',
             'maintenanceAssets',
-            'latestAssets',
+            'assignedAssets',
             'lowStockAssets',
-            'monthlyAssets',
-            'search'
-        ));
+            'recentAssignments',
+            'recentActivity',
+            'categorySummary',
+            'departmentSummary',
+            'notificationCount'
+        ))->with([
+            'totalSuppliers' => Supplier::count(),
+            'totalCategories' => Category::count(),
+            'totalDepartments' => Department::count(),
+        ]);
     }
 }

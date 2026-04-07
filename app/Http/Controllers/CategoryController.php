@@ -3,101 +3,79 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
-    /**
-     * =============================
-     * DISPLAY CATEGORIES + SEARCH + FILTER
-     * =============================
-     */
-    public function index(Request $request)
+    public function index(Request $request): View
     {
-        $query = Category::query();
+        $query = Category::withCount('items')->latest();
 
-        //  SEARCH (GROUPED FIX)
         if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            $search = trim((string) $request->search);
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
-        //  FILTER BY NAME
-        if ($request->filled('name')) {
-            $query->where('name', 'like', '%' . $request->name . '%');
-        }
+        $categories = $query->paginate(10)->withQueryString();
 
-        //  FILTER BY DESCRIPTION
-        if ($request->filled('description')) {
-            $query->where('description', 'like', '%' . $request->description . '%');
-        }
-
-        $categories = $query->latest()
-                            ->paginate(10)
-                            ->withQueryString();
-
-        return view('categories', compact('categories'));
+        return view('categories.index', compact('categories'));
     }
 
-    /**
- * =============================
- * EDIT CATEGORY
- * =============================
- */
-public function edit($id)
-{
-    $category = Category::findOrFail($id);
+    public function create(): View
+    {
+        return view('categories.create');
+    }
 
-    return view('categories-edit', compact('category'));
-}
-
-/**
- * =============================
- * UPDATE CATEGORY
- * =============================
- */
-public function update(Request $request, $id)
-{
-    $category = Category::findOrFail($id);
-
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'description' => 'nullable|string|max:255',
-    ]);
-
-    $category->update($validated);
-
-    return redirect()->route('categories')
-        ->with('success', 'Category updated successfully');
-}
-    /**
-     * =============================
-     * STORE CATEGORY
-     * =============================
-     */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:255',
+            'name' => ['required', 'string', 'max:255', 'unique:categories,name'],
+            'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
         Category::create($validated);
 
-        return back()->with('success', 'Category added successfully');
+        return redirect()->route('categories.index')->with('success', 'Category created successfully.');
     }
 
-    /**
-     * =============================
-     * DELETE CATEGORY
-     * =============================
-     */
-    public function destroy($id)
+    public function show(Category $category): View
     {
-        Category::findOrFail($id)->delete();
+        $category->load('items');
 
-        return back()->with('success', 'Category deleted successfully');
+        return view('categories.show', compact('category'));
+    }
+
+    public function edit(Category $category): View
+    {
+        return view('categories.edit', compact('category'));
+    }
+
+    public function update(Request $request, Category $category): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:categories,name,' . $category->id],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $category->update($validated);
+
+        return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
+    }
+
+    public function destroy(Category $category): RedirectResponse
+    {
+        if ($category->items()->exists()) {
+            return redirect()->route('categories.index')->with('error', 'Cannot delete category with linked items.');
+        }
+
+        $category->delete();
+
+        return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
     }
 }

@@ -2,30 +2,21 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Supplier;
+use Illuminate\Database\Seeder;
 
 class SupplierSeeder extends Seeder
 {
     public function run(): void
     {
-        Supplier::insert([
-            [
-                'name' => 'Samsung Supplier',
-                'email' => 'samsung@supplier.com',
-                'phone' => '09123456789',
-                'company' => 'Samsung Inc.',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Apple Distributor',
-                'email' => 'apple@supplier.com',
-                'phone' => '09987654321',
-                'company' => 'Apple Inc.',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        $rows = [
+            ['name' => 'Dell Supplier', 'email' => 'dell@supplier.local', 'phone' => '+6757000001'],
+            ['name' => 'HP Supplier', 'email' => 'hp@supplier.local', 'phone' => '+6757000002'],
+            ['name' => 'Cisco Distributor', 'email' => 'cisco@supplier.local', 'phone' => '+6757000003'],
+        ];
+
+        foreach ($rows as $row) {
+            Supplier::updateOrCreate(['email' => $row['email']], $row);
+        }
     }
 }

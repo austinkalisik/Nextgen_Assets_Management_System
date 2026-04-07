@@ -3,123 +3,57 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Item extends Model
 {
-    /**
-     * =============================
-     * MASS ASSIGNABLE
-     * =============================
-     */
     protected $fillable = [
-        'part_no',
-        'brand',
-        'part_name',
-        'description',
+        'name',
         'category_id',
         'supplier_id',
+        'department_id',
         'asset_tag',
         'serial_number',
+        'quantity',
         'status',
-        'assigned_to',
         'location',
         'purchase_date',
-        'quantity'
     ];
 
-    /**
-     * =============================
-     * DEFAULT VALUES
-     * =============================
-     */
-    protected $attributes = [
-        'status' => 'available',
-        'quantity' => 1,
+    protected $casts = [
+        'purchase_date' => 'date',
+        'quantity' => 'integer',
     ];
 
-    /**
-     * =============================
-     * RELATIONSHIPS
-     * =============================
-     */
-
-    // Category
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    // Supplier
-    public function supplier()
+    public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    // LEGACY (keep for compatibility)
-    public function user()
+    public function department(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsTo(Department::class);
     }
 
-    // MAIN RELATION (CRITICAL)
-    public function assignments()
+    public function assignments(): HasMany
     {
         return $this->hasMany(Assignment::class);
     }
 
-    // ACTIVE ASSIGNMENTS ONLY
-    public function activeAssignments()
+    public function activeAssignment(): HasOne
     {
-        return $this->hasMany(Assignment::class)
-            ->whereNull('returned_at');
+        return $this->hasOne(Assignment::class)->whereNull('returned_at')->latestOfMany('assigned_at');
     }
 
-    /**
-     * =============================
-     * INVENTORY LOGIC (CORE SYSTEM)
-     * =============================
-     */
-
-    // TOTAL ASSIGNED (ACTIVE ONLY)
-    public function totalAssigned()
+    public function assetLogs(): HasMany
     {
-        return (int) $this->activeAssignments()->sum('quantity');
-    }
-
-    // AVAILABLE STOCK
-    public function availableQuantity()
-    {
-        return max(0, (int) $this->quantity - $this->totalAssigned());
-    }
-
-    /**
-     * =============================
-     * STATUS (REAL SYSTEM LOGIC)
-     * =============================
-     */
-
-    public function getComputedStatusAttribute()
-    {
-        $assigned = $this->totalAssigned();
-        $available = $this->availableQuantity();
-
-        if ($available <= 0) {
-            return 'out_of_stock';
-        }
-
-        if ($assigned > 0) {
-            return 'partially_assigned';
-        }
-
-        return 'available';
-    }
-
-    public function getStatusLabelAttribute()
-    {
-        return match ($this->computed_status) {
-            'out_of_stock' => 'Out of Stock',
-            'partially_assigned' => 'Partially Assigned',
-            default => 'Available',
-        };
+        return $this->hasMany(AssetLog::class);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AssetLog extends Model
 {
@@ -10,21 +11,14 @@ class AssetLog extends Model
         'item_id',
         'user_id',
         'action',
-        'old_values',
-        'new_values'
     ];
 
-    protected $casts = [
-        'old_values' => 'array',
-        'new_values' => 'array',
-    ];
-
-    public function item()
+    public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
