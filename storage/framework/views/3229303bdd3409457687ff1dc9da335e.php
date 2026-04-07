@@ -1,7 +1,13 @@
-<aside class="w-64 bg-slate-950 text-white min-h-screen">
+<aside class="w-64 min-h-screen text-white bg-slate-950">
     <div class="px-6 py-6 border-b border-slate-800">
-        <h1 class="text-2xl font-bold leading-tight">NextGen Assets</h1>
-        <p class="text-sm text-slate-400">Management System</p>
+        <h1 class="text-2xl font-bold leading-tight">
+            <?php echo e($appSettings['system_name'] ?? 'NextGen Assets'); ?>
+
+        </h1>
+        <p class="text-sm text-slate-400">
+            <?php echo e($appSettings['system_tagline'] ?? 'Management System'); ?>
+
+        </p>
     </div>
 
     <nav class="px-4 py-6 space-y-2 text-sm">
@@ -30,7 +36,7 @@
     <div class="px-4 mt-8">
         <form method="POST" action="<?php echo e(route('logout')); ?>">
             <?php echo csrf_field(); ?>
-            <button type="submit" class="w-full rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold hover:bg-red-600">
+            <button type="submit" class="w-full px-4 py-2 text-sm font-semibold bg-red-500 rounded-lg hover:bg-red-600">
                 Logout
             </button>
         </form>

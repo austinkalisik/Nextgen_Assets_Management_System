@@ -3,43 +3,56 @@
 @section('content')
     <div class="mb-6">
         <h1 class="text-3xl font-bold">Settings</h1>
-        <p class="text-slate-500">Manage system configuration</p>
+        <p class="text-slate-500">Manage system branding and configuration</p>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div class="p-6 bg-white shadow rounded-2xl">
-            <h2 class="mb-4 text-xl font-semibold">Add / Update Setting</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl bg-white p-6 shadow">
+            <h2 class="text-xl font-semibold mb-4">System Branding</h2>
+
             <form method="POST" action="{{ route('settings.store') }}" class="space-y-4">
                 @csrf
-                <input type="text" name="key" placeholder="Setting Key" class="w-full px-4 py-2 border rounded-lg">
-                <textarea name="value" placeholder="Setting Value" class="w-full px-4 py-2 border rounded-lg"></textarea>
-                <button class="px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg">Save Setting</button>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">System Name</label>
+                    <input type="text" name="system_name" value="{{ old('system_name', $systemName) }}"
+                        placeholder="NextGen Assets" class="w-full rounded-lg border px-4 py-2" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">System Tagline</label>
+                    <input type="text" name="system_tagline" value="{{ old('system_tagline', $systemTagline) }}"
+                        placeholder="Management System" class="w-full rounded-lg border px-4 py-2" required>
+                </div>
+
+                <button class="rounded-lg bg-blue-600 px-4 py-2 text-white font-semibold">
+                    Save Branding
+                </button>
             </form>
         </div>
 
-        <div class="p-6 bg-white shadow rounded-2xl">
-            <h2 class="mb-4 text-xl font-semibold">Current Settings</h2>
-            <div class="space-y-3">
-                @forelse($settings as $setting)
-                    <div class="p-4 space-y-3 border rounded-lg">
-                        <form method="POST" action="{{ route('settings.update', $setting->key) }}" class="space-y-2">
-                            @csrf
-                            @method('PUT')
-                            <div class="font-semibold">{{ $setting->key }}</div>
-                            <textarea name="value" class="w-full px-4 py-2 border rounded-lg">{{ $setting->value }}</textarea>
-                            <button class="px-3 py-1 text-sm text-white bg-blue-600 rounded">Update</button>
-                        </form>
+        <div class="rounded-2xl bg-white p-6 shadow">
+            <h2 class="text-xl font-semibold mb-4">Preview</h2>
 
-                        <form method="POST" action="{{ route('settings.destroy', $setting->key) }}"
-                            onsubmit="return confirm('Delete this setting?')">
-                            @csrf
-                            @method('DELETE')
-                            <button class="px-3 py-1 text-sm text-white bg-red-600 rounded">Delete</button>
-                        </form>
+            <div class="rounded-2xl border border-slate-200 bg-slate-950 p-6 text-white">
+                <h3 class="text-2xl font-bold leading-tight">
+                    {{ $systemName }}
+                </h3>
+                <p class="text-sm text-slate-400 mt-1">
+                    {{ $systemTagline }}
+                </p>
+            </div>
+
+            <div class="mt-6">
+                <h3 class="text-sm font-semibold text-slate-700 mb-2">Saved Keys</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="rounded-lg bg-slate-50 px-3 py-2 border">
+                        <strong>system_name</strong>: {{ $systemName }}
                     </div>
-                @empty
-                    <p class="text-slate-500">No settings found.</p>
-                @endforelse
+                    <div class="rounded-lg bg-slate-50 px-3 py-2 border">
+                        <strong>system_tagline</strong>: {{ $systemTagline }}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

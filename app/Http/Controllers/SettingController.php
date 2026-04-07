@@ -13,26 +13,40 @@ class SettingController extends Controller
     {
         $settings = DB::table('settings')->orderBy('key')->get();
 
-        return view('settings.index', compact('settings'));
+        $systemName = DB::table('settings')->where('key', 'system_name')->value('value') ?? 'NextGen Assets';
+        $systemTagline = DB::table('settings')->where('key', 'system_tagline')->value('value') ?? 'Management System';
+
+        return view('settings.index', compact('settings', 'systemName', 'systemTagline'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'key' => ['required', 'string', 'max:255'],
-            'value' => ['nullable', 'string'],
+            'system_name' => ['required', 'string', 'max:255'],
+            'system_tagline' => ['required', 'string', 'max:255'],
         ]);
 
         DB::table('settings')->updateOrInsert(
-            ['key' => $validated['key']],
+            ['key' => 'system_name'],
             [
-                'value' => $validated['value'],
+                'value' => $validated['system_name'],
                 'created_at' => now(),
                 'updated_at' => now(),
             ]
         );
 
-        return redirect()->route('settings.index')->with('success', 'Setting saved successfully.');
+        DB::table('settings')->updateOrInsert(
+            ['key' => 'system_tagline'],
+            [
+                'value' => $validated['system_tagline'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        return redirect()
+            ->route('settings.index')
+            ->with('success', 'System branding updated successfully.');
     }
 
     public function update(Request $request, string $key): RedirectResponse
@@ -48,13 +62,17 @@ class SettingController extends Controller
                 'updated_at' => now(),
             ]);
 
-        return redirect()->route('settings.index')->with('success', 'Setting updated successfully.');
+        return redirect()
+            ->route('settings.index')
+            ->with('success', 'Setting updated successfully.');
     }
 
     public function destroy(string $key): RedirectResponse
     {
         DB::table('settings')->where('key', $key)->delete();
 
-        return redirect()->route('settings.index')->with('success', 'Setting deleted successfully.');
+        return redirect()
+            ->route('settings.index')
+            ->with('success', 'Setting deleted successfully.');
     }
 }
