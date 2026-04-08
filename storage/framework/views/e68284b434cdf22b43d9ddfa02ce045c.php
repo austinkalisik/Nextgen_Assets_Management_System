@@ -1,13 +1,13 @@
-@extends('layouts.app')
 
-@section('content')
+
+<?php $__env->startSection('content'); ?>
     <div class="mb-6">
         <h1 class="text-3xl font-bold">Create Assets</h1>
         <p class="text-slate-500">Add one or many asset records in a single submission</p>
     </div>
 
-    <form method="POST" action="{{ route('items.store') }}" class="p-6 bg-white shadow rounded-2xl">
-        @csrf
+    <form method="POST" action="<?php echo e(route('items.store')); ?>" class="p-6 bg-white shadow rounded-2xl">
+        <?php echo csrf_field(); ?>
 
         <div id="asset-rows" class="space-y-6">
             <div class="p-4 border asset-row rounded-xl">
@@ -27,23 +27,23 @@
 
                     <select name="rows[0][category_id]" class="px-4 py-2 border rounded-lg" required>
                         <option value="">Select Category</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($category->id); ?>"><?php echo e($category->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
 
                     <select name="rows[0][supplier_id]" class="px-4 py-2 border rounded-lg" required>
                         <option value="">Select Supplier</option>
-                        @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $suppliers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $supplier): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($supplier->id); ?>"><?php echo e($supplier->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
 
                     <select name="rows[0][department_id]" class="px-4 py-2 border rounded-lg" required>
                         <option value="">Select Department</option>
-                        @foreach($departments as $department)
-                            <option value="{{ $department->id }}">{{ $department->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $department): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($department->id); ?>"><?php echo e($department->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
 
                     <select name="rows[0][status]" class="px-4 py-2 border rounded-lg" required>
@@ -66,7 +66,7 @@
                 Save Assets
             </button>
 
-            <a href="{{ route('items.index') }}" class="px-4 py-2 font-semibold rounded-lg bg-slate-200">
+            <a href="<?php echo e(route('items.index')); ?>" class="px-4 py-2 font-semibold rounded-lg bg-slate-200">
                 Cancel
             </a>
         </div>
@@ -97,23 +97,23 @@
 
                     <select name="rows[${assetRowIndex}][category_id]" class="px-4 py-2 border rounded-lg" required>
                         <option value="">Select Category</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($category->id); ?>"><?php echo e($category->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
 
                     <select name="rows[${assetRowIndex}][supplier_id]" class="px-4 py-2 border rounded-lg" required>
                         <option value="">Select Supplier</option>
-                        @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $suppliers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $supplier): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($supplier->id); ?>"><?php echo e($supplier->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
 
                     <select name="rows[${assetRowIndex}][department_id]" class="px-4 py-2 border rounded-lg" required>
                         <option value="">Select Department</option>
-                        @foreach($departments as $department)
-                            <option value="{{ $department->id }}">{{ $department->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $department): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($department->id); ?>"><?php echo e($department->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
 
                     <select name="rows[${assetRowIndex}][status]" class="px-4 py-2 border rounded-lg" required>
@@ -129,4 +129,5 @@
             assetRowIndex++;
         }
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\akalisik\Project\backend\resources\views/items/create.blade.php ENDPATH**/ ?>

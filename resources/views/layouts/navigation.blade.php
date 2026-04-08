@@ -9,6 +9,10 @@
     </div>
 
     <nav class="px-4 py-6 space-y-2 text-sm">
+        <a href="{{ route('settings.index') }}"
+            class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('settings.*') ? 'bg-slate-800' : '' }}">Settings</a>
+        <a href="{{ route('profile.edit') }}"
+            class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('profile.*') ? 'bg-slate-800' : '' }}">Profile</a>
         <a href="{{ route('dashboard') }}"
             class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('dashboard') ? 'bg-slate-800' : '' }}">Dashboard</a>
         <a href="{{ route('items.index') }}"
@@ -23,12 +27,11 @@
             class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('categories.*') ? 'bg-slate-800' : '' }}">Categories</a>
         <a href="{{ route('departments.index') }}"
             class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('departments.*') ? 'bg-slate-800' : '' }}">Departments</a>
-        <a href="{{ route('users.index') }}"
-            class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('users.*') ? 'bg-slate-800' : '' }}">Users</a>
-        <a href="{{ route('settings.index') }}"
-            class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('settings.*') ? 'bg-slate-800' : '' }}">Settings</a>
-        <a href="{{ route('profile.edit') }}"
-            class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('profile.*') ? 'bg-slate-800' : '' }}">Profile</a>
+
+        @if(auth()->check() && auth()->user()->role === 'admin')
+            <a href="{{ route('users.index') }}"
+                class="block px-4 py-2 rounded-lg hover:bg-slate-800 {{ request()->routeIs('users.*') ? 'bg-slate-800' : '' }}">Users</a>
+        @endif
     </nav>
 
     <div class="px-4 mt-8">

@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @property string $name
+ * @property string $email
+ * @property string $role
+ */
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
@@ -31,18 +35,23 @@ class User extends Authenticatable
         ];
     }
 
-    public function assignments(): HasMany
+    public function assignments()
     {
         return $this->hasMany(Assignment::class);
     }
 
-    public function activeAssignments(): HasMany
+    public function activeAssignments()
     {
         return $this->hasMany(Assignment::class)->whereNull('returned_at');
     }
 
-    public function assetLogs(): HasMany
+    public function assetLogs()
     {
         return $this->hasMany(AssetLog::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Item;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class AssignmentController extends Controller
@@ -48,39 +49,49 @@ class AssignmentController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'item_id' => ['required', 'exists:items,id'],
-            'user_id' => ['required', 'exists:users,id'],
-            'department_id' => ['required', 'exists:departments,id'],
-            'assigned_at' => ['required', 'date'],
+        $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*.item_id' => ['required', 'exists:items,id'],
+            'rows.*.user_id' => ['required', 'exists:users,id'],
+            'rows.*.department_id' => ['required', 'exists:departments,id'],
+            'rows.*.assigned_at' => ['required', 'date'],
         ]);
 
-        $alreadyAssigned = Assignment::where('item_id', $validated['item_id'])
-            ->whereNull('returned_at')
-            ->exists();
+        $createdCount = 0;
 
-        if ($alreadyAssigned) {
-            return back()
-                ->with('error', 'This asset is already assigned.')
-                ->withInput();
+        foreach ($request->rows as $row) {
+            $alreadyAssigned = Assignment::where('item_id', $row['item_id'])
+                ->whereNull('returned_at')
+                ->exists();
+
+            if ($alreadyAssigned) {
+                continue;
+            }
+
+            $assignment = Assignment::create([
+                'item_id' => $row['item_id'],
+                'user_id' => $row['user_id'],
+                'department_id' => $row['department_id'],
+                'assigned_at' => $row['assigned_at'],
+            ]);
+
+            $assignment->item->update([
+                'status' => 'assigned',
+                'department_id' => $row['department_id'],
+            ]);
+
+            AssetLog::create([
+                'item_id' => $row['item_id'],
+                'user_id' => Auth::id() ?? 1,
+                'action' => 'assigned',
+            ]);
+
+            $createdCount++;
         }
-
-        $assignment = Assignment::create($validated);
-
-        $assignment->item->update([
-            'status' => 'assigned',
-            'department_id' => $validated['department_id'],
-        ]);
-
-        AssetLog::create([
-            'item_id' => $validated['item_id'],
-            'user_id' => \Auth::id() ?? 1,
-            'action' => 'assigned',
-        ]);
 
         return redirect()
             ->route('assignments.index')
-            ->with('success', 'Asset assigned successfully.');
+            ->with('success', "{$createdCount} assignment(s) processed successfully.");
     }
 
     public function return(Request $request, Assignment $assignment): RedirectResponse
@@ -104,7 +115,7 @@ class AssignmentController extends Controller
 
         AssetLog::create([
             'item_id' => $assignment->item_id,
-            'user_id' => \Auth::id() ?? 1,
+            'user_id' => Auth::id() ?? 1,
             'action' => 'returned',
         ]);
 

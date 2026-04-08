@@ -9,6 +9,7 @@ use App\Models\Item;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class ItemController extends Controller
@@ -16,12 +17,7 @@ class ItemController extends Controller
     public function index(Request $request): View
     {
         $query = Item::query()
-            ->with([
-                'category',
-                'supplier',
-                'department',
-                'activeAssignment.user',
-            ])
+            ->with(['category', 'supplier', 'department', 'activeAssignment.user'])
             ->latest();
 
         if ($request->filled('search')) {
@@ -32,15 +28,9 @@ class ItemController extends Controller
                     ->orWhere('asset_tag', 'like', "%{$search}%")
                     ->orWhere('serial_number', 'like', "%{$search}%")
                     ->orWhere('location', 'like', "%{$search}%")
-                    ->orWhereHas('category', function ($sub) use ($search) {
-                        $sub->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('supplier', function ($sub) use ($search) {
-                        $sub->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('department', function ($sub) use ($search) {
-                        $sub->where('name', 'like', "%{$search}%");
-                    });
+                    ->orWhereHas('category', fn ($sub) => $sub->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('supplier', fn ($sub) => $sub->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('department', fn ($sub) => $sub->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -74,28 +64,53 @@ class ItemController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'category_id' => ['required', 'exists:categories,id'],
-            'supplier_id' => ['required', 'exists:suppliers,id'],
-            'department_id' => ['required', 'exists:departments,id'],
-            'asset_tag' => ['nullable', 'string', 'max:255', 'unique:items,asset_tag'],
-            'serial_number' => ['nullable', 'string', 'max:255', 'unique:items,serial_number'],
-            'quantity' => ['required', 'integer', 'min:1'],
-            'status' => ['required', 'in:available,assigned,maintenance,retired'],
-            'location' => ['nullable', 'string', 'max:255'],
-            'purchase_date' => ['nullable', 'date'],
+        $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*.name' => ['required', 'string', 'max:255'],
+            'rows.*.category_id' => ['required', 'exists:categories,id'],
+            'rows.*.supplier_id' => ['required', 'exists:suppliers,id'],
+            'rows.*.department_id' => ['required', 'exists:departments,id'],
+            'rows.*.asset_tag' => ['nullable', 'string', 'max:255'],
+            'rows.*.serial_number' => ['nullable', 'string', 'max:255'],
+            'rows.*.status' => ['required', 'in:available,assigned,maintenance,retired'],
+            'rows.*.location' => ['nullable', 'string', 'max:255'],
+            'rows.*.purchase_date' => ['nullable', 'date'],
         ]);
 
-        $item = Item::create($validated);
+        $createdCount = 0;
 
-        AssetLog::create([
-            'item_id' => $item->id,
-            'user_id' => \Auth::id() ?? 1,
-            'action' => 'created',
-        ]);
+        foreach ($request->rows as $row) {
+            $item = Item::create([
+                'name' => $row['name'],
+                'category_id' => $row['category_id'],
+                'supplier_id' => $row['supplier_id'],
+                'department_id' => $row['department_id'],
+                'asset_tag' => !empty($row['asset_tag']) ? $row['asset_tag'] : null,
+                'serial_number' => !empty($row['serial_number']) ? $row['serial_number'] : null,
+                'quantity' => 1,
+                'status' => $row['status'],
+                'location' => $row['location'] ?? null,
+                'purchase_date' => $row['purchase_date'] ?? null,
+            ]);
 
-        return redirect()->route('items.index')->with('success', 'Asset created successfully.');
+            if (!$item->asset_tag) {
+                $item->update([
+                    'asset_tag' => 'NGA-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT),
+                ]);
+            }
+
+            AssetLog::create([
+                'item_id' => $item->id,
+                'user_id' => Auth::id() ?? 1,
+                'action' => 'created',
+            ]);
+
+            $createdCount++;
+        }
+
+        return redirect()
+            ->route('items.index')
+            ->with('success', "{$createdCount} asset(s) created successfully.");
     }
 
     public function show(Item $item): View
@@ -141,23 +156,27 @@ class ItemController extends Controller
 
         AssetLog::create([
             'item_id' => $item->id,
-            'user_id' => \Auth::id() ?? 1,
+            'user_id' => Auth::id() ?? 1,
             'action' => 'updated',
         ]);
 
-        return redirect()->route('items.index')->with('success', 'Asset updated successfully.');
+        return redirect()
+            ->route('items.index')
+            ->with('success', 'Asset updated successfully.');
     }
 
     public function destroy(Item $item): RedirectResponse
     {
         AssetLog::create([
             'item_id' => $item->id,
-            'user_id' => \Auth::id() ?? 1,
+            'user_id' => Auth::id() ?? 1,
             'action' => 'deleted',
         ]);
 
         $item->delete();
 
-        return redirect()->route('items.index')->with('success', 'Asset deleted successfully.');
+        return redirect()
+            ->route('items.index')
+            ->with('success', 'Asset deleted successfully.');
     }
 }

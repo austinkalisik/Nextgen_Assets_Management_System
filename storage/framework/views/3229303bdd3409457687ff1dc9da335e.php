@@ -11,6 +11,10 @@
     </div>
 
     <nav class="px-4 py-6 space-y-2 text-sm">
+        <a href="<?php echo e(route('settings.index')); ?>"
+            class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('settings.*') ? 'bg-slate-800' : ''); ?>">Settings</a>
+        <a href="<?php echo e(route('profile.edit')); ?>"
+            class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('profile.*') ? 'bg-slate-800' : ''); ?>">Profile</a>
         <a href="<?php echo e(route('dashboard')); ?>"
             class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('dashboard') ? 'bg-slate-800' : ''); ?>">Dashboard</a>
         <a href="<?php echo e(route('items.index')); ?>"
@@ -25,12 +29,11 @@
             class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('categories.*') ? 'bg-slate-800' : ''); ?>">Categories</a>
         <a href="<?php echo e(route('departments.index')); ?>"
             class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('departments.*') ? 'bg-slate-800' : ''); ?>">Departments</a>
-        <a href="<?php echo e(route('users.index')); ?>"
-            class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('users.*') ? 'bg-slate-800' : ''); ?>">Users</a>
-        <a href="<?php echo e(route('settings.index')); ?>"
-            class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('settings.*') ? 'bg-slate-800' : ''); ?>">Settings</a>
-        <a href="<?php echo e(route('profile.edit')); ?>"
-            class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('profile.*') ? 'bg-slate-800' : ''); ?>">Profile</a>
+
+        <?php if(auth()->check() && auth()->user()->role === 'admin'): ?>
+            <a href="<?php echo e(route('users.index')); ?>"
+                class="block px-4 py-2 rounded-lg hover:bg-slate-800 <?php echo e(request()->routeIs('users.*') ? 'bg-slate-800' : ''); ?>">Users</a>
+        <?php endif; ?>
     </nav>
 
     <div class="px-4 mt-8">

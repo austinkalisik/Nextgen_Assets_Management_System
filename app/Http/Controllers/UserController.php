@@ -12,10 +12,17 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    protected function ensureAdmin(): void
+    {
+        abort_unless(Auth::check() && Auth::user()->role === 'admin', 403, 'Only administrators can manage users.');
+    }
+
     public function index(Request $request): View
     {
+        $this->ensureAdmin();
+
         $query = User::query()
-            ->withCount(['assignments', 'activeAssignments'])
+            ->withCount(['assignments', 'activeAssignments', 'assetLogs'])
             ->latest();
 
         if ($request->filled('search')) {
@@ -35,11 +42,15 @@ class UserController extends Controller
 
     public function create(): View
     {
+        $this->ensureAdmin();
+
         return view('users.create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->ensureAdmin();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
@@ -58,22 +69,36 @@ class UserController extends Controller
 
     public function show(User $user): View
     {
+        $this->ensureAdmin();
+
         $user->load([
             'assignments.item',
             'assignments.department',
-            'assetLogs',
+            'activeAssignments.item',
+            'activeAssignments.department',
+            'assetLogs.item',
         ]);
 
-        return view('users.show', compact('user'));
+        $recentLogs = $user->assetLogs()
+            ->with('item')
+            ->latest()
+            ->take(15)
+            ->get();
+
+        return view('users.show', compact('user', 'recentLogs'));
     }
 
     public function edit(User $user): View
     {
+        $this->ensureAdmin();
+
         return view('users.edit', compact('user'));
     }
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $this->ensureAdmin();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
@@ -96,10 +121,18 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
+        $this->ensureAdmin();
+
         if ((int) Auth::id() === (int) $user->id) {
             return redirect()
                 ->route('users.index')
                 ->with('error', 'You cannot delete your own account.');
+        }
+
+        if ($user->activeAssignments()->exists()) {
+            return redirect()
+                ->route('users.index')
+                ->with('error', 'Cannot delete user with active assignments.');
         }
 
         if ($user->assignments()->exists()) {

@@ -16,17 +16,42 @@
         <main class="flex-1 p-6">
             <div class="mx-auto max-w-7xl">
                 @php
-                    $lowStockCount = \App\Models\Item::where('quantity', '<=', 3)->count();
-                    $activeAssignmentsCount = \App\Models\Assignment::whereNull('returned_at')->count();
-                    $todayActivityCount = \App\Models\AssetLog::whereDate('created_at', today())->count();
+                    $liveAlerts = collect();
 
-                    $notificationItems = collect([
-                        $lowStockCount > 0 ? $lowStockCount . ' low stock asset(s)' : null,
-                        $activeAssignmentsCount > 0 ? $activeAssignmentsCount . ' active assignment(s)' : null,
-                        $todayActivityCount > 0 ? $todayActivityCount . ' activity log(s) today' : null,
-                    ])->filter()->values();
+                    $overdueAssignments = \App\Models\Assignment::whereNull('returned_at')
+                        ->whereDate('assigned_at', '<=', now()->subDays(14))
+                        ->pluck('id')
+                        ->map(fn($id) => 'overdue-assignment-' . $id);
 
-                    $notificationCount = $notificationItems->count();
+                    $lowStockItems = \App\Models\Item::where('quantity', '<=', 3)
+                        ->pluck('id')
+                        ->map(fn($id) => 'low-stock-' . $id);
+
+                    $maintenanceItems = \App\Models\Item::where('status', 'maintenance')
+                        ->pluck('id')
+                        ->map(fn($id) => 'maintenance-' . $id);
+
+                    $recentAssignments = \App\Models\Assignment::latest('assigned_at')
+                        ->take(5)
+                        ->pluck('id')
+                        ->map(fn($id) => 'recent-assignment-' . $id);
+
+                    $recentActivities = \App\Models\AssetLog::latest()
+                        ->take(5)
+                        ->pluck('id')
+                        ->map(fn($id) => 'activity-' . $id);
+
+                    $liveAlerts = $liveAlerts
+                        ->concat($overdueAssignments)
+                        ->concat($lowStockItems)
+                        ->concat($maintenanceItems)
+                        ->concat($recentAssignments)
+                        ->concat($recentActivities)
+                        ->unique()
+                        ->values();
+
+                    $readIds = collect(session('read_notifications', []));
+                    $notificationCount = $liveAlerts->filter(fn($id) => !$readIds->contains($id))->count();
                 @endphp
 
                 <div class="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
@@ -46,43 +71,21 @@
                     </form>
 
                     <div class="flex items-center gap-3">
-                        <div class="relative group">
-                            <button type="button"
-                                class="relative px-4 py-3 bg-white border shadow-sm rounded-2xl border-slate-200 hover:bg-slate-50">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9" />
-                                </svg>
+                        <a href="{{ route('notifications.index') }}" target="_blank"
+                            class="relative px-4 py-3 bg-white border shadow-sm rounded-2xl border-slate-200 hover:bg-slate-50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9" />
+                            </svg>
 
-                                @if($notificationCount > 0)
-                                    <span
-                                        class="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
-                                        {{ $notificationCount }}
-                                    </span>
-                                @endif
-                            </button>
-
-                            <div
-                                class="absolute right-0 z-50 invisible p-4 mt-2 transition bg-white border shadow-xl opacity-0 w-80 rounded-2xl border-slate-200 group-hover:visible group-hover:opacity-100">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h3 class="text-sm font-semibold text-slate-900">Notifications</h3>
-                                    <span class="text-xs text-slate-400">{{ now()->format('d M Y') }}</span>
-                                </div>
-
-                                <div class="space-y-3 text-sm">
-                                    @forelse($notificationItems as $notice)
-                                        <div class="px-3 py-2 rounded-xl bg-slate-50 text-slate-700">
-                                            {{ $notice }}
-                                        </div>
-                                    @empty
-                                        <div class="px-3 py-2 rounded-xl bg-slate-50 text-slate-500">
-                                            No current alerts.
-                                        </div>
-                                    @endforelse
-                                </div>
-                            </div>
-                        </div>
+                            @if($notificationCount > 0)
+                                <span
+                                    class="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
+                                    {{ $notificationCount }}
+                                </span>
+                            @endif
+                        </a>
 
                         <div class="px-4 py-3 bg-white border shadow-sm rounded-2xl border-slate-200">
                             <div class="text-sm font-semibold text-slate-900">{{ auth()->user()->name ?? 'User' }}</div>
@@ -120,5 +123,4 @@
         </main>
     </div>
 </body>
-
 </html>
