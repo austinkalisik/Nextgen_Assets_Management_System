@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    @if($dashboardMode === 'admin')
+    @if($dashboardMode === 'operations')
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-4xl font-bold text-slate-900">Admin Dashboard</h1>
@@ -9,16 +9,18 @@
                 </p>
             </div>
 
-            <div class="flex gap-3">
-                <a href="{{ route('items.create') }}"
-                    class="rounded-xl bg-blue-600 px-4 py-2.5 text-white font-semibold hover:bg-blue-700">
-                    + Add Asset
-                </a>
-                <a href="{{ route('assignments.create') }}"
-                    class="rounded-xl bg-slate-900 px-4 py-2.5 text-white font-semibold hover:bg-slate-800">
-                    + Assign Asset
-                </a>
-            </div>
+            @if(auth()->user()->isAdmin() || auth()->user()->isAssetOfficer())
+                <div class="flex gap-3">
+                    <a href="{{ route('items.create') }}"
+                        class="rounded-xl bg-blue-600 px-4 py-2.5 text-white font-semibold hover:bg-blue-700">
+                        + Add Asset
+                    </a>
+                    <a href="{{ route('assignments.create') }}"
+                        class="rounded-xl bg-slate-900 px-4 py-2.5 text-white font-semibold hover:bg-slate-800">
+                        + Assign Asset
+                    </a>
+                </div>
+            @endif
         </div>
 
         <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3 xl:grid-cols-6">
@@ -86,21 +88,26 @@
                     <h2 class="text-lg font-semibold">System Activity</h2>
                 </div>
                 <div class="p-6 space-y-4 text-sm">
-                    @forelse($recentActivity as $activity)
-                        <div class="pb-3 border-b">
-                            <p class="font-semibold text-slate-900">{{ ucfirst(str_replace('_', ' ', $activity->action)) }}</p>
-                            <p class="text-slate-600">{{ $activity->item?->name ?? 'Unknown asset' }}</p>
-                            <p class="text-xs text-slate-400">{{ $activity->user?->name ?? 'System' }} •
-                                {{ $activity->created_at?->format('d M Y H:i') }}</p>
+                    @if ($dashboardMode == 'user')
+                    <div>
+                        <h2>My Recent Activity</h2>
+                        @forelse($myRecentActivity as $activity)
+                        <div>
+                            {{ $activity->action }} - 
+                            {{ $activity->item?->name ?? '_' }}
                         </div>
-                    @empty
-                        <p class="text-slate-500">No recent activity.</p>
-                    @endforelse
+                        @empty
+                        <p>No Activity</p>
+                        @endforelse
+                        
+                    </div>
+                    
+                    @endif
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-4">
             <div class="bg-white shadow rounded-2xl">
                 <div class="px-6 py-4 border-b">
                     <h2 class="text-lg font-semibold">Category Summary</h2>
@@ -154,6 +161,23 @@
                         <span>Active Assignments</span>
                         <span class="font-semibold">{{ $activeAssignments }}</span>
                     </div>
+                </div>
+            </div>
+
+            <div class="bg-white shadow rounded-2xl">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-lg font-semibold">Unread Notifications</h2>
+                </div>
+                <div class="p-6 space-y-3 text-sm">
+                    @forelse($unreadNotifications as $notification)
+                        <a href="{{ route('notifications.open', $notification) }}"
+                            class="block px-1 pb-2 border-b rounded hover:bg-slate-50">
+                            <p class="font-medium">{{ $notification->title }}</p>
+                            <p class="text-slate-500">{{ $notification->message }}</p>
+                        </a>
+                    @empty
+                        <p class="text-slate-500">No unread notifications.</p>
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -230,35 +254,54 @@
             </div>
         </div>
 
-        <div class="bg-white shadow rounded-2xl">
-            <div class="px-6 py-4 border-b">
-                <h2 class="text-lg font-semibold">My Assignment History</h2>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left">Asset</th>
-                            <th class="px-6 py-3 text-left">Department</th>
-                            <th class="px-6 py-3 text-left">Assigned At</th>
-                            <th class="px-6 py-3 text-left">Returned At</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($myAssignmentHistory as $assignment)
-                            <tr class="border-b">
-                                <td class="px-6 py-3">{{ $assignment->item?->name ?? '-' }}</td>
-                                <td class="px-6 py-3">{{ $assignment->department?->name ?? '-' }}</td>
-                                <td class="px-6 py-3">{{ $assignment->assigned_at?->format('d M Y H:i') }}</td>
-                                <td class="px-6 py-3">{{ $assignment->returned_at?->format('d M Y H:i') ?? '-' }}</td>
-                            </tr>
-                        @empty
+        <div class="grid grid-cols-1 gap-6 mb-6 xl:grid-cols-2">
+            <div class="bg-white shadow rounded-2xl">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-lg font-semibold">My Assignment History</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-50">
                             <tr>
-                                <td colspan="4" class="px-6 py-6 text-center text-slate-500">No assignment history.</td>
+                                <th class="px-6 py-3 text-left">Asset</th>
+                                <th class="px-6 py-3 text-left">Department</th>
+                                <th class="px-6 py-3 text-left">Assigned At</th>
+                                <th class="px-6 py-3 text-left">Returned At</th>
                             </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse($myAssignmentHistory as $assignment)
+                                <tr class="border-b">
+                                    <td class="px-6 py-3">{{ $assignment->item?->name ?? '-' }}</td>
+                                    <td class="px-6 py-3">{{ $assignment->department?->name ?? '-' }}</td>
+                                    <td class="px-6 py-3">{{ $assignment->assigned_at?->format('d M Y H:i') }}</td>
+                                    <td class="px-6 py-3">{{ $assignment->returned_at?->format('d M Y H:i') ?? '-' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="px-6 py-6 text-center text-slate-500">No assignment history.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white shadow rounded-2xl">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-lg font-semibold">My Notifications</h2>
+                </div>
+                <div class="p-6 space-y-3 text-sm">
+                    @forelse($myNotifications as $notification)
+                        <a href="{{ route('notifications.open', $notification) }}"
+                            class="block px-1 pb-2 border-b rounded hover:bg-slate-50">
+                            <p class="font-medium">{{ $notification->title }}</p>
+                            <p class="text-slate-500">{{ $notification->message }}</p>
+                        </a>
+                    @empty
+                        <p class="text-slate-500">No notifications found.</p>
+                    @endforelse
+                </div>
             </div>
         </div>
     @endif

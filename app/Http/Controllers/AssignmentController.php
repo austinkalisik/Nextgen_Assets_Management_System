@@ -7,6 +7,7 @@ use App\Models\Assignment;
 use App\Models\Department;
 use App\Models\Item;
 use App\Models\User;
+use App\Services\SystemNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,7 +48,7 @@ class AssignmentController extends Controller
         return view('assignments.create', compact('items', 'users', 'departments'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, SystemNotificationService $notificationService): RedirectResponse
     {
         $request->validate([
             'rows' => ['required', 'array', 'min:1'],
@@ -75,6 +76,8 @@ class AssignmentController extends Controller
                 'assigned_at' => $row['assigned_at'],
             ]);
 
+            $assignment->load(['item', 'user', 'department']);
+
             $assignment->item->update([
                 'status' => 'assigned',
                 'department_id' => $row['department_id'],
@@ -86,6 +89,25 @@ class AssignmentController extends Controller
                 'action' => 'assigned',
             ]);
 
+            $notificationService->notifyUser(
+                $assignment->user_id,
+                'info',
+                'Asset assigned to you',
+                ($assignment->item->name ?? 'Asset') . ' has been assigned to you.',
+                route('items.show', $assignment->item_id),
+                Assignment::class,
+                $assignment->id
+            );
+
+            $notificationService->notifyAdmins(
+                'info',
+                'New assignment created',
+                ($assignment->item->name ?? 'Asset') . ' assigned to ' . ($assignment->user->name ?? 'User'),
+                route('assignments.index'),
+                Assignment::class,
+                $assignment->id
+            );
+
             $createdCount++;
         }
 
@@ -94,11 +116,13 @@ class AssignmentController extends Controller
             ->with('success', "{$createdCount} assignment(s) processed successfully.");
     }
 
-    public function return(Request $request, Assignment $assignment): RedirectResponse
+    public function return(Request $request, Assignment $assignment, SystemNotificationService $notificationService): RedirectResponse
     {
         if ($assignment->returned_at) {
             return back()->with('error', 'This assignment has already been returned.');
         }
+
+        $assignment->load(['item', 'user']);
 
         $assignment->update([
             'returned_at' => now(),
@@ -118,6 +142,25 @@ class AssignmentController extends Controller
             'user_id' => Auth::id() ?? 1,
             'action' => 'returned',
         ]);
+
+        $notificationService->notifyUser(
+            $assignment->user_id,
+            'success',
+            'Asset return recorded',
+            ($assignment->item->name ?? 'Asset') . ' return has been recorded.',
+            route('items.show', $assignment->item_id),
+            Assignment::class,
+            $assignment->id
+        );
+
+        $notificationService->notifyAdmins(
+            'success',
+            'Asset returned',
+            ($assignment->item->name ?? 'Asset') . ' has been returned.',
+            route('assignments.index'),
+            Assignment::class,
+            $assignment->id
+        );
 
         return redirect()
             ->route('assignments.index')

@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Department;
 use App\Models\Item;
 use App\Models\Supplier;
+use App\Services\SystemNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -62,7 +63,7 @@ class ItemController extends Controller
         return view('items.create', compact('categories', 'suppliers', 'departments'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, SystemNotificationService $notificationService): RedirectResponse
     {
         $request->validate([
             'rows' => ['required', 'array', 'min:1'],
@@ -105,6 +106,26 @@ class ItemController extends Controller
                 'action' => 'created',
             ]);
 
+            $notificationService->notifyAdmins(
+                'success',
+                'Asset created',
+                $item->name . ' was added to the system.',
+                route('items.show', $item),
+                Item::class,
+                $item->id
+            );
+
+            if ($item->status === 'maintenance') {
+                $notificationService->notifyAdmins(
+                    'warning',
+                    'Asset in maintenance',
+                    $item->name . ' was created with maintenance status.',
+                    route('items.show', $item),
+                    Item::class,
+                    $item->id
+                );
+            }
+
             $createdCount++;
         }
 
@@ -137,8 +158,10 @@ class ItemController extends Controller
         return view('items.edit', compact('item', 'categories', 'suppliers', 'departments'));
     }
 
-    public function update(Request $request, Item $item): RedirectResponse
+    public function update(Request $request, Item $item, SystemNotificationService $notificationService): RedirectResponse
     {
+        $oldStatus = $item->status;
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'exists:categories,id'],
@@ -160,18 +183,47 @@ class ItemController extends Controller
             'action' => 'updated',
         ]);
 
+        $notificationService->notifyAdmins(
+            'info',
+            'Asset updated',
+            $item->name . ' details were updated.',
+            route('items.show', $item),
+            Item::class,
+            $item->id
+        );
+
+        if ($oldStatus !== $item->status && $item->status === 'maintenance') {
+            $notificationService->notifyAdmins(
+                'warning',
+                'Asset moved to maintenance',
+                $item->name . ' is now under maintenance.',
+                route('items.show', $item),
+                Item::class,
+                $item->id
+            );
+        }
+
         return redirect()
             ->route('items.index')
             ->with('success', 'Asset updated successfully.');
     }
 
-    public function destroy(Item $item): RedirectResponse
+    public function destroy(Item $item, SystemNotificationService $notificationService): RedirectResponse
     {
         AssetLog::create([
             'item_id' => $item->id,
             'user_id' => Auth::id() ?? 1,
             'action' => 'deleted',
         ]);
+
+        $notificationService->notifyAdmins(
+            'warning',
+            'Asset deleted',
+            $item->name . ' was removed from the system.',
+            route('items.index'),
+            Item::class,
+            $item->id
+        );
 
         $item->delete();
 

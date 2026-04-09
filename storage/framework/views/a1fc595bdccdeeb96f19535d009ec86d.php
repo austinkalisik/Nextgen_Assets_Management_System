@@ -1,7 +1,7 @@
 
 
 <?php $__env->startSection('content'); ?>
-    <?php if($dashboardMode === 'admin'): ?>
+    <?php if($dashboardMode === 'operations'): ?>
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-4xl font-bold text-slate-900">Admin Dashboard</h1>
@@ -9,16 +9,18 @@
                 </p>
             </div>
 
-            <div class="flex gap-3">
-                <a href="<?php echo e(route('items.create')); ?>"
-                    class="rounded-xl bg-blue-600 px-4 py-2.5 text-white font-semibold hover:bg-blue-700">
-                    + Add Asset
-                </a>
-                <a href="<?php echo e(route('assignments.create')); ?>"
-                    class="rounded-xl bg-slate-900 px-4 py-2.5 text-white font-semibold hover:bg-slate-800">
-                    + Assign Asset
-                </a>
-            </div>
+            <?php if(auth()->user()->isAdmin() || auth()->user()->isAssetOfficer()): ?>
+                <div class="flex gap-3">
+                    <a href="<?php echo e(route('items.create')); ?>"
+                        class="rounded-xl bg-blue-600 px-4 py-2.5 text-white font-semibold hover:bg-blue-700">
+                        + Add Asset
+                    </a>
+                    <a href="<?php echo e(route('assignments.create')); ?>"
+                        class="rounded-xl bg-slate-900 px-4 py-2.5 text-white font-semibold hover:bg-slate-800">
+                        + Assign Asset
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3 xl:grid-cols-6">
@@ -86,21 +88,27 @@
                     <h2 class="text-lg font-semibold">System Activity</h2>
                 </div>
                 <div class="p-6 space-y-4 text-sm">
-                    <?php $__empty_1 = true; $__currentLoopData = $recentActivity; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $activity): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                        <div class="pb-3 border-b">
-                            <p class="font-semibold text-slate-900"><?php echo e(ucfirst(str_replace('_', ' ', $activity->action))); ?></p>
-                            <p class="text-slate-600"><?php echo e($activity->item?->name ?? 'Unknown asset'); ?></p>
-                            <p class="text-xs text-slate-400"><?php echo e($activity->user?->name ?? 'System'); ?> •
-                                <?php echo e($activity->created_at?->format('d M Y H:i')); ?></p>
+                    <?php if($dashboardMode == 'user'): ?>
+                    <div>
+                        <h2>My Recent Activity</h2>
+                        <?php $__empty_1 = true; $__currentLoopData = $myRecentActivity; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $activity): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <div>
+                            <?php echo e($activity->action); ?> - 
+                            <?php echo e($activity->item?->name ?? '_'); ?>
+
                         </div>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                        <p class="text-slate-500">No recent activity.</p>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <p>No Activity</p>
+                        <?php endif; ?>
+                        
+                    </div>
+                    
                     <?php endif; ?>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-4">
             <div class="bg-white shadow rounded-2xl">
                 <div class="px-6 py-4 border-b">
                     <h2 class="text-lg font-semibold">Category Summary</h2>
@@ -154,6 +162,23 @@
                         <span>Active Assignments</span>
                         <span class="font-semibold"><?php echo e($activeAssignments); ?></span>
                     </div>
+                </div>
+            </div>
+
+            <div class="bg-white shadow rounded-2xl">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-lg font-semibold">Unread Notifications</h2>
+                </div>
+                <div class="p-6 space-y-3 text-sm">
+                    <?php $__empty_1 = true; $__currentLoopData = $unreadNotifications; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $notification): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <a href="<?php echo e(route('notifications.open', $notification)); ?>"
+                            class="block px-1 pb-2 border-b rounded hover:bg-slate-50">
+                            <p class="font-medium"><?php echo e($notification->title); ?></p>
+                            <p class="text-slate-500"><?php echo e($notification->message); ?></p>
+                        </a>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <p class="text-slate-500">No unread notifications.</p>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -231,35 +256,54 @@
             </div>
         </div>
 
-        <div class="bg-white shadow rounded-2xl">
-            <div class="px-6 py-4 border-b">
-                <h2 class="text-lg font-semibold">My Assignment History</h2>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left">Asset</th>
-                            <th class="px-6 py-3 text-left">Department</th>
-                            <th class="px-6 py-3 text-left">Assigned At</th>
-                            <th class="px-6 py-3 text-left">Returned At</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php $__empty_1 = true; $__currentLoopData = $myAssignmentHistory; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $assignment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                            <tr class="border-b">
-                                <td class="px-6 py-3"><?php echo e($assignment->item?->name ?? '-'); ?></td>
-                                <td class="px-6 py-3"><?php echo e($assignment->department?->name ?? '-'); ?></td>
-                                <td class="px-6 py-3"><?php echo e($assignment->assigned_at?->format('d M Y H:i')); ?></td>
-                                <td class="px-6 py-3"><?php echo e($assignment->returned_at?->format('d M Y H:i') ?? '-'); ?></td>
-                            </tr>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+        <div class="grid grid-cols-1 gap-6 mb-6 xl:grid-cols-2">
+            <div class="bg-white shadow rounded-2xl">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-lg font-semibold">My Assignment History</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-50">
                             <tr>
-                                <td colspan="4" class="px-6 py-6 text-center text-slate-500">No assignment history.</td>
+                                <th class="px-6 py-3 text-left">Asset</th>
+                                <th class="px-6 py-3 text-left">Department</th>
+                                <th class="px-6 py-3 text-left">Assigned At</th>
+                                <th class="px-6 py-3 text-left">Returned At</th>
                             </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php $__empty_1 = true; $__currentLoopData = $myAssignmentHistory; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $assignment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                <tr class="border-b">
+                                    <td class="px-6 py-3"><?php echo e($assignment->item?->name ?? '-'); ?></td>
+                                    <td class="px-6 py-3"><?php echo e($assignment->department?->name ?? '-'); ?></td>
+                                    <td class="px-6 py-3"><?php echo e($assignment->assigned_at?->format('d M Y H:i')); ?></td>
+                                    <td class="px-6 py-3"><?php echo e($assignment->returned_at?->format('d M Y H:i') ?? '-'); ?></td>
+                                </tr>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                                <tr>
+                                    <td colspan="4" class="px-6 py-6 text-center text-slate-500">No assignment history.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white shadow rounded-2xl">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-lg font-semibold">My Notifications</h2>
+                </div>
+                <div class="p-6 space-y-3 text-sm">
+                    <?php $__empty_1 = true; $__currentLoopData = $myNotifications; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $notification): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <a href="<?php echo e(route('notifications.open', $notification)); ?>"
+                            class="block px-1 pb-2 border-b rounded hover:bg-slate-50">
+                            <p class="font-medium"><?php echo e($notification->title); ?></p>
+                            <p class="text-slate-500"><?php echo e($notification->message); ?></p>
+                        </a>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <p class="text-slate-500">No notifications found.</p>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     <?php endif; ?>

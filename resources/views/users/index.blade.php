@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-4xl font-bold text-slate-900">User Administration</h1>
             <p class="mt-1 text-slate-500">Provision accounts, assign roles, and monitor system ownership.</p>
@@ -13,32 +13,32 @@
         </a>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="rounded-2xl bg-white p-5 shadow">
+    <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-4">
+        <div class="p-5 bg-white shadow rounded-2xl">
             <p class="text-sm text-slate-500">Total Users</p>
             <h2 class="mt-2 text-3xl font-bold">{{ $users->total() }}</h2>
         </div>
-        <div class="rounded-2xl bg-white p-5 shadow">
+        <div class="p-5 bg-white shadow rounded-2xl">
             <p class="text-sm text-slate-500">Admins</p>
             <h2 class="mt-2 text-3xl font-bold text-red-600">{{ $users->where('role', 'admin')->count() }}</h2>
         </div>
-        <div class="rounded-2xl bg-white p-5 shadow">
+        <div class="p-5 bg-white shadow rounded-2xl">
             <p class="text-sm text-slate-500">Asset Officers</p>
             <h2 class="mt-2 text-3xl font-bold text-blue-600">{{ $users->where('role', 'asset_officer')->count() }}</h2>
         </div>
-        <div class="rounded-2xl bg-white p-5 shadow">
+        <div class="p-5 bg-white shadow rounded-2xl">
             <p class="text-sm text-slate-500">Managers</p>
             <h2 class="mt-2 text-3xl font-bold text-amber-500">{{ $users->where('role', 'manager')->count() }}</h2>
         </div>
     </div>
 
-    <form method="GET" action="{{ route('users.index') }}" class="mb-6 rounded-2xl bg-white p-4 shadow flex gap-3">
+    <form method="GET" action="{{ route('users.index') }}" class="flex gap-3 p-4 mb-6 bg-white shadow rounded-2xl">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by name, email, or role..."
-            class="flex-1 rounded-lg border px-4 py-2">
-        <button class="rounded-lg bg-slate-900 px-4 py-2 text-white font-semibold">Search</button>
+            class="flex-1 px-4 py-2 border rounded-lg">
+        <button class="px-4 py-2 font-semibold text-white rounded-lg bg-slate-900">Search</button>
     </form>
 
-    <div class="rounded-2xl bg-white shadow overflow-hidden">
+    <div class="overflow-hidden bg-white shadow rounded-2xl">
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-slate-50">
@@ -64,16 +64,16 @@
                             <td class="px-4 py-3">
                                 <div class="flex gap-2">
                                     <a href="{{ route('users.show', $user) }}"
-                                        class="rounded bg-slate-700 px-3 py-1 text-white text-xs">View</a>
+                                        class="px-3 py-1 text-xs text-white rounded bg-slate-700">View</a>
                                     <a href="{{ route('users.edit', $user) }}"
-                                        class="rounded bg-blue-600 px-3 py-1 text-white text-xs">Edit</a>
+                                        class="px-3 py-1 text-xs text-white bg-blue-600 rounded">Edit</a>
 
                                     @if(auth()->id() !== $user->id)
                                         <form method="POST" action="{{ route('users.destroy', $user) }}"
                                             onsubmit="return confirm('Delete this user?')">
                                             @csrf
                                             @method('DELETE')
-                                            <button class="rounded bg-red-600 px-3 py-1 text-white text-xs">Delete</button>
+                                            <button class="px-3 py-1 text-xs text-white bg-red-600 rounded">Delete</button>
                                         </form>
                                     @endif
                                 </div>

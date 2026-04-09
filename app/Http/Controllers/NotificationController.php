@@ -2,146 +2,110 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AssetLog;
-use App\Models\Assignment;
-use App\Models\Item;
+use App\Models\SystemNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class NotificationController extends Controller
 {
     public function index(Request $request): View
     {
-        $lowStockItems = Item::with(['category', 'department'])
-            ->where('quantity', '<=', 3)
-            ->orderBy('quantity')
-            ->get();
+        $baseQuery = SystemNotification::query()
+            ->where('user_id', Auth::id())
+            ->latest();
 
-        $maintenanceItems = Item::with(['category', 'department'])
-            ->where('status', 'maintenance')
-            ->latest()
-            ->get();
+        if ($request->filled('status')) {
+            if ($request->status === 'unread') {
+                $baseQuery->whereNull('read_at');
+            }
 
-        $overdueAssignments = Assignment::with(['item', 'user', 'department'])
-            ->whereNull('returned_at')
-            ->whereDate('assigned_at', '<=', now()->subDays(14))
-            ->latest('assigned_at')
-            ->get();
+            if ($request->status === 'read') {
+                $baseQuery->whereNotNull('read_at');
+            }
+        }
 
-        $recentAssignments = Assignment::with(['item', 'user', 'department'])
-            ->latest('assigned_at')
-            ->take(15)
-            ->get();
+        if ($request->filled('type')) {
+            $baseQuery->where('type', $request->type);
+        }
 
-        $recentActivity = AssetLog::with(['item', 'user'])
-            ->latest()
-            ->take(20)
-            ->get();
+        $notifications = (clone $baseQuery)->paginate(20)->withQueryString();
 
-        $alerts = collect();
+        $unreadCount = SystemNotification::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
 
-        foreach ($overdueAssignments as $assignment) {
-            $alerts->push([
-                'id' => 'overdue-assignment-' . $assignment->id,
-                'type' => 'critical',
-                'title' => 'Overdue assignment',
-                'message' => ($assignment->item->name ?? 'Asset') . ' is still assigned to ' . ($assignment->user->name ?? 'Unknown user'),
-                'meta' => 'Assigned ' . optional($assignment->assigned_at)->format('d M Y H:i'),
-                'created_at' => $assignment->assigned_at,
-                'url' => route('assignments.index'),
+        $criticalCount = SystemNotification::query()
+            ->where('user_id', Auth::id())
+            ->where('type', 'critical')
+            ->whereNull('read_at')
+            ->count();
+
+        $warningCount = SystemNotification::query()
+            ->where('user_id', Auth::id())
+            ->where('type', 'warning')
+            ->whereNull('read_at')
+            ->count();
+
+        $infoCount = SystemNotification::query()
+            ->where('user_id', Auth::id())
+            ->where('type', 'info')
+            ->whereNull('read_at')
+            ->count();
+
+        $successCount = SystemNotification::query()
+            ->where('user_id', Auth::id())
+            ->where('type', 'success')
+            ->whereNull('read_at')
+            ->count();
+
+        return view('notifications.index', compact(
+            'notifications',
+            'unreadCount',
+            'criticalCount',
+            'warningCount',
+            'infoCount',
+            'successCount'
+        ));
+    }
+
+    public function open(SystemNotification $notification): RedirectResponse
+    {
+        abort_unless($notification->user_id === Auth::id(), 403);
+
+        if (is_null($notification->read_at)) {
+            $notification->update([
+                'read_at' => now(),
             ]);
         }
 
-        foreach ($lowStockItems as $item) {
-            $alerts->push([
-                'id' => 'low-stock-' . $item->id,
-                'type' => 'warning',
-                'title' => 'Low stock',
-                'message' => $item->name . ' is low in stock',
-                'meta' => 'Qty: ' . $item->quantity . ' • ' . ($item->department->name ?? 'No department'),
-                'created_at' => $item->updated_at,
-                'url' => route('items.show', $item),
+        return redirect($notification->url ?: route('dashboard'));
+    }
+
+    public function markRead(SystemNotification $notification): RedirectResponse
+    {
+        abort_unless($notification->user_id === Auth::id(), 403);
+
+        if (is_null($notification->read_at)) {
+            $notification->update([
+                'read_at' => now(),
             ]);
         }
 
-        foreach ($maintenanceItems as $item) {
-            $alerts->push([
-                'id' => 'maintenance-' . $item->id,
-                'type' => 'warning',
-                'title' => 'Maintenance required',
-                'message' => $item->name . ' is under maintenance',
-                'meta' => ($item->category->name ?? 'No category') . ' • ' . ($item->department->name ?? 'No department'),
-                'created_at' => $item->updated_at,
-                'url' => route('items.show', $item),
-            ]);
-        }
-
-        foreach ($recentAssignments->take(5) as $assignment) {
-            $alerts->push([
-                'id' => 'recent-assignment-' . $assignment->id,
-                'type' => 'info',
-                'title' => 'New assignment',
-                'message' => ($assignment->item->name ?? 'Asset') . ' assigned to ' . ($assignment->user->name ?? 'Unknown user'),
-                'meta' => optional($assignment->assigned_at)->format('d M Y H:i'),
-                'created_at' => $assignment->assigned_at,
-                'url' => route('assignments.index'),
-            ]);
-        }
-
-        foreach ($recentActivity->take(5) as $activity) {
-            $alerts->push([
-                'id' => 'activity-' . $activity->id,
-                'type' => 'info',
-                'title' => ucfirst(str_replace('_', ' ', $activity->action)),
-                'message' => ($activity->item->name ?? 'Unknown asset') . ' by ' . ($activity->user->name ?? 'System'),
-                'meta' => optional($activity->created_at)->format('d M Y H:i'),
-                'created_at' => $activity->created_at,
-                'url' => $activity->item ? route('items.show', $activity->item) : route('dashboard'),
-            ]);
-        }
-
-        $alerts = $alerts
-            ->sortByDesc(fn ($alert) => $alert['created_at'] ?? now())
-            ->values();
-
-        $readIds = collect(session('read_notifications', []));
-        $unreadCount = $alerts->filter(fn ($alert) => ! $readIds->contains($alert['id']))->count();
-
-        return view('notifications.index', [
-            'alerts' => $alerts,
-            'unreadCount' => $unreadCount,
-            'lowStockItems' => $lowStockItems,
-            'maintenanceItems' => $maintenanceItems,
-            'overdueAssignments' => $overdueAssignments,
-            'recentAssignments' => $recentAssignments,
-            'recentActivity' => $recentActivity,
-        ]);
+        return back()->with('success', 'Notification marked as read.');
     }
 
     public function markAllRead(): RedirectResponse
     {
-        $lowStockIds = Item::where('quantity', '<=', 3)->pluck('id')->map(fn ($id) => 'low-stock-' . $id);
-        $maintenanceIds = Item::where('status', 'maintenance')->pluck('id')->map(fn ($id) => 'maintenance-' . $id);
-        $overdueIds = Assignment::whereNull('returned_at')
-            ->whereDate('assigned_at', '<=', now()->subDays(14))
-            ->pluck('id')
-            ->map(fn ($id) => 'overdue-assignment-' . $id);
-        $recentAssignmentIds = Assignment::latest('assigned_at')->take(5)->pluck('id')->map(fn ($id) => 'recent-assignment-' . $id);
-        $recentActivityIds = AssetLog::latest()->take(5)->pluck('id')->map(fn ($id) => 'activity-' . $id);
+        SystemNotification::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now(),
+            ]);
 
-        $readIds = $lowStockIds
-            ->concat($maintenanceIds)
-            ->concat($overdueIds)
-            ->concat($recentAssignmentIds)
-            ->concat($recentActivityIds)
-            ->values()
-            ->all();
-
-        session(['read_notifications' => $readIds]);
-
-        return redirect()
-            ->route('notifications.index')
-            ->with('success', 'All notifications marked as read.');
+        return back()->with('success', 'All notifications marked as read.');
     }
 }

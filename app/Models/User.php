@@ -50,8 +50,43 @@ class User extends Authenticatable
         return $this->hasMany(AssetLog::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(SystemNotification::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isAssetOfficer(): bool
+    {
+        return $this->role === 'asset_officer';
+    }
+
+    public function isManager(): bool
+    {
+        return $this->role === 'manager';
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->role === 'staff';
+    }
+
+    public function canManageUsers(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function canManageAssets(): bool
+    {
+        return $this->isAdmin() || $this->isAssetOfficer();
+    }
+
+    public function canMonitorOperations(): bool
+    {
+        return $this->isAdmin() || $this->isManager() || $this->isAssetOfficer();
     }
 }

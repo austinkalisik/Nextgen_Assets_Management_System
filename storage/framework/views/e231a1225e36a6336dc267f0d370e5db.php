@@ -13,49 +13,17 @@
     <div class="flex min-h-screen">
         <?php echo $__env->make('layouts.navigation', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-        <main class="flex-1 p-6">
-            <div class="mx-auto max-w-7xl">
+        <main class="flex-1">
+            <div class="px-6 py-4 bg-white border-b shadow-sm border-slate-200">
                 <?php
-                    $liveAlerts = collect();
-
-                    $overdueAssignments = \App\Models\Assignment::whereNull('returned_at')
-                        ->whereDate('assigned_at', '<=', now()->subDays(14))
-                        ->pluck('id')
-                        ->map(fn($id) => 'overdue-assignment-' . $id);
-
-                    $lowStockItems = \App\Models\Item::where('quantity', '<=', 3)
-                        ->pluck('id')
-                        ->map(fn($id) => 'low-stock-' . $id);
-
-                    $maintenanceItems = \App\Models\Item::where('status', 'maintenance')
-                        ->pluck('id')
-                        ->map(fn($id) => 'maintenance-' . $id);
-
-                    $recentAssignments = \App\Models\Assignment::latest('assigned_at')
-                        ->take(5)
-                        ->pluck('id')
-                        ->map(fn($id) => 'recent-assignment-' . $id);
-
-                    $recentActivities = \App\Models\AssetLog::latest()
-                        ->take(5)
-                        ->pluck('id')
-                        ->map(fn($id) => 'activity-' . $id);
-
-                    $liveAlerts = $liveAlerts
-                        ->concat($overdueAssignments)
-                        ->concat($lowStockItems)
-                        ->concat($maintenanceItems)
-                        ->concat($recentAssignments)
-                        ->concat($recentActivities)
-                        ->unique()
-                        ->values();
-
-                    $readIds = collect(session('read_notifications', []));
-                    $notificationCount = $liveAlerts->filter(fn($id) => !$readIds->contains($id))->count();
+                    $notificationCount = \App\Models\SystemNotification::query()
+                        ->where('user_id', auth()->id())
+                        ->whereNull('read_at')
+                        ->count();
                 ?>
 
-                <div class="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-                    <form method="GET" action="<?php echo e(route('items.index')); ?>" class="w-full max-w-2xl">
+                <div class="mx-auto flex max-w-[1500px] items-center justify-between gap-4">
+                    <form method="GET" action="<?php echo e(route('items.index')); ?>" class="w-full max-w-xl">
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
@@ -66,13 +34,13 @@
                             </span>
                             <input type="text" name="search" value="<?php echo e(request('search')); ?>"
                                 placeholder="Search assets, tags, serial numbers, locations..."
-                                class="w-full py-3 pr-4 bg-white border shadow-sm rounded-2xl border-slate-200 pl-11 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                         </div>
                     </form>
 
                     <div class="flex items-center gap-3">
-                        <a href="<?php echo e(route('notifications.index')); ?>" target="_blank"
-                            class="relative px-4 py-3 bg-white border shadow-sm rounded-2xl border-slate-200 hover:bg-slate-50">
+                        <a href="<?php echo e(route('notifications.index')); ?>"
+                            class="relative rounded-xl border border-slate-200 bg-white px-4 py-2.5 hover:bg-slate-50">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-600" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -88,42 +56,47 @@
                             <?php endif; ?>
                         </a>
 
-                        <div class="px-4 py-3 bg-white border shadow-sm rounded-2xl border-slate-200">
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
                             <div class="text-sm font-semibold text-slate-900"><?php echo e(auth()->user()->name ?? 'User'); ?></div>
                             <div class="text-xs text-slate-500">
                                 <?php echo e(ucfirst(str_replace('_', ' ', auth()->user()->role ?? 'staff'))); ?></div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <?php if(session('success')): ?>
-                    <div class="px-4 py-3 mb-4 text-green-700 border border-green-200 rounded-xl bg-green-50">
-                        <?php echo e(session('success')); ?>
+            <div class="px-6 py-6">
+                <div class="mx-auto max-w-[1500px]">
+                    <?php if(session('success')): ?>
+                        <div class="px-4 py-3 mb-4 text-green-700 border border-green-200 rounded-xl bg-green-50">
+                            <?php echo e(session('success')); ?>
 
-                    </div>
-                <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
 
-                <?php if(session('error')): ?>
-                    <div class="px-4 py-3 mb-4 text-red-700 border border-red-200 rounded-xl bg-red-50">
-                        <?php echo e(session('error')); ?>
+                    <?php if(session('error')): ?>
+                        <div class="px-4 py-3 mb-4 text-red-700 border border-red-200 rounded-xl bg-red-50">
+                            <?php echo e(session('error')); ?>
 
-                    </div>
-                <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
 
-                <?php if($errors->any()): ?>
-                    <div class="px-4 py-3 mb-4 text-red-700 border border-red-200 rounded-xl bg-red-50">
-                        <p class="mb-2 font-semibold">Please fix the following errors:</p>
-                        <ul class="text-sm list-disc list-inside">
-                            <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <li><?php echo e($error); ?></li>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        </ul>
-                    </div>
-                <?php endif; ?>
+                    <?php if($errors->any()): ?>
+                        <div class="px-4 py-3 mb-4 text-red-700 border border-red-200 rounded-xl bg-red-50">
+                            <p class="mb-2 font-semibold">Please fix the following errors:</p>
+                            <ul class="text-sm list-disc list-inside">
+                                <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <li><?php echo e($error); ?></li>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
 
-                <?php echo $__env->yieldContent('content'); ?>
+                    <?php echo $__env->yieldContent('content'); ?>
+                </div>
             </div>
         </main>
     </div>
 </body>
+
 </html><?php /**PATH C:\Users\akalisik\Project\backend\resources\views/layouts/app.blade.php ENDPATH**/ ?>

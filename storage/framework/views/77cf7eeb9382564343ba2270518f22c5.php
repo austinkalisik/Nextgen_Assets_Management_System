@@ -4,26 +4,27 @@
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-bold">Assets</h1>
-            <p class="text-slate-500">Manage all company assets</p>
+            <p class="text-slate-500">Manage asset records, ownership, status, and lifecycle</p>
         </div>
+
         <div class="flex gap-3">
             <a href="<?php echo e(route('items.create')); ?>"
                 class="px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-                + Add Asset
+                + Add Assets
             </a>
             <a href="<?php echo e(route('assignments.create')); ?>"
                 class="px-4 py-2 font-semibold text-white rounded-lg bg-slate-900 hover:bg-slate-800">
-                Assign Asset
+                Assign Assets
             </a>
         </div>
     </div>
 
     <form method="GET" action="<?php echo e(route('items.index')); ?>"
-        class="grid grid-cols-1 gap-4 p-4 mb-6 bg-white shadow md:grid-cols-4 rounded-2xl">
-        <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="Search asset..."
-            class="px-4 py-2 border rounded-lg border-slate-300">
+        class="grid grid-cols-1 gap-4 p-4 mb-6 bg-white shadow rounded-2xl md:grid-cols-4">
+        <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="Search assets..."
+            class="px-4 py-2 border rounded-lg">
 
-        <select name="status" class="px-4 py-2 border rounded-lg border-slate-300">
+        <select name="status" class="px-4 py-2 border rounded-lg">
             <option value="">All Status</option>
             <option value="available" <?php if(request('status') === 'available'): echo 'selected'; endif; ?>>Available</option>
             <option value="assigned" <?php if(request('status') === 'assigned'): echo 'selected'; endif; ?>>Assigned</option>
@@ -31,7 +32,7 @@
             <option value="retired" <?php if(request('status') === 'retired'): echo 'selected'; endif; ?>>Retired</option>
         </select>
 
-        <select name="category_id" class="px-4 py-2 border rounded-lg border-slate-300">
+        <select name="category_id" class="px-4 py-2 border rounded-lg">
             <option value="">All Categories</option>
             <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <option value="<?php echo e($category->id); ?>" <?php if((string) request('category_id') === (string) $category->id): echo 'selected'; endif; ?>>
@@ -41,7 +42,7 @@
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </select>
 
-        <select name="department_id" class="px-4 py-2 border rounded-lg border-slate-300">
+        <select name="department_id" class="px-4 py-2 border rounded-lg">
             <option value="">All Departments</option>
             <?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $department): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <option value="<?php echo e($department->id); ?>" <?php if((string) request('department_id') === (string) $department->id): echo 'selected'; endif; ?>>
@@ -62,11 +63,11 @@
             <table class="min-w-full text-sm">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-4 py-3 text-left">Name</th>
+                        <th class="px-4 py-3 text-left">Asset</th>
+                        <th class="px-4 py-3 text-left">Tag</th>
                         <th class="px-4 py-3 text-left">Category</th>
                         <th class="px-4 py-3 text-left">Supplier</th>
                         <th class="px-4 py-3 text-left">Department</th>
-                        <th class="px-4 py-3 text-left">Qty</th>
                         <th class="px-4 py-3 text-left">Status</th>
                         <th class="px-4 py-3 text-left">Assigned To</th>
                         <th class="px-4 py-3 text-left">Actions</th>
@@ -76,10 +77,10 @@
                     <?php $__empty_1 = true; $__currentLoopData = $items; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr class="border-b">
                             <td class="px-4 py-3 font-medium"><?php echo e($item->name); ?></td>
+                            <td class="px-4 py-3"><?php echo e($item->asset_tag ?? '-'); ?></td>
                             <td class="px-4 py-3"><?php echo e($item->category?->name ?? '-'); ?></td>
                             <td class="px-4 py-3"><?php echo e($item->supplier?->name ?? '-'); ?></td>
                             <td class="px-4 py-3"><?php echo e($item->department?->name ?? '-'); ?></td>
-                            <td class="px-4 py-3"><?php echo e($item->quantity); ?></td>
                             <td class="px-4 py-3"><?php echo e(ucfirst($item->status)); ?></td>
                             <td class="px-4 py-3"><?php echo e($item->activeAssignment?->user?->name ?? '-'); ?></td>
                             <td class="px-4 py-3">
