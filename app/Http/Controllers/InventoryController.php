@@ -22,15 +22,9 @@ class InventoryController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('asset_tag', 'like', "%{$search}%")
                     ->orWhere('serial_number', 'like', "%{$search}%")
-                    ->orWhereHas('category', function ($sub) use ($search) {
-                        $sub->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('supplier', function ($sub) use ($search) {
-                        $sub->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('department', function ($sub) use ($search) {
-                        $sub->where('name', 'like', "%{$search}%");
-                    });
+                    ->orWhereHas('category', fn($sub) => $sub->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('supplier', fn($sub) => $sub->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('department', fn($sub) => $sub->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -40,63 +34,56 @@ class InventoryController extends Controller
     }
 
     public function stockOut(Request $request, Item $item)
-    {
-        $validated = $request->validate([
-            'quantity' => 'required|integer|min:1',
-        ]);
+{
+    $validated = $request->validate([
+        'quantity' => 'required|integer|min:1',
+    ]);
 
-        $item->decrement('quantity', $validated['quantity']);
-        $item->refresh();
-
-        if ($item->quantity <= 0) {
-            $item->update([
-                'status' => 'maintenance',
-                'quantity' => 0,
-            ]);
-            $item->refresh();
-        }
-
-        $authUser = Auth::user();
-
-        AssetLog::create([
-            'item_id' => $item->id,
-            'user_id' => $authUser?->id ?? 1,
-            'action' => 'stock_out',
-            'notes' => 'Stock decreased by ' . $validated['quantity'] . '. New qty: ' . $item->quantity,
-        ]);
-
-        return back()->with('success', 'Stock out recorded successfully.');
+    //  Prevent negative stock
+    if ($validated['quantity'] > $item->quantity) {
+        return back()->with('error', 'Not enough stock available.');
     }
 
-    public function stockIn(Request $request, Item $item)
-    {
-        $validated = $request->validate([
-            'quantity' => 'required|integer|min:1',
-        ]);
+    // 🔻 Decrease stock
+    $item->decrement('quantity', $validated['quantity']);
+    $item->refresh();
 
-        $item->increment('quantity', $validated['quantity']);
-        $item->refresh();
+    //  Auto status update
+    $item->syncAutomatedStatus();
 
-        if ($item->status === 'maintenance' && $item->quantity > 0) {
-            $hasActiveAssignment = Assignment::where('item_id', $item->id)
-                ->whereNull('returned_at')
-                ->exists();
+    //  Log
+    AssetLog::create([
+        'item_id' => $item->id,
+        'user_id' => Auth::id() ?? 1,
+        'action' => 'stock_out',
+        'notes' => "Stock out: -{$validated['quantity']}",
+    ]);
 
-            if (! $hasActiveAssignment) {
-                $item->update(['status' => 'available']);
-                $item->refresh();
-            }
-        }
+    return back()->with('success', 'Stock out recorded.');
+}
 
-        $authUser = Auth::user();
+public function stockIn(Request $request, Item $item)
+{
+    $validated = $request->validate([
+        'quantity' => 'required|integer|min:1',
+    ]);
 
-        AssetLog::create([
-            'item_id' => $item->id,
-            'user_id' => $authUser?->id ?? 1,
-            'action' => 'stock_in',
-            'notes' => 'Stock increased by ' . $validated['quantity'] . '. New qty: ' . $item->quantity,
-        ]);
+    // 🔺 Increase stock
+    $item->increment('quantity', $validated['quantity']);
+    $item->refresh();
 
-        return back()->with('success', 'Stock in recorded successfully.');
-    }
+    //  Auto status update
+    $item->syncAutomatedStatus();
+
+    // Log
+    AssetLog::create([
+        'item_id' => $item->id,
+        'user_id' => Auth::id() ?? 1,
+        'action' => 'stock_in',
+        'notes' => "Stock in: +{$validated['quantity']}",
+    ]);
+
+    return back()->with('success', 'Stock updated.');
+}
+
 }

@@ -53,7 +53,7 @@
                             <option value="">Select Department</option>
                             @foreach($departments as $department)
                                 <option value="{{ $department->id }}"
-                                    @selected(old('rows.0.assigned_department_id') == $department->id)>
+                                    @selected(old('rows.0.department_id') == $department->id)>
                                     {{ $department->name }}
                                 </option>
                             @endforeach

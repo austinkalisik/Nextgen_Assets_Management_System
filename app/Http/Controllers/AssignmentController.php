@@ -54,7 +54,7 @@ class AssignmentController extends Controller
         'rows' => ['required', 'array', 'min:1'],
         'rows.*.item_id' => ['required', 'exists:items,id'],
         'rows.*.user_id' => ['required', 'exists:users,id'],
-        'rows.*.department_id' => ['required', 'exists:departments,id'], // ✅ FIXED
+        'rows.*.department_id' => ['required', 'exists:departments,id'],
         'rows.*.assigned_at' => ['required', 'date'],
     ]);
 
@@ -63,7 +63,14 @@ class AssignmentController extends Controller
 
     foreach ($request->rows as $row) {
 
-        // Prevent double assignment
+        $item = Item::find($row['item_id']);
+
+        //  Prevent assigning empty stock
+        if ($item->quantity <= 0) {
+            continue;
+        }
+
+        //  Prevent double assignment
         $alreadyAssigned = Assignment::where('item_id', $row['item_id'])
             ->whereNull('returned_at')
             ->exists();
@@ -72,51 +79,42 @@ class AssignmentController extends Controller
             continue;
         }
 
-        //  CREATE ASSIGNMENT
+        //  Create assignment
         $assignment = Assignment::create([
             'item_id' => $row['item_id'],
             'user_id' => $row['user_id'],
-            'department_id' => $row['department_id'], // FIXED
+            'department_id' => $row['department_id'],
             'assigned_at' => $row['assigned_at'],
         ]);
 
         $assignment->load(['item', 'user', 'assignedDepartment']);
 
-        //  UPDATE ITEM STATUS + DEPARTMENT
-        $assignment->item->update([
-            'status' => 'assigned',
+        //  Reduce quantity (REAL SYSTEM LOGIC)
+        $item->decrement('quantity');
+
+        //  Sync status automatically
+        $item->syncAutomatedStatus();
+
+        //  Update department
+        $item->update([
             'department_id' => $row['department_id'],
         ]);
 
-        //  LOG ACTIVITY
+        //  Log
         AssetLog::create([
-            'item_id' => $row['item_id'],
+            'item_id' => $item->id,
             'user_id' => $authUser?->id ?? 1,
             'action' => 'assigned',
-            'notes' => ($assignment->item->name ?? 'Asset') . 
-                ' assigned to ' . ($assignment->user->name ?? 'User') . 
-                ' in ' . ($assignment->assignedDepartment->name ?? 'Department'),
+            'notes' => "{$item->name} assigned to {$assignment->user->name}",
         ]);
 
-        //  NOTIFY USER
+        //  Notifications
         $notificationService->notifyUser(
             $assignment->user_id,
             'info',
-            'Asset assigned to you',
-            ($assignment->item->name ?? 'Asset') . ' has been assigned to you.',
-            route('items.show', $assignment->item_id),
-            Assignment::class,
-            $assignment->id
-        );
-
-        //  NOTIFY ADMINS
-        $notificationService->notifyAdmins(
-            'info',
-            'New assignment created',
-            ($assignment->item->name ?? 'Asset') . ' assigned to ' . ($assignment->user->name ?? 'User'),
-            route('assignments.index'),
-            Assignment::class,
-            $assignment->id
+            'Asset assigned',
+            "{$item->name} assigned to you",
+            route('items.show', $item->id)
         );
 
         $createdCount++;
@@ -124,7 +122,7 @@ class AssignmentController extends Controller
 
     return redirect()
         ->route('assignments.index')
-        ->with('success', "{$createdCount} assignment(s) processed successfully.");
+        ->with('success', "{$createdCount} assignment(s) processed.");
 }
 
     public function return(Request $request, Assignment $assignment, SystemNotificationService $notificationService): RedirectResponse
