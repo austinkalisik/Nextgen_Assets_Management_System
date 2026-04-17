@@ -16,7 +16,11 @@ function formatDate(value) {
 }
 
 export default function DashboardPage() {
-    const { data, loading, error, refetch } = useApi('/dashboard', {}, { ttl: 180000 });
+    const { data, loading, refreshing, error, refetch } = useApi(
+        '/dashboard',
+        {},
+        { ttl: 180000 }
+    );
 
     const stats = [
         {
@@ -66,9 +70,7 @@ export default function DashboardPage() {
         return (
             <div className="space-y-4">
                 <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                    <p className="text-sm text-red-700">
-                        Failed to load dashboard data: {error}
-                    </p>
+                    <p className="text-sm text-red-700">Failed to load dashboard data: {error}</p>
                 </div>
 
                 <button
@@ -81,7 +83,6 @@ export default function DashboardPage() {
             </div>
         );
     }
-    
 
     return (
         <div className="space-y-8">
@@ -99,6 +100,12 @@ export default function DashboardPage() {
                     <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
                         Operational control center for assets, assignments, departments, and system activity.
                     </p>
+
+                    {refreshing ? (
+                        <p className="mt-3 text-sm font-medium text-blue-600">
+                            Updating dashboard...
+                        </p>
+                    ) : null}
 
                     <div className="mt-4 flex flex-wrap gap-3">
                         <Link
@@ -118,9 +125,10 @@ export default function DashboardPage() {
                         <button
                             type="button"
                             onClick={() => void refetch()}
-                            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                            disabled={refreshing}
+                            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            Refresh
+                            {refreshing ? 'Refreshing...' : 'Refresh'}
                         </button>
                     </div>
                 </div>
@@ -162,12 +170,8 @@ export default function DashboardPage() {
                     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    Recent Assignments
-                                </h2>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Latest asset movement across departments.
-                                </p>
+                                <h2 className="text-lg font-semibold text-slate-900">Recent Assignments</h2>
+                                <p className="mt-1 text-sm text-slate-500">Latest asset movement across departments.</p>
                             </div>
                         </div>
 
@@ -214,10 +218,7 @@ export default function DashboardPage() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td
-                                                colSpan="5"
-                                                className="px-6 py-4 text-center text-slate-500"
-                                            >
+                                            <td colSpan="5" className="px-6 py-4 text-center text-slate-500">
                                                 No recent assignments
                                             </td>
                                         </tr>
@@ -260,7 +261,7 @@ export default function DashboardPage() {
                     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h3 className="text-lg font-semibold text-slate-900">Slow Internet Friendly</h3>
                         <p className="mt-1 text-sm text-slate-500">
-                            Dashboard data is cached. Returning to this page should feel faster now.
+                            Dashboard data is cached, so going back to this page should be faster.
                         </p>
                     </div>
                 </div>

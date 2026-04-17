@@ -57,7 +57,6 @@ async function fetchWithCache(endpoint, options, cacheKey, ttl, force = false) {
             });
 
             inFlightRequests.delete(cacheKey);
-
             return data;
         })
         .catch((error) => {
@@ -110,6 +109,7 @@ export function useApi(endpoint, options = {}, config = {}) {
 
     const [data, setData] = useState(initialCached);
     const [loading, setLoading] = useState(enabled && initialCached === null);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
 
     const mountedRef = useRef(true);
@@ -120,7 +120,12 @@ export function useApi(endpoint, options = {}, config = {}) {
                 return null;
             }
 
-            setLoading(true);
+            if (force) {
+                setRefreshing(true);
+            } else {
+                setLoading(true);
+            }
+
             setError(null);
 
             try {
@@ -144,13 +149,13 @@ export function useApi(endpoint, options = {}, config = {}) {
                             err?.message ||
                             'An error occurred'
                     );
-                    setData(null);
                 }
 
                 throw err;
             } finally {
                 if (mountedRef.current) {
                     setLoading(false);
+                    setRefreshing(false);
                 }
             }
         },
@@ -158,12 +163,13 @@ export function useApi(endpoint, options = {}, config = {}) {
     );
 
     const refetch = useCallback(async () => {
+        invalidateApiCache(cacheKey);
         return execute(true);
-    }, [execute]);
+    }, [cacheKey, execute]);
 
     const invalidate = useCallback(() => {
-        invalidateApiCache(endpoint);
-    }, [endpoint]);
+        invalidateApiCache(cacheKey);
+    }, [cacheKey]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -193,6 +199,7 @@ export function useApi(endpoint, options = {}, config = {}) {
     return {
         data,
         loading,
+        refreshing,
         error,
         refetch,
         invalidate,
