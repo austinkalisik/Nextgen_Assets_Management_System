@@ -1,39 +1,27 @@
+// file: README.md
 # NextGen Assets Management System
 
 A Laravel + React asset management system for tracking assets, assignments, departments, inventory, suppliers, users, notifications, settings, and profile images.
 
-## Features
-
-- Laravel backend API
-- React SPA frontend
-- Authentication and session-based login
-- Dashboard
-- Assets management
-- Assignments tracking
-- Inventory monitoring
-- Categories, departments, and suppliers
-- Users and profile management
-- Settings management
-- Profile image upload
-
 ## Tech Stack
 
-- PHP 8.2+
 - Laravel
 - React
 - Vite
 - MySQL
 - Tailwind CSS
+- XAMPP
+- VS Code
 
 ## Requirements
 
-Make sure these are installed before running the project:
+Install these first:
 
-- PHP 8.2 or newer
+- XAMPP
+- PHP 8.2+
 - Composer
-- Node.js 18 or newer
+- Node.js 18+
 - npm
-- MySQL or XAMPP
 - Git
 - VS Code
 

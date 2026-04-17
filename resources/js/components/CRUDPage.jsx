@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { invalidateApiCache, useApi } from '../hooks/useApi';
 import apiClient from '../api/client';
 import { downloadCsv } from '../utils/csv';
 
@@ -26,10 +27,11 @@ export function CRUDPage({
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
     const [form, setForm] = useState({});
     const [meta, setMeta] = useState({
         current_page: 1,
@@ -55,43 +57,57 @@ export function CRUDPage({
         setSearchInput(searchInputFromUrl);
     }, [searchInputFromUrl]);
 
+    const requestOptions = useMemo(
+        () => ({
+            params: {
+                search: searchInputFromUrl || undefined,
+                page: pageFromUrl > 0 ? pageFromUrl : 1,
+                per_page: 10,
+            },
+        }),
+        [searchInputFromUrl, pageFromUrl]
+    );
+
+    const {
+        data: payload,
+        loading,
+        error: loadError,
+        refetch,
+    } = useApi(`/${endpoint}`, requestOptions, { ttl: 180000 });
+
     useEffect(() => {
-        void fetchItems();
-    }, [searchInputFromUrl, pageFromUrl]);
-
-    async function fetchItems() {
-        try {
-            setLoading(true);
-
-            const response = await apiClient.get(`/${endpoint}`, {
-                params: {
-                    search: searchInputFromUrl || undefined,
-                    page: pageFromUrl > 0 ? pageFromUrl : 1,
-                    per_page: 10,
-                },
-            });
-
-            const payload = response.data;
-
-            setItems(payload.data || []);
-            setMeta({
-                current_page: payload.current_page || 1,
-                last_page: payload.last_page || 1,
-                total: payload.total || 0,
-                per_page: payload.per_page || 10,
-            });
-            setError('');
-        } catch (err) {
-            setError(err?.response?.data?.message || `Failed to load ${endpoint}`);
-        } finally {
-            setLoading(false);
+        if (!payload) {
+            return;
         }
+
+        setItems(payload.data || []);
+        setMeta({
+            current_page: payload.current_page || 1,
+            last_page: payload.last_page || 1,
+            total: payload.total || 0,
+            per_page: payload.per_page || 10,
+        });
+        setError('');
+    }, [payload]);
+
+    useEffect(() => {
+        if (loadError) {
+            setError(loadError);
+        }
+    }, [loadError]);
+
+    async function refreshList() {
+        invalidateApiCache(`/${endpoint}`);
+        await refetch();
     }
 
     async function handleSubmit(event) {
         event.preventDefault();
 
         try {
+            setSaving(true);
+            setError('');
+
             if (editingId) {
                 await apiClient.put(`/${endpoint}/${editingId}`, form);
             } else {
@@ -99,9 +115,11 @@ export function CRUDPage({
             }
 
             resetForm();
-            await fetchItems();
+            await refreshList();
         } catch (err) {
             setError(err?.response?.data?.message || 'Failed to save');
+        } finally {
+            setSaving(false);
         }
     }
 
@@ -111,10 +129,15 @@ export function CRUDPage({
         }
 
         try {
+            setDeletingId(id);
+            setError('');
+
             await apiClient.delete(`/${endpoint}/${id}`);
-            await fetchItems();
+            await refreshList();
         } catch (err) {
             setError(err?.response?.data?.message || 'Failed to delete');
+        } finally {
+            setDeletingId(null);
         }
     }
 
@@ -138,7 +161,6 @@ export function CRUDPage({
         setForm(nextForm);
         setEditingId(null);
         setShowForm(false);
-        setError('');
     }
 
     function handleSearchSubmit(event) {
@@ -186,7 +208,7 @@ export function CRUDPage({
         return `Add ${title}`;
     }, [createLabel, title]);
 
-    if (loading) {
+    if (loading && !payload) {
         return <div className="text-slate-500">Loading {endpoint}...</div>;
     }
 
@@ -283,9 +305,10 @@ export function CRUDPage({
                         <div className="flex gap-3">
                             <button
                                 type="submit"
-                                className="rounded-xl bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+                                disabled={saving}
+                                className="rounded-xl bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
                             >
-                                {editingId ? 'Update' : 'Create'}
+                                {saving ? 'Saving...' : editingId ? 'Update' : 'Create'}
                             </button>
 
                             <button
@@ -336,9 +359,10 @@ export function CRUDPage({
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(item.id)}
-                                                className="text-red-600 hover:underline"
+                                                disabled={deletingId === item.id}
+                                                className="text-red-600 hover:underline disabled:opacity-50"
                                             >
-                                                Delete
+                                                {deletingId === item.id ? 'Deleting...' : 'Delete'}
                                             </button>
                                         </td>
                                     </tr>
@@ -385,3 +409,4 @@ export function CRUDPage({
 }
 
 export default CRUDPage;
+
