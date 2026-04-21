@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import apiClient from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -8,7 +9,7 @@ export function AuthProvider({ children }) {
 
     const fetchMe = useCallback(async () => {
         try {
-            const response = await window.axios.get('/me');
+            const response = await apiClient.get('/me');
             setUser(response.data);
             return response.data;
         } catch (error) {
@@ -46,7 +47,7 @@ export function AuthProvider({ children }) {
             setLoading(true);
 
             try {
-                const response = await window.axios.post('/login', {
+                const response = await apiClient.post('/login', {
                     email,
                     password,
                 });
@@ -85,7 +86,7 @@ export function AuthProvider({ children }) {
 
     const logout = useCallback(async () => {
         try {
-            await window.axios.post('/logout');
+            await apiClient.post('/logout');
         } catch (error) {
             console.error('Logout failed', error);
         } finally {
@@ -95,14 +96,14 @@ export function AuthProvider({ children }) {
 
     const impersonate = useCallback(
         async (userId) => {
-            await window.axios.post(`/users/${userId}/impersonate`);
+            await apiClient.post(`/users/${userId}/impersonate`);
             await fetchMe();
         },
         [fetchMe]
     );
 
     const stopImpersonation = useCallback(async () => {
-        await window.axios.post('/users/stop-impersonation');
+        await apiClient.post('/users/stop-impersonation');
         await fetchMe();
     }, [fetchMe]);
 

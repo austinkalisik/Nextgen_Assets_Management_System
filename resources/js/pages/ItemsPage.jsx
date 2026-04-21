@@ -49,9 +49,25 @@ function defaultForm() {
     };
 }
 
+function extractErrorMessage(error) {
+    const response = error?.response?.data;
+
+    if (response?.errors && typeof response.errors === 'object') {
+        const firstKey = Object.keys(response.errors)[0];
+
+        if (firstKey && Array.isArray(response.errors[firstKey]) && response.errors[firstKey][0]) {
+            return response.errors[firstKey][0];
+        }
+    }
+
+    return response?.message || error?.message || 'Failed to save inventory item.';
+}
+
 export default function ItemsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [notice, setNotice] = useState('');
+    const [formError, setFormError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const [showForm, setShowForm] = useState(searchParams.get('create') === '1');
     const [editingId, setEditingId] = useState(null);
     const [categories, setCategories] = useState([]);
@@ -121,14 +137,25 @@ export default function ItemsPage() {
         setForm(defaultForm());
         setEditingId(null);
         setShowForm(false);
+        setFormError('');
     }, []);
+
+    const hasSerializedIdentity =
+        Boolean(String(form.asset_tag || '').trim()) || Boolean(String(form.serial_number || '').trim());
 
     const handleSubmit = useCallback(
         async (event) => {
             event.preventDefault();
+            setNotice('');
+            setFormError('');
+
+            if (!editingId && hasSerializedIdentity && Number(form.quantity) !== 1) {
+                setFormError('Serialized or tagged assets must have quantity 1.');
+                return;
+            }
 
             try {
-                setNotice('');
+                setSubmitting(true);
 
                 const payload = {
                     name: form.name.trim(),
@@ -154,14 +181,21 @@ export default function ItemsPage() {
                     ? await apiClient.put(`/items/${editingId}`, payload)
                     : await apiClient.post('/items', payload);
 
-                setNotice(response?.data?.message || (editingId ? 'Inventory item updated successfully.' : 'Inventory item saved successfully.'));
+                setNotice(
+                    response?.data?.message ||
+                        (editingId ? 'Inventory item updated successfully.' : 'Inventory item saved successfully.')
+                );
+
                 resetForm();
                 await refreshItems();
             } catch (err) {
                 console.error(err);
+                setFormError(extractErrorMessage(err));
+            } finally {
+                setSubmitting(false);
             }
         },
-        [editingId, form, refreshItems, resetForm]
+        [editingId, form, hasSerializedIdentity, refreshItems, resetForm]
     );
 
     const handleDelete = useCallback(
@@ -172,11 +206,13 @@ export default function ItemsPage() {
 
             try {
                 setNotice('');
+                setFormError('');
                 await apiClient.delete(`/items/${id}`);
                 setNotice('Inventory item deleted successfully.');
                 await refreshItems();
             } catch (err) {
                 console.error(err);
+                setFormError(extractErrorMessage(err));
             }
         },
         [refreshItems]
@@ -184,6 +220,7 @@ export default function ItemsPage() {
 
     const handleEdit = useCallback((item) => {
         setNotice('');
+        setFormError('');
         setForm({
             name: item.name || '',
             brand: item.brand || '',
@@ -257,6 +294,7 @@ export default function ItemsPage() {
 
     function toggleForm() {
         setNotice('');
+        setFormError('');
 
         if (showForm) {
             resetForm();
@@ -341,17 +379,29 @@ export default function ItemsPage() {
             </div>
 
             {notice ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {notice}
+                </div>
+            ) : null}
+
+            {formError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {formError}
+                </div>
             ) : null}
 
             {error ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
             ) : null}
 
             {showForm ? (
                 <div className="panel">
                     <div className="panel-body">
-                        <h2 className="mb-4 text-lg font-semibold">{editingId ? 'Edit Inventory Item' : 'Add New Inventory Item'}</h2>
+                        <h2 className="mb-4 text-lg font-semibold">
+                            {editingId ? 'Edit Inventory Item' : 'Add New Inventory Item'}
+                        </h2>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -402,6 +452,11 @@ export default function ItemsPage() {
                                             className="input-shell w-full"
                                             required
                                         />
+                                        {hasSerializedIdentity && Number(form.quantity) !== 1 ? (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                Tagged or serialized items must have quantity 1.
+                                            </p>
+                                        ) : null}
                                     </div>
                                 ) : (
                                     <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -537,8 +592,12 @@ export default function ItemsPage() {
                             </div>
 
                             <div className="flex gap-3">
-                                <button type="submit" className="btn-primary">
-                                    {editingId ? 'Update' : 'Create'} Inventory Item
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {submitting ? 'Saving...' : editingId ? 'Update Inventory Item' : 'Create Inventory Item'}
                                 </button>
 
                                 <button type="button" onClick={resetForm} className="btn-secondary">
@@ -635,3 +694,4 @@ export default function ItemsPage() {
         </div>
     );
 }
+
