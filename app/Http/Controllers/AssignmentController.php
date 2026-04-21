@@ -4,14 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\AssetLog;
 use App\Models\Assignment;
+use App\Models\Department;
 use App\Models\Item;
 use App\Models\SystemNotification;
 use App\Models\User;
+use App\Services\StockInventoryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AssignmentController extends Controller
 {
+    protected StockInventoryService $stockInventoryService;
+
+    public function __construct(StockInventoryService $stockInventoryService)
+    {
+        $this->stockInventoryService = $stockInventoryService;
+    }
+
     public function index(Request $request)
     {
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
@@ -23,14 +33,11 @@ class AssignmentController extends Controller
             $search = trim((string) $request->search);
 
             $query->where(function ($q) use ($search) {
-                $q->whereHas('item', function ($sub) use ($search) {
-                    $sub->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%")
-                        ->orWhere('asset_tag', 'like', "%{$search}%");
-                })
-                    ->orWhereHas('user', function ($sub) use ($search) {
+                $q->where('receiver_name', 'like', "%{$search}%")
+                    ->orWhereHas('item', function ($sub) use ($search) {
                         $sub->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
+                            ->orWhere('asset_tag', 'like', "%{$search}%")
+                            ->orWhere('sku', 'like', "%{$search}%");
                     })
                     ->orWhereHas('assignedDepartment', function ($sub) use ($search) {
                         $sub->where('name', 'like', "%{$search}%");
@@ -52,77 +59,108 @@ class AssignmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'item_id' => ['required', 'exists:items,id'],
-            'user_id' => ['required', 'exists:users,id'],
-            'department_id' => ['required', 'exists:departments,id'],
+            'item_id' => ['required', 'integer', 'exists:items,id'],
+            'receiver_name' => ['required', 'string', 'max:255'],
+            'department_id' => ['required', 'integer', 'exists:departments,id'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
-        $item = Item::findOrFail($validated['item_id']);
+        $validated['receiver_name'] = trim((string) $validated['receiver_name']);
+        $validated['quantity'] = (int) $validated['quantity'];
+        $validated['department_id'] = (int) $validated['department_id'];
+        $validated['item_id'] = (int) $validated['item_id'];
+        $validated['user_id'] = isset($validated['user_id']) ? (int) $validated['user_id'] : null;
 
-        if ($item->quantity <= 0) {
-            return response()->json(['message' => 'Item is out of stock'], 422);
-        }
+        $assignment = DB::transaction(function () use ($validated) {
+            $item = Item::query()->lockForUpdate()->findOrFail($validated['item_id']);
+            $department = Department::query()->lockForUpdate()->find($validated['department_id']);
 
-        $alreadyAssigned = Assignment::where('item_id', $validated['item_id'])
-            ->whereNull('returned_at')
-            ->exists();
+            if (!$department) {
+                throw ValidationException::withMessages([
+                    'department_id' => 'Selected department is invalid.',
+                ]);
+            }
 
-        if ($alreadyAssigned) {
-            return response()->json(['message' => 'Item is already assigned'], 422);
-        }
+            if ($item->status !== Item::STATUS_AVAILABLE) {
+                throw ValidationException::withMessages([
+                    'item_id' => 'Only available items can be assigned.',
+                ]);
+            }
 
-        $assignment = Assignment::create([
-            'item_id' => $validated['item_id'],
-            'user_id' => $validated['user_id'],
-            'department_id' => $validated['department_id'],
-            'assigned_at' => now(),
-        ]);
+            if (method_exists($item, 'isAssignable') && !$item->isAssignable()) {
+                throw ValidationException::withMessages([
+                    'item_id' => 'This item is not currently assignable.',
+                ]);
+            }
 
-        $assignment->load(['item', 'user', 'assignedDepartment']);
+            if ($validated['quantity'] > (int) $item->quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Assigned quantity exceeds available stock.',
+                ]);
+            }
 
-        $item->decrement('quantity');
-        $item->refresh();
-        $item->update(['department_id' => $validated['department_id']]);
+            $assignment = Assignment::create([
+                'item_id' => $item->id,
+                'user_id' => $validated['user_id'],
+                'receiver_name' => $validated['receiver_name'],
+                'department_id' => $department->id,
+                'quantity' => $validated['quantity'],
+                'assigned_at' => now(),
+            ]);
 
-        if (method_exists($item, 'syncAutomatedStatus')) {
-            $item->syncAutomatedStatus();
-        }
-
-        AssetLog::log(
-            $item->id,
-            AssetLog::ACTION_ASSIGNED,
-            "{$item->name} assigned to {$assignment->user->name}"
-        );
-
-        $this->notifyAdmins(
-            'assignment_created',
-            'Asset Assigned',
-            "Asset '{$item->name}' was assigned to '{$assignment->user->name}'.",
-            '/assignments',
-            'assignment',
-            $assignment->id
-        );
-
-        $this->notifyUser(
-            (int) $assignment->user_id,
-            'assignment_created',
-            'Asset Assigned To You',
-            "You were assigned asset '{$item->name}'.",
-            '/assignments',
-            'assignment',
-            $assignment->id
-        );
-
-        if ((int) $item->quantity <= 5) {
-            $this->notifyAdmins(
-                'low_stock',
-                'Low Stock Alert',
-                "Asset '{$item->name}' is low in stock with quantity {$item->quantity}.",
-                '/inventory',
-                'item',
-                $item->id
+            $this->stockInventoryService->stockOut(
+                $item,
+                $validated['quantity'],
+                'ASN-' . $assignment->id,
+                'Assigned to ' . $assignment->receiver_name
             );
-        }
+
+            $assignment->load(['item', 'user', 'assignedDepartment']);
+
+            AssetLog::log(
+                $item->id,
+                AssetLog::ACTION_ASSIGNED,
+                "{$validated['quantity']} unit(s) of {$item->name} assigned to {$assignment->receiver_name} ({$department->name})"
+            );
+
+            $this->notifyAdmins(
+                'assignment_created',
+                'Asset Assigned',
+                "{$validated['quantity']} unit(s) of '{$item->name}' were assigned to '{$assignment->receiver_name}' in '{$department->name}'.",
+                '/assignments',
+                'assignment',
+                $assignment->id
+            );
+
+            if (!empty($assignment->user_id)) {
+                $this->notifyUser(
+                    (int) $assignment->user_id,
+                    'assignment_created',
+                    'Asset Assigned To You',
+                    "{$validated['quantity']} unit(s) of '{$item->name}' were assigned to you.",
+                    '/assignments',
+                    'assignment',
+                    $assignment->id
+                );
+            }
+
+            $item->refresh();
+            $reorderLevel = (int) ($item->reorder_level ?? 5);
+
+            if ((int) $item->quantity <= $reorderLevel) {
+                $this->notifyAdmins(
+                    'low_stock',
+                    'Low Stock Alert',
+                    "Asset '{$item->name}' is low in stock with quantity {$item->quantity}.",
+                    '/inventory',
+                    'item',
+                    $item->id
+                );
+            }
+
+            return $assignment;
+        });
 
         return response()->json($assignment, 201);
     }
@@ -130,40 +168,49 @@ class AssignmentController extends Controller
     public function returnItem(Assignment $assignment)
     {
         if ($assignment->returned_at) {
-            return response()->json(['message' => 'Assignment already returned'], 422);
+            return response()->json([
+                'message' => 'This assignment has already been returned.',
+            ], 422);
         }
 
-        $assignment->load(['item', 'user', 'assignedDepartment']);
+        $assignment = DB::transaction(function () use ($assignment) {
+            $assignment->loadMissing(['item', 'assignedDepartment']);
 
-        $assignment->update([
-            'returned_at' => now(),
-        ]);
+            $item = Item::query()->lockForUpdate()->findOrFail($assignment->item_id);
 
-        $assignment->item->increment('quantity');
-        $assignment->item->refresh();
+            $assignment->update([
+                'returned_at' => now(),
+            ]);
 
-        if (method_exists($assignment->item, 'syncAutomatedStatus')) {
-            $assignment->item->syncAutomatedStatus();
-        }
+            $this->stockInventoryService->stockIn(
+                $item,
+                (int) $assignment->quantity,
+                'RET-' . $assignment->id,
+                null,
+                'Returned from ' . ($assignment->receiver_name ?: 'receiver')
+            );
 
-        AssetLog::log(
-            $assignment->item_id,
-            AssetLog::ACTION_RETURNED,
-            ($assignment->item->name ?? 'Asset') . ' returned by ' . (Auth::user()?->name ?? 'System')
-        );
+            AssetLog::log(
+                $item->id,
+                AssetLog::ACTION_RETURNED,
+                "{$assignment->quantity} unit(s) of {$item->name} returned from {$assignment->receiver_name}"
+            );
 
-        $this->notifyAdmins(
-            'assignment_returned',
-            'Asset Returned',
-            "Asset '{$assignment->item->name}' was returned from '{$assignment->user->name}'.",
-            '/assignments',
-            'assignment',
-            $assignment->id
-        );
+            $this->notifyAdmins(
+                'assignment_returned',
+                'Asset Returned',
+                "{$assignment->quantity} unit(s) of '{$item->name}' were returned from '{$assignment->receiver_name}'.",
+                '/assignments',
+                'assignment',
+                $assignment->id
+            );
+
+            return $assignment->fresh(['item', 'user', 'assignedDepartment']);
+        });
 
         return response()->json([
-            'message' => 'Asset returned successfully',
-            'assignment' => $assignment->fresh(['item', 'user', 'assignedDepartment']),
+            'message' => 'Asset returned successfully.',
+            'assignment' => $assignment,
         ]);
     }
 
@@ -175,7 +222,7 @@ class AssignmentController extends Controller
         ?string $sourceType = null,
         ?int $sourceId = null
     ): void {
-        $admins = User::where('role', 'admin')->get();
+        $admins = User::query()->where('role', 'admin')->get();
 
         foreach ($admins as $admin) {
             SystemNotification::create([

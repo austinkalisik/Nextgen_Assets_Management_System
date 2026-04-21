@@ -1,21 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { navigationItems } from '../config/navigation';
+import { navigationSections } from '../config/navigation';
 import useNotifications from '../hooks/useNotifications';
 
 function SearchIcon() {
     return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-4 w-4"
-            aria-hidden="true"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />
         </svg>
@@ -24,21 +16,13 @@ function SearchIcon() {
 
 function MenuIcon() {
     return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-5 w-5"
-            aria-hidden="true"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" aria-hidden="true">
             <path d="M4 6h16M4 12h16M4 18h16" />
         </svg>
     );
 }
 
-function CloseIcon() {
+function ChevronIcon({ open = false }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -46,10 +30,19 @@ function CloseIcon() {
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            className="h-5 w-5"
+            className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
             aria-hidden="true"
         >
-            <path d="M18 6 6 18M6 6l12 12" />
+            <path d="m9 18 6-6-6-6" />
+        </svg>
+    );
+}
+
+function BellIcon() {
+    return (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M15 17H5a2 2 0 0 1-2-2c0-1.2.5-2.3 1.4-3.1L6 10.5V8a6 6 0 1 1 12 0v2.5l1.6 1.4A4.2 4.2 0 0 1 21 15a2 2 0 0 1-2 2h-4" />
+            <path d="M9 17a3 3 0 0 0 6 0" />
         </svg>
     );
 }
@@ -123,15 +116,6 @@ function BuildingIcon() {
     );
 }
 
-function BellIcon() {
-    return (
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path d="M15 17H5a2 2 0 0 1-2-2c0-1.2.5-2.3 1.4-3.1L6 10.5V8a6 6 0 1 1 12 0v2.5l1.6 1.4A4.2 4.2 0 0 1 21 15a2 2 0 0 1-2 2h-4" />
-            <path d="M9 17a3 3 0 0 0 6 0" />
-        </svg>
-    );
-}
-
 function UserIcon() {
     return (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -150,32 +134,41 @@ function SettingsIcon() {
     );
 }
 
-function getNavIcon(path) {
-    switch (path) {
-        case '/dashboard':
-            return <DashboardIcon />;
-        case '/items':
-            return <BoxIcon />;
-        case '/assignments':
-            return <ClipboardIcon />;
-        case '/inventory':
-            return <LayersIcon />;
-        case '/suppliers':
-            return <TruckIcon />;
-        case '/categories':
-            return <TagIcon />;
-        case '/departments':
-            return <BuildingIcon />;
-        case '/notifications':
-            return <BellIcon />;
-        case '/users':
-        case '/profile':
-            return <UserIcon />;
-        case '/settings':
-            return <SettingsIcon />;
-        default:
-            return <BoxIcon />;
-    }
+function FolderIcon() {
+    return (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+        </svg>
+    );
+}
+
+function LogoutIcon() {
+    return (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="m16 17 5-5-5-5" />
+            <path d="M21 12H9" />
+        </svg>
+    );
+}
+
+const ICONS = {
+    dashboard: DashboardIcon,
+    items: BoxIcon,
+    assignments: ClipboardIcon,
+    inventory: LayersIcon,
+    suppliers: TruckIcon,
+    categories: TagIcon,
+    departments: BuildingIcon,
+    users: UserIcon,
+    settings: SettingsIcon,
+    profile: UserIcon,
+    notifications: BellIcon,
+    default: FolderIcon,
+};
+
+function getIcon(name) {
+    return ICONS[name] || ICONS.default;
 }
 
 function initials(name) {
@@ -193,12 +186,18 @@ function initials(name) {
 
 function Avatar({ user }) {
     const [broken, setBroken] = useState(false);
+    const photoUrl = user?.profile_photo_url || '';
 
-    if (user?.profile_photo_url && !broken) {
+    useEffect(() => {
+        setBroken(false);
+    }, [photoUrl]);
+
+    if (photoUrl && !broken) {
         return (
             <img
-                src={user.profile_photo_url}
-                alt={user.name || 'User'}
+                key={photoUrl}
+                src={photoUrl}
+                alt={user?.name || 'User'}
                 className="h-10 w-10 rounded-full object-cover ring-2 ring-white/10"
                 onError={() => setBroken(true)}
             />
@@ -212,90 +211,160 @@ function Avatar({ user }) {
     );
 }
 
-function BrandBlock({ systemName, systemTagline }) {
-    return (
-        <div className="flex items-center gap-3">
-            <img
-                src="/images/nextgen-logo.png"
-                alt="NextGen Technology"
-                className="h-11 w-auto max-w-[140px] object-contain"
-                onError={(event) => {
-                    event.currentTarget.style.display = 'none';
-                }}
-            />
+function BrandMark({ systemName, systemLogoUrl }) {
+    const [broken, setBroken] = useState(false);
 
-            <div className="min-w-0">
-                <h1 className="truncate text-base font-bold tracking-wide text-white">{systemName}</h1>
-                <p className="truncate text-xs text-slate-400">{systemTagline}</p>
-            </div>
+    useEffect(() => {
+        setBroken(false);
+    }, [systemLogoUrl]);
+
+    if (systemLogoUrl && !broken) {
+        return (
+            <img
+                key={systemLogoUrl}
+                src={systemLogoUrl}
+                alt={systemName || 'System Logo'}
+                className="h-11 w-11 rounded-xl bg-white object-contain p-1 shadow-lg shadow-blue-700/30"
+                onError={() => setBroken(true)}
+            />
+        );
+    }
+
+    return (
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg shadow-blue-700/30">
+            <BoxIcon />
         </div>
     );
 }
 
-function SidebarNavItem({ item, onClick, unreadCount }) {
+function routeMatches(pathname, item) {
+    if (!item?.match?.length) {
+        return pathname === item.to || pathname.startsWith(`${item.to}/`);
+    }
+
+    return item.match.some((match) => pathname === match || pathname.startsWith(`${match}/`));
+}
+
+function SidebarItem({ item, pathname, onNavigate, unreadCount }) {
+    const Icon = getIcon(item.icon);
+    const isActive = routeMatches(pathname, item);
+
     return (
         <NavLink
             to={item.to}
-            onClick={onClick}
-            className={({ isActive }) =>
-                [
-                    'group flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
-                    isActive ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-200 hover:bg-slate-800 hover:text-white',
-                ].join(' ')
-            }
+            onClick={onNavigate}
+            className={[
+                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                isActive
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/20'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white',
+            ].join(' ')}
         >
-            <span className="flex items-center gap-3">
-                <span className="shrink-0">{getNavIcon(item.to)}</span>
-                <span>{item.label}</span>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                <Icon />
             </span>
+            <span className="truncate">{item.label}</span>
 
             {item.to === '/notifications' && unreadCount > 0 ? (
-                <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
                     {unreadCount}
                 </span>
             ) : null}
+
+            {isActive ? <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-white/80" /> : null}
         </NavLink>
     );
 }
 
+function SidebarSection({ section, pathname, onNavigate, unreadCount, defaultOpen = true }) {
+    const [open, setOpen] = useState(defaultOpen);
+
+    useEffect(() => {
+        const hasActiveChild = section.items.some((item) => routeMatches(pathname, item));
+        if (hasActiveChild) {
+            setOpen(true);
+        }
+    }, [pathname, section.items]);
+
+    return (
+        <div className="space-y-2">
+            <button
+                type="button"
+                onClick={() => setOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition hover:text-slate-300"
+            >
+                <span>{section.label}</span>
+                <ChevronIcon open={open} />
+            </button>
+
+            {open ? (
+                <div className="space-y-1.5">
+                    {section.items.map((item) => (
+                        <SidebarItem
+                            key={item.to}
+                            item={item}
+                            pathname={pathname}
+                            onNavigate={onNavigate}
+                            unreadCount={unreadCount}
+                        />
+                    ))}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 function SidebarContent({
+    pathname,
     systemName,
     systemTagline,
-    companyWebsite,
     displayName,
+    companyWebsite,
+    systemLogoUrl,
     user,
     onLogout,
     onNavigate,
     unreadCount,
 }) {
     return (
-        <>
-            <div className="border-b border-slate-800 px-5 py-5">
-                <BrandBlock systemName={systemName} systemTagline={systemTagline} />
+        <div className="flex h-full flex-col bg-[#081122] text-white">
+            <div className="border-b border-white/5 px-5 py-5">
+                <div className="flex items-center gap-3">
+                    <BrandMark systemName={systemName} systemLogoUrl={systemLogoUrl} />
 
-                <a
-                    href={companyWebsite}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-flex text-xs font-medium text-blue-300 transition hover:text-blue-200"
-                >
-                    nextgenpng.net
-                </a>
+                    <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold">{systemName}</p>
+                        <p className="truncate text-[11px] text-slate-400">{systemTagline}</p>
+                    </div>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-[11px] text-slate-400">
+                    {companyWebsite?.replace(/^https?:\/\//, '') || 'nextgenpng.net'}
+                </div>
             </div>
 
-            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-                {navigationItems.map((item) => (
-                    <SidebarNavItem key={item.to} item={item} onClick={onNavigate} unreadCount={unreadCount} />
-                ))}
-            </nav>
+            <div className="flex-1 overflow-y-auto px-4 py-5">
+                <div className="space-y-6">
+                    {navigationSections.map((section, index) => (
+                        <SidebarSection
+                            key={section.label}
+                            section={section}
+                            pathname={pathname}
+                            onNavigate={onNavigate}
+                            unreadCount={unreadCount}
+                            defaultOpen={index === 0}
+                        />
+                    ))}
+                </div>
+            </div>
 
-            <div className="border-t border-slate-800 px-4 py-4">
-                <div className="mb-3 rounded-2xl bg-slate-900/80 px-4 py-3">
+            <div className="border-t border-white/5 px-4 py-4">
+                <div className="rounded-2xl border border-white/5 bg-white/5 p-3">
                     <div className="flex items-center gap-3">
                         <Avatar user={user} />
-                        <div className="min-w-0">
-                            <p className="text-xs text-slate-400">Signed in as</p>
-                            <p className="truncate text-sm font-medium text-white">{displayName}</p>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[11px] text-slate-400">Signed in as</p>
+                            <p className="truncate text-sm font-semibold text-white">{displayName}</p>
                         </div>
                     </div>
                 </div>
@@ -303,18 +372,19 @@ function SidebarContent({
                 <button
                     type="button"
                     onClick={onLogout}
-                    className="w-full rounded-xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-800 hover:text-white"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/5 hover:text-white"
                 >
-                    Logout
+                    <LogoutIcon />
+                    Sign Out
                 </button>
             </div>
-        </>
+        </div>
     );
 }
 
-function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRead, onClose }) {
+function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRead, onClose, loading }) {
     return (
-        <div className="absolute right-0 top-12 z-50 w-[360px] rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div className="absolute right-0 top-14 z-50 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                 <div>
                     <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
@@ -331,7 +401,9 @@ function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRea
             </div>
 
             <div className="max-h-96 overflow-y-auto">
-                {notifications.length === 0 ? (
+                {loading ? (
+                    <div className="px-4 py-6 text-sm text-slate-500">Loading notifications...</div>
+                ) : notifications.length === 0 ? (
                     <div className="px-4 py-6 text-sm text-slate-500">No notifications available.</div>
                 ) : (
                     notifications.map((notification) => (
@@ -341,7 +413,7 @@ function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRea
                             onClick={() => onOpen(notification)}
                             className={[
                                 'block w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50',
-                                notification.is_read ? 'bg-white' : 'bg-blue-50/40',
+                                notification.is_read ? 'bg-white' : 'bg-blue-50/50',
                             ].join(' ')}
                         >
                             <div className="flex items-start justify-between gap-3">
@@ -353,9 +425,7 @@ function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRea
                                     </p>
                                 </div>
 
-                                {!notification.is_read ? (
-                                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" />
-                                ) : null}
+                                {!notification.is_read ? <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" /> : null}
                             </div>
                         </button>
                     ))
@@ -363,11 +433,7 @@ function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRea
             </div>
 
             <div className="border-t border-slate-200 px-4 py-3">
-                <NavLink
-                    to="/notifications"
-                    onClick={onClose}
-                    className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-                >
+                <NavLink to="/notifications" onClick={onClose} className="text-sm font-semibold text-blue-600 hover:text-blue-700">
                     View all notifications
                 </NavLink>
             </div>
@@ -380,7 +446,7 @@ export default function Layout({ children }) {
     const navigate = useNavigate();
     const { user, logout, stopImpersonation } = useAuth();
     const { settings } = useSettings();
-    const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+    const { notifications, unreadCount, loading: notificationsLoading, markRead, markAllRead } = useNotifications();
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [globalSearch, setGlobalSearch] = useState('');
@@ -400,10 +466,12 @@ export default function Layout({ children }) {
         }
 
         document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        setSidebarOpen(false);
+    }, [location.pathname]);
 
     const displayName = useMemo(() => {
         if (!user) {
@@ -413,9 +481,10 @@ export default function Layout({ children }) {
         return user.name || user.email || 'System Administrator';
     }, [user]);
 
-    const systemName = settings.system_name || 'NextGen Technology';
-    const systemTagline = settings.system_tagline || 'Asset Management System';
+    const systemName = settings.system_name || 'NextGen Assets';
+    const systemTagline = settings.system_tagline || 'Management System';
     const companyWebsite = settings.company_website || 'https://nextgenpng.net/';
+    const systemLogoUrl = settings.system_logo_url || '';
 
     async function handleLogout() {
         try {
@@ -440,11 +509,11 @@ export default function Layout({ children }) {
         const query = globalSearch.trim();
 
         if (!query) {
-            navigate('/items');
+            navigate('/inventory');
             return;
         }
 
-        navigate(`/items?search=${encodeURIComponent(query)}`);
+        navigate(`/inventory?search=${encodeURIComponent(query)}`);
     }
 
     function closeSidebar() {
@@ -465,13 +534,15 @@ export default function Layout({ children }) {
     }
 
     return (
-        <div className="flex min-h-screen bg-slate-100 text-slate-800">
-            <aside className="hidden w-72 flex-col bg-slate-950 text-white lg:flex">
+        <div className="flex min-h-screen bg-[#f5f7fb]">
+            <aside className="hidden w-[270px] shrink-0 border-r border-slate-200/70 lg:flex">
                 <SidebarContent
+                    pathname={location.pathname}
                     systemName={systemName}
                     systemTagline={systemTagline}
-                    companyWebsite={companyWebsite}
                     displayName={displayName}
+                    companyWebsite={companyWebsite}
+                    systemLogoUrl={systemLogoUrl}
                     user={user}
                     onLogout={handleLogout}
                     onNavigate={closeSidebar}
@@ -480,53 +551,34 @@ export default function Layout({ children }) {
             </aside>
 
             {sidebarOpen ? (
-                <div className="fixed inset-0 z-40 lg:hidden">
-                    <button
-                        type="button"
-                        aria-label="Close menu"
-                        className="absolute inset-0 bg-slate-950/60"
-                        onClick={closeSidebar}
-                    />
-                    <aside className="relative z-10 flex h-full w-72 flex-col bg-slate-950 text-white shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-5">
-                            <BrandBlock systemName={systemName} systemTagline={systemTagline} />
-
-                            <button
-                                type="button"
-                                onClick={closeSidebar}
-                                className="inline-flex items-center justify-center rounded-xl border border-slate-700 p-2 text-slate-300 transition hover:bg-slate-800 hover:text-white"
-                                aria-label="Close menu"
-                            >
-                                <CloseIcon />
-                            </button>
-                        </div>
-
-                        <div className="flex min-h-0 flex-1 flex-col">
-                            <SidebarContent
-                                systemName={systemName}
-                                systemTagline={systemTagline}
-                                companyWebsite={companyWebsite}
-                                displayName={displayName}
-                                user={user}
-                                onLogout={handleLogout}
-                                onNavigate={closeSidebar}
-                                unreadCount={unreadCount}
-                            />
-                        </div>
+                <div className="fixed inset-0 z-50 lg:hidden">
+                    <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={closeSidebar} />
+                    <aside className="relative z-10 h-full w-[280px] border-r border-white/10">
+                        <SidebarContent
+                            pathname={location.pathname}
+                            systemName={systemName}
+                            systemTagline={systemTagline}
+                            displayName={displayName}
+                            companyWebsite={companyWebsite}
+                            systemLogoUrl={systemLogoUrl}
+                            user={user}
+                            onLogout={handleLogout}
+                            onNavigate={closeSidebar}
+                            unreadCount={unreadCount}
+                        />
                     </aside>
                 </div>
             ) : null}
 
             <div className="flex min-w-0 flex-1 flex-col">
                 {user?.is_impersonating ? (
-                    <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:px-6">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <span>You are currently switched into another user account.</span>
-
+                    <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 sm:px-6">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-medium text-amber-800">You are currently impersonating another user.</p>
                             <button
                                 type="button"
                                 onClick={handleStopImpersonation}
-                                className="rounded-lg border border-amber-300 px-3 py-1.5 font-medium transition hover:bg-amber-100"
+                                className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100"
                             >
                                 Return to Admin
                             </button>
@@ -534,31 +586,31 @@ export default function Layout({ children }) {
                     </div>
                 ) : null}
 
-                <header className="border-b border-slate-200 bg-white">
+                <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
                     <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
                         <div className="flex items-center gap-3">
                             <button
                                 type="button"
                                 onClick={() => setSidebarOpen(true)}
-                                className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 lg:hidden"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
                                 aria-label="Open menu"
                             >
                                 <MenuIcon />
                             </button>
 
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">{systemName}</h2>
+                                <h2 className="text-lg font-bold text-slate-900">{systemName}</h2>
                                 <p className="text-xs text-slate-500">{systemTagline}</p>
                             </div>
                         </div>
 
-                        <form onSubmit={handleGlobalSearchSubmit} className="flex w-full max-w-xl items-center gap-2">
+                        <form onSubmit={handleGlobalSearchSubmit} className="flex w-full max-w-xl items-center gap-3">
                             <div className="relative flex-1">
                                 <input
                                     type="text"
                                     value={globalSearch}
                                     onChange={(event) => setGlobalSearch(event.target.value)}
-                                    placeholder="Search assets by name, asset tag or serial number..."
+                                    placeholder="Search inventory..."
                                     className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
@@ -568,7 +620,7 @@ export default function Layout({ children }) {
 
                             <button
                                 type="submit"
-                                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                             >
                                 Search
                             </button>
@@ -579,7 +631,7 @@ export default function Layout({ children }) {
                                 <button
                                     type="button"
                                     onClick={() => setNotificationsOpen((prev) => !prev)}
-                                    className="relative inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50"
+                                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                                 >
                                     <BellIcon />
                                     {unreadCount > 0 ? (
@@ -596,19 +648,23 @@ export default function Layout({ children }) {
                                         onOpen={handleOpenNotification}
                                         onMarkAllRead={markAllRead}
                                         onClose={() => setNotificationsOpen(false)}
+                                        loading={notificationsLoading}
                                     />
                                 ) : null}
                             </div>
 
-                            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                            <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 sm:flex">
                                 <Avatar user={user} />
-                                <span>{displayName}</span>
+                                <div className="min-w-0">
+                                    <p className="truncate text-xs text-slate-500">System Administrator</p>
+                                    <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                                </div>
                             </div>
 
                             <button
                                 type="button"
                                 onClick={handleLogout}
-                                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                             >
                                 Logout
                             </button>
@@ -616,8 +672,10 @@ export default function Layout({ children }) {
                     </div>
                 </header>
 
-                <main className="flex-1 p-4 sm:p-6">
-                    {children ?? <Outlet />}
+                <main className="flex-1 overflow-auto">
+                    <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 xl:px-8">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

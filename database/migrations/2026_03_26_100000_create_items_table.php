@@ -13,11 +13,10 @@ return new class extends Migration
             $table->string('name');
             $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->foreignId('supplier_id')->constrained('suppliers')->cascadeOnDelete();
-            $table->foreignId('department_id')->constrained('departments')->cascadeOnDelete();
             $table->string('asset_tag')->nullable()->unique();
             $table->string('serial_number')->nullable()->unique();
             $table->unsignedInteger('quantity')->default(1);
-            $table->enum('status', ['available', 'assigned', 'maintenance', 'retired'])->default('available');
+            $table->enum('status', ['available', 'maintenance', 'lost', 'retired'])->default('available');
             $table->string('location')->nullable();
             $table->date('purchase_date')->nullable();
             $table->timestamps();

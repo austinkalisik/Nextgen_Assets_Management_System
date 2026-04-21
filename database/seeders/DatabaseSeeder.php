@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             DepartmentSeeder::class,
             ItemSeeder::class,
+            StockMovementSeeder::class,
             AssignmentSeeder::class,
             AssetLogSeeder::class,
         ]);

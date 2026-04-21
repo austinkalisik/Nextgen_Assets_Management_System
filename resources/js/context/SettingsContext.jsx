@@ -1,5 +1,3 @@
-// file: resources/js/context/SettingsContext.jsx
-
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import apiClient from '../api/client';
 import { useAuth } from './AuthContext';
@@ -7,8 +5,8 @@ import { useAuth } from './AuthContext';
 const SettingsContext = createContext(null);
 
 const DEFAULT_SETTINGS = {
-    system_name: 'NextGen Technology',
-    system_tagline: 'Asset Management System',
+    system_name: 'NextGen Assets',
+    system_tagline: 'Management System',
     company_name: 'NextGen Technology',
     company_website: 'https://nextgenpng.net/',
     support_email: 'support@nextgenpng.net',
@@ -35,7 +33,6 @@ export function SettingsProvider({ children }) {
         try {
             const response = await apiClient.get('/settings');
             const rows = response.data.data || response.data || [];
-
             const mapped = { ...DEFAULT_SETTINGS };
 
             rows.forEach((row) => {

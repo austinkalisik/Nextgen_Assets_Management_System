@@ -16,23 +16,37 @@ function formatValue(value) {
     return String(value);
 }
 
+function getDefaultForm(fields) {
+    const initialForm = {};
+
+    fields.forEach((field) => {
+        if (field.type === 'checkbox') {
+            initialForm[field.name] = field.defaultValue ?? false;
+            return;
+        }
+
+        initialForm[field.name] = field.defaultValue ?? '';
+    });
+
+    return initialForm;
+}
+
 export function CRUDPage({
     title,
     endpoint,
     fields,
     searchPlaceholder = 'Search...',
-    createLabel,
+    createLabel = 'Add',
     csvConfig = null,
 }) {
     const [searchParams, setSearchParams] = useSearchParams();
-
-    const [items, setItems] = useState([]);
     const [error, setError] = useState('');
-    const [showForm, setShowForm] = useState(false);
+    const [success, setSuccess] = useState('');
+    const [showForm, setShowForm] = useState(searchParams.get('create') === '1');
     const [editingId, setEditingId] = useState(null);
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
-    const [form, setForm] = useState({});
+    const [form, setForm] = useState(() => getDefaultForm(fields));
     const [meta, setMeta] = useState({
         current_page: 1,
         last_page: 1,
@@ -42,20 +56,21 @@ export function CRUDPage({
 
     const searchInputFromUrl = searchParams.get('search') ?? '';
     const pageFromUrl = Number.parseInt(searchParams.get('page') ?? '1', 10);
-
     const [searchInput, setSearchInput] = useState(searchInputFromUrl);
 
     useEffect(() => {
-        const initialForm = {};
-        fields.forEach((field) => {
-            initialForm[field.name] = field.defaultValue ?? '';
-        });
-        setForm(initialForm);
+        setForm(getDefaultForm(fields));
     }, [fields]);
 
     useEffect(() => {
         setSearchInput(searchInputFromUrl);
     }, [searchInputFromUrl]);
+
+    useEffect(() => {
+        if (searchParams.get('create') === '1' && !editingId) {
+            setShowForm(true);
+        }
+    }, [searchParams, editingId]);
 
     const requestOptions = useMemo(
         () => ({
@@ -75,19 +90,17 @@ export function CRUDPage({
         refetch,
     } = useApi(`/${endpoint}`, requestOptions, { ttl: 180000 });
 
-    useEffect(() => {
-        if (!payload) {
-            return;
-        }
+    const items = payload?.data || payload || [];
 
-        setItems(payload.data || []);
-        setMeta({
-            current_page: payload.current_page || 1,
-            last_page: payload.last_page || 1,
-            total: payload.total || 0,
-            per_page: payload.per_page || 10,
-        });
-        setError('');
+    useEffect(() => {
+        if (payload) {
+            setMeta({
+                current_page: payload.current_page || 1,
+                last_page: payload.last_page || 1,
+                total: payload.total || 0,
+                per_page: payload.per_page || 10,
+            });
+        }
     }, [payload]);
 
     useEffect(() => {
@@ -96,9 +109,77 @@ export function CRUDPage({
         }
     }, [loadError]);
 
-    async function refreshList() {
-        invalidateApiCache(`/${endpoint}`);
-        await refetch();
+    function updateQuery(nextValues) {
+        const next = new URLSearchParams(searchParams);
+
+        Object.entries(nextValues).forEach(([key, value]) => {
+            if (value === '' || value === null || value === undefined) {
+                next.delete(key);
+            } else {
+                next.set(key, String(value));
+            }
+        });
+
+        if (!next.get('page')) {
+            next.set('page', '1');
+        }
+
+        setSearchParams(next);
+    }
+
+    function handleSearchSubmit(event) {
+        event.preventDefault();
+        updateQuery({ search: searchInput.trim(), page: 1 });
+    }
+
+    function goToPage(page) {
+        updateQuery({ page });
+    }
+
+    function resetForm() {
+        setForm(getDefaultForm(fields));
+        setEditingId(null);
+        setShowForm(false);
+        setSaving(false);
+        setDeletingId(null);
+        setError('');
+    }
+
+    function toggleForm() {
+        setSuccess('');
+        setError('');
+
+        if (showForm) {
+            resetForm();
+            return;
+        }
+
+        setEditingId(null);
+        setForm(getDefaultForm(fields));
+        setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function normalizePayload(source) {
+        const payload = {};
+
+        fields.forEach((field) => {
+            const rawValue = source[field.name];
+
+            if (field.type === 'checkbox') {
+                payload[field.name] = rawValue ? 1 : 0;
+                return;
+            }
+
+            if (field.type === 'number') {
+                payload[field.name] = rawValue === '' || rawValue === null ? null : Number(rawValue);
+                return;
+            }
+
+            payload[field.name] = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
+        });
+
+        return payload;
     }
 
     async function handleSubmit(event) {
@@ -107,109 +188,77 @@ export function CRUDPage({
         try {
             setSaving(true);
             setError('');
+            setSuccess('');
+
+            const payloadToSend = normalizePayload(form);
 
             if (editingId) {
-                await apiClient.put(`/${endpoint}/${editingId}`, form);
+                await apiClient.put(`/${endpoint}/${editingId}`, payloadToSend);
+                setSuccess(`${title.slice(0, -1)} updated successfully.`);
             } else {
-                await apiClient.post(`/${endpoint}`, form);
+                await apiClient.post(`/${endpoint}`, payloadToSend);
+                setSuccess(`${title.slice(0, -1)} created successfully.`);
             }
 
+            invalidateApiCache(`/${endpoint}`);
             resetForm();
-            await refreshList();
+            await refetch();
         } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to save');
+            setError(err?.response?.data?.message || `Failed to save ${title.toLowerCase()}`);
         } finally {
             setSaving(false);
         }
     }
 
+    function handleEdit(item) {
+        const nextForm = getDefaultForm(fields);
+
+        fields.forEach((field) => {
+            nextForm[field.name] = item[field.name] ?? nextForm[field.name];
+        });
+
+        setForm(nextForm);
+        setEditingId(item.id);
+        setShowForm(true);
+        setSuccess('');
+        setError('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     async function handleDelete(id) {
-        if (!window.confirm('Are you sure?')) {
+        if (!window.confirm(`Are you sure you want to delete this ${title.slice(0, -1).toLowerCase()}?`)) {
             return;
         }
 
         try {
             setDeletingId(id);
             setError('');
+            setSuccess('');
 
             await apiClient.delete(`/${endpoint}/${id}`);
-            await refreshList();
+            setSuccess(`${title.slice(0, -1)} deleted successfully.`);
+            invalidateApiCache(`/${endpoint}`);
+            await refetch();
         } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to delete');
+            setError(err?.response?.data?.message || `Failed to delete ${title.toLowerCase()}`);
         } finally {
             setDeletingId(null);
         }
     }
 
-    function handleEdit(item) {
-        const nextForm = {};
-        fields.forEach((field) => {
-            nextForm[field.name] = item[field.name] ?? field.defaultValue ?? '';
-        });
-
-        setForm(nextForm);
-        setEditingId(item.id);
-        setShowForm(true);
-    }
-
-    function resetForm() {
-        const nextForm = {};
-        fields.forEach((field) => {
-            nextForm[field.name] = field.defaultValue ?? '';
-        });
-
-        setForm(nextForm);
-        setEditingId(null);
-        setShowForm(false);
-    }
-
-    function handleSearchSubmit(event) {
-        event.preventDefault();
-
-        const next = new URLSearchParams(searchParams);
-
-        if (searchInput.trim()) {
-            next.set('search', searchInput.trim());
-        } else {
-            next.delete('search');
-        }
-
-        next.set('page', '1');
-        setSearchParams(next);
-    }
-
-    function goToPage(page) {
-        const next = new URLSearchParams(searchParams);
-        next.set('page', String(page));
-        setSearchParams(next);
-    }
-
     function handleExportCsv() {
-        if (!items.length) {
+        if (!csvConfig) {
             return;
         }
 
-        const rows = csvConfig?.mapRow
-            ? items.map((item) => csvConfig.mapRow(item))
-            : items;
-
         downloadCsv(
-            csvConfig?.filename || `${endpoint}.csv`,
-            rows,
-            csvConfig?.headers || null
+            csvConfig.filename,
+            items.map((item) => csvConfig.mapRow(item))
         );
     }
 
-    const headingActionLabel = useMemo(() => {
-        if (createLabel) {
-            return createLabel;
-        }
-
-        return `Add ${title}`;
-    }, [createLabel, title]);
-
     if (loading && !payload) {
-        return <div className="text-slate-500">Loading {endpoint}...</div>;
+        return <div className="text-slate-500">Loading {title.toLowerCase()}...</div>;
     }
 
     return (
@@ -217,7 +266,7 @@ export function CRUDPage({
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
-                    <p className="mt-1 text-sm text-slate-500">Manage {endpoint}</p>
+                    <p className="mt-1 text-sm text-slate-500">Manage {title.toLowerCase()} records for the system.</p>
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row">
@@ -227,35 +276,30 @@ export function CRUDPage({
                             value={searchInput}
                             onChange={(event) => setSearchInput(event.target.value)}
                             placeholder={searchPlaceholder}
-                            className="w-72 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="input-shell w-72"
                         />
-                        <button
-                            type="submit"
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        >
+                        <button type="submit" className="btn-secondary">
                             Find
                         </button>
                     </form>
 
+                    <button type="button" onClick={toggleForm} className="btn-primary">
+                        {showForm ? 'Cancel' : createLabel}
+                    </button>
+
                     {csvConfig ? (
-                        <button
-                            type="button"
-                            onClick={handleExportCsv}
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        >
+                        <button type="button" onClick={handleExportCsv} className="btn-secondary">
                             Export CSV
                         </button>
                     ) : null}
-
-                    <button
-                        type="button"
-                        onClick={() => setShowForm((prev) => !prev)}
-                        className="rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700"
-                    >
-                        {showForm ? 'Cancel' : headingActionLabel}
-                    </button>
                 </div>
             </div>
+
+            {success ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {success}
+                </div>
+            ) : null}
 
             {error ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -264,73 +308,95 @@ export function CRUDPage({
             ) : null}
 
             {showForm ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold">
-                        {editingId ? `Edit ${title}` : headingActionLabel}
-                    </h2>
+                <div className="panel">
+                    <div className="panel-body">
+                        <h2 className="mb-4 text-lg font-semibold">
+                            {editingId ? `Edit ${title.slice(0, -1)}` : createLabel}
+                        </h2>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {fields.map((field) => (
-                                <div key={field.name} className={field.fullWidth ? 'md:col-span-2' : ''}>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        {field.label || field.name}
-                                    </label>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                {fields.map((field) => {
+                                    const isFullWidth = field.fullWidth === true;
+                                    const value = form[field.name] ?? '';
 
-                                    {field.type === 'textarea' ? (
-                                        <textarea
-                                            value={form[field.name] || ''}
-                                            onChange={(event) =>
-                                                setForm((prev) => ({ ...prev, [field.name]: event.target.value }))
-                                            }
-                                            className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            rows={field.rows || 3}
-                                            required={field.required !== false}
-                                        />
-                                    ) : (
-                                        <input
-                                            type={field.type || 'text'}
-                                            value={form[field.name] || ''}
-                                            onChange={(event) =>
-                                                setForm((prev) => ({ ...prev, [field.name]: event.target.value }))
-                                            }
-                                            className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            required={field.required !== false}
-                                        />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                                    return (
+                                        <div key={field.name} className={isFullWidth ? 'md:col-span-2' : ''}>
+                                            <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                {field.label}
+                                            </label>
 
-                        <div className="flex gap-3">
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="rounded-xl bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                            >
-                                {saving ? 'Saving...' : editingId ? 'Update' : 'Create'}
-                            </button>
+                                            {field.type === 'textarea' ? (
+                                                <textarea
+                                                    rows={field.rows || 3}
+                                                    value={value}
+                                                    onChange={(event) =>
+                                                        setForm((prev) => ({
+                                                            ...prev,
+                                                            [field.name]: event.target.value,
+                                                        }))
+                                                    }
+                                                    className="input-shell w-full"
+                                                    required={field.required}
+                                                />
+                                            ) : field.type === 'checkbox' ? (
+                                                <label className="inline-flex cursor-pointer items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={Boolean(value)}
+                                                        onChange={(event) =>
+                                                            setForm((prev) => ({
+                                                                ...prev,
+                                                                [field.name]: event.target.checked,
+                                                            }))
+                                                        }
+                                                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm text-slate-600">
+                                                        {Boolean(value) ? 'Enabled' : 'Disabled'}
+                                                    </span>
+                                                </label>
+                                            ) : (
+                                                <input
+                                                    type={field.type || 'text'}
+                                                    value={value}
+                                                    onChange={(event) =>
+                                                        setForm((prev) => ({
+                                                            ...prev,
+                                                            [field.name]: event.target.value,
+                                                        }))
+                                                    }
+                                                    className="input-shell w-full"
+                                                    required={field.required}
+                                                />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
-                            <button
-                                type="button"
-                                onClick={resetForm}
-                                className="rounded-xl bg-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-300"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
+                            <div className="flex gap-3">
+                                <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">
+                                    {saving ? 'Saving...' : editingId ? 'Update' : 'Create'}
+                                </button>
+
+                                <button type="button" onClick={resetForm} className="btn-secondary">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="table-shell">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                        <thead className="table-head">
                             <tr>
                                 {fields.map((field) => (
                                     <th key={field.name} className="px-6 py-4 text-left font-semibold">
-                                        {field.label || field.name}
+                                        {field.label}
                                     </th>
                                 ))}
                                 <th className="px-6 py-4 text-left font-semibold">Actions</th>
@@ -340,15 +406,13 @@ export function CRUDPage({
                         <tbody className="divide-y divide-slate-100">
                             {items.length > 0 ? (
                                 items.map((item) => (
-                                    <tr key={item.id} className="hover:bg-slate-50">
+                                    <tr key={item.id} className="table-row">
                                         {fields.map((field) => (
-                                            <td key={field.name} className="whitespace-pre-line px-6 py-4 text-slate-900">
-                                                {field.render
-                                                    ? field.render(item[field.name], item)
-                                                    : formatValue(item[field.name])}
+                                            <td key={field.name} className="px-6 py-4 text-slate-700">
+                                                {formatValue(item[field.name])}
                                             </td>
                                         ))}
-                                        <td className="space-x-2 px-6 py-4">
+                                        <td className="space-x-3 px-6 py-4">
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(item)}
@@ -388,7 +452,7 @@ export function CRUDPage({
                             type="button"
                             disabled={meta.current_page <= 1}
                             onClick={() => goToPage(meta.current_page - 1)}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="btn-secondary !px-3 !py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Previous
                         </button>
@@ -397,7 +461,7 @@ export function CRUDPage({
                             type="button"
                             disabled={meta.current_page >= meta.last_page}
                             onClick={() => goToPage(meta.current_page + 1)}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="btn-secondary !px-3 !py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Next
                         </button>
@@ -409,4 +473,5 @@ export function CRUDPage({
 }
 
 export default CRUDPage;
+
 

@@ -42,13 +42,23 @@ export default function ProfilePage() {
         }
     }, [user]);
 
-    const currentPhoto = useMemo(() => {
-        return photoPreview || user?.profile_photo_url || '';
-    }, [photoPreview, user]);
+    useEffect(() => {
+        return () => {
+            if (photoPreview) {
+                URL.revokeObjectURL(photoPreview);
+            }
+        };
+    }, [photoPreview]);
+
+    const currentPhoto = useMemo(() => photoPreview || user?.profile_photo_url || '', [photoPreview, user]);
 
     function handlePhotoChange(event) {
         const file = event.target.files?.[0] || null;
         setPhotoFile(file);
+
+        if (photoPreview) {
+            URL.revokeObjectURL(photoPreview);
+        }
 
         if (file) {
             setPhotoPreview(URL.createObjectURL(file));
@@ -92,14 +102,19 @@ export default function ProfilePage() {
             await refreshUser();
 
             setSuccess('Profile updated successfully.');
-            setPhotoFile(null);
-            setPhotoPreview('');
             setForm((prev) => ({
                 ...prev,
                 current_password: '',
                 password: '',
                 password_confirmation: '',
             }));
+            setPhotoFile(null);
+
+            if (photoPreview) {
+                URL.revokeObjectURL(photoPreview);
+            }
+
+            setPhotoPreview('');
         } catch (err) {
             setError(err?.response?.data?.message || 'Failed to update profile');
         } finally {
@@ -108,89 +123,58 @@ export default function ProfilePage() {
     }
 
     async function handleDeletePhoto() {
-        setPhotoLoading(true);
-        setSuccess('');
-        setError('');
-
         try {
+            setPhotoLoading(true);
+            setSuccess('');
+            setError('');
+
             await apiClient.delete('/profile/photo');
             await refreshUser();
+
             setPhotoFile(null);
+
+            if (photoPreview) {
+                URL.revokeObjectURL(photoPreview);
+            }
+
             setPhotoPreview('');
-            setSuccess('Profile photo deleted successfully.');
+            setSuccess('Profile image removed successfully.');
         } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to delete profile photo');
+            setError(err?.response?.data?.message || 'Failed to remove profile image');
         } finally {
             setPhotoLoading(false);
         }
     }
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
-                <p className="mt-1 text-sm text-slate-500">Manage your account settings</p>
-            </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="panel">
+                <div className="panel-body">
+                    <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
+                    <p className="mt-1 text-sm text-slate-500">Update your account details, password, and profile image.</p>
 
-            {success ? (
-                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                    {success}
-                </div>
-            ) : null}
+                    {success ? (
+                        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                            {success}
+                        </div>
+                    ) : null}
 
-            {error ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                </div>
-            ) : null}
+                    {error ? (
+                        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {error}
+                        </div>
+                    ) : null}
 
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold">Profile Photo</h2>
-
-                    <div className="flex flex-col items-center gap-4">
-                        {currentPhoto ? (
-                            <img
-                                src={currentPhoto}
-                                alt="Profile"
-                                className="h-28 w-28 rounded-full object-cover ring-4 ring-slate-100"
-                            />
-                        ) : (
-                            <div className="flex h-28 w-28 items-center justify-center rounded-full bg-slate-900 text-2xl font-bold text-white ring-4 ring-slate-100">
-                                {initials(user?.name)}
-                            </div>
-                        )}
-
-                        <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/jpg,image/webp"
-                            onChange={handlePhotoChange}
-                            className="block w-full text-sm text-slate-600"
-                        />
-
-                        <button
-                            type="button"
-                            onClick={handleDeletePhoto}
-                            disabled={photoLoading || (!user?.profile_photo_url && !photoPreview)}
-                            className="w-full rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            {photoLoading ? 'Deleting...' : 'Delete Photo'}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-6 text-lg font-semibold">Account Information</h2>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="mt-6 space-y-6">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Full Name</label>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
                                 <input
                                     type="text"
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-shell w-full"
+                                    required
                                 />
                             </div>
 
@@ -200,33 +184,28 @@ export default function ProfilePage() {
                                     type="email"
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-shell w-full"
+                                    required
                                 />
                             </div>
-                        </div>
 
-                        <hr className="my-6" />
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Current Password</label>
+                                <input
+                                    type="password"
+                                    value={form.current_password}
+                                    onChange={(e) => setForm({ ...form, current_password: e.target.value })}
+                                    className="input-shell w-full"
+                                />
+                            </div>
 
-                        <h3 className="text-base font-semibold text-slate-900">Change Password</h3>
-
-                        <div>
-                            <label className="mb-1 block text-sm font-medium text-slate-700">Current Password</label>
-                            <input
-                                type="password"
-                                value={form.current_password}
-                                onChange={(e) => setForm({ ...form, current_password: e.target.value })}
-                                className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-slate-700">New Password</label>
                                 <input
                                     type="password"
                                     value={form.password}
                                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-shell w-full"
                                 />
                             </div>
 
@@ -236,48 +215,88 @@ export default function ProfilePage() {
                                     type="password"
                                     value={form.password_confirmation}
                                     onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-shell w-full"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Profile Image</label>
+                                <input
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    onChange={handlePhotoChange}
+                                    className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-4">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="rounded-xl bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
-                            >
+                        <div className="flex gap-3 pt-2">
+                            <button type="submit" disabled={loading} className="btn-primary disabled:opacity-60">
                                 {loading ? 'Saving...' : 'Save Changes'}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleDeletePhoto}
+                                disabled={photoLoading || (!user?.profile_photo_url && !photoPreview)}
+                                className="btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {photoLoading ? 'Removing...' : 'Remove Image'}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">Account Details</h2>
+            <div className="space-y-6">
+                <div className="panel">
+                    <div className="panel-body">
+                        <div className="flex flex-col items-center text-center">
+                            {currentPhoto ? (
+                                <img
+                                    src={currentPhoto}
+                                    alt={user?.name || 'User'}
+                                    className="h-28 w-28 rounded-2xl object-cover ring-4 ring-slate-100"
+                                />
+                            ) : (
+                                <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-slate-900 text-2xl font-bold text-white ring-4 ring-slate-100">
+                                    {initials(user?.name)}
+                                </div>
+                            )}
 
-                <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-slate-600">Role:</span>
-                        <span className="font-medium text-slate-900">{user?.role || 'N/A'}</span>
+                            <h2 className="mt-4 text-lg font-semibold text-slate-900">{user?.name || 'User'}</h2>
+                            <p className="text-sm text-slate-500">{user?.email || 'No email available'}</p>
+                        </div>
                     </div>
+                </div>
 
-                    <div className="flex justify-between">
-                        <span className="text-slate-600">Email Verified:</span>
-                        <span className="font-medium text-slate-900">{user?.email_verified_at ? 'Yes' : 'No'}</span>
-                    </div>
+                <div className="panel">
+                    <div className="panel-body">
+                        <h2 className="mb-4 text-lg font-semibold text-slate-900">Account Details</h2>
 
-                    <div className="flex justify-between">
-                        <span className="text-slate-600">Impersonating:</span>
-                        <span className="font-medium text-slate-900">{user?.is_impersonating ? 'Yes' : 'No'}</span>
-                    </div>
+                        <div className="space-y-3 text-sm">
+                            <div className="flex justify-between gap-3">
+                                <span className="text-slate-600">Role:</span>
+                                <span className="font-medium text-slate-900">{user?.role || 'N/A'}</span>
+                            </div>
 
-                    <div className="flex justify-between">
-                        <span className="text-slate-600">Member Since:</span>
-                        <span className="font-medium text-slate-900">
-                            {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
-                        </span>
+                            <div className="flex justify-between gap-3">
+                                <span className="text-slate-600">Email Verified:</span>
+                                <span className="font-medium text-slate-900">{user?.email_verified_at ? 'Yes' : 'No'}</span>
+                            </div>
+
+                            <div className="flex justify-between gap-3">
+                                <span className="text-slate-600">Impersonating:</span>
+                                <span className="font-medium text-slate-900">{user?.is_impersonating ? 'Yes' : 'No'}</span>
+                            </div>
+
+                            <div className="flex justify-between gap-3">
+                                <span className="text-slate-600">Member Since:</span>
+                                <span className="font-medium text-slate-900">
+                                    {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

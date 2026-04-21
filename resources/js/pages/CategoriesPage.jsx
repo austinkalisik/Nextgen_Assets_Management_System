@@ -21,6 +21,13 @@ export default function CategoriesPage() {
             fields={fields}
             searchPlaceholder="Search categories..."
             createLabel="Add Category"
+            csvConfig={{
+                filename: 'categories.csv',
+                mapRow: (item) => ({
+                    'Category Name': item.name || '',
+                    Description: item.description || '',
+                }),
+            }}
         />
     );
 }

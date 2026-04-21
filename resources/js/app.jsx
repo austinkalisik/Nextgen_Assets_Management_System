@@ -1,7 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
@@ -9,24 +9,53 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Layout from './components/Layout';
 
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import ItemsPage from './pages/ItemsPage';
-import AssignmentsPage from './pages/AssignmentsPage';
-import InventoryPage from './pages/InventoryPage';
-import CategoriesPage from './pages/CategoriesPage';
-import DepartmentsPage from './pages/DepartmentsPage';
-import SuppliersPage from './pages/SuppliersPage';
-import NotificationsPage from './pages/NotificationsPage';
-import ProfilePage from './pages/ProfilePage';
-import UsersPage from './pages/UsersPage';
-import SettingsPage from './pages/SettingsPage';
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ItemsPage = lazy(() => import('./pages/ItemsPage'));
+const AssignmentsPage = lazy(() => import('./pages/AssignmentsPage'));
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
+const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage'));
+const SuppliersPage = lazy(() => import('./pages/SuppliersPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const UsersPage = lazy(() => import('./pages/UsersPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+function preloadPages() {
+    [
+        import('./pages/DashboardPage'),
+        import('./pages/ItemsPage'),
+        import('./pages/AssignmentsPage'),
+        import('./pages/CategoriesPage'),
+        import('./pages/DepartmentsPage'),
+        import('./pages/SuppliersPage'),
+        import('./pages/NotificationsPage'),
+        import('./pages/ProfilePage'),
+        import('./pages/UsersPage'),
+        import('./pages/SettingsPage'),
+    ].forEach((pagePromise) => {
+        pagePromise.catch(() => {});
+    });
+}
 
 function LoadingScreen() {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-100">
-            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
-                <p className="text-sm text-slate-500">Loading application...</p>
+        <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
+            <div className="text-center">
+                <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+                <p className="mt-4 text-sm font-medium text-slate-600">Loading NextGen Assets...</p>
+                <p className="mt-1 text-xs text-slate-500">Preparing your workspace</p>
+            </div>
+        </div>
+    );
+}
+
+function PageLoader() {
+    return (
+        <div className="flex min-h-[320px] items-center justify-center">
+            <div className="text-center">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+                <p className="mt-3 text-sm text-slate-600">Loading page...</p>
             </div>
         </div>
     );
@@ -57,7 +86,11 @@ function ProtectedRoute({ children }) {
         return <Navigate to="/login" replace />;
     }
 
-    return <Layout>{children}</Layout>;
+    return (
+        <Layout>
+            <Suspense fallback={<PageLoader />}>{children}</Suspense>
+        </Layout>
+    );
 }
 
 function AppRoutes() {
@@ -83,8 +116,10 @@ function AppRoutes() {
                 }
             />
 
+            <Route path="/items" element={<Navigate to="/inventory" replace />} />
+
             <Route
-                path="/items"
+                path="/inventory"
                 element={
                     <ProtectedRoute>
                         <ItemsPage />
@@ -97,15 +132,6 @@ function AppRoutes() {
                 element={
                     <ProtectedRoute>
                         <AssignmentsPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/inventory"
-                element={
-                    <ProtectedRoute>
-                        <InventoryPage />
                     </ProtectedRoute>
                 }
             />
@@ -180,15 +206,13 @@ function AppRoutes() {
 
 function App() {
     return (
-        <React.StrictMode>
-            <BrowserRouter>
-                <AuthProvider>
-                    <SettingsProvider>
-                        <AppRoutes />
-                    </SettingsProvider>
-                </AuthProvider>
-            </BrowserRouter>
-        </React.StrictMode>
+        <BrowserRouter>
+            <AuthProvider>
+                <SettingsProvider>
+                    <AppRoutes />
+                </SettingsProvider>
+            </AuthProvider>
+        </BrowserRouter>
     );
 }
 
@@ -200,4 +224,5 @@ if (rootElement) {
     }
 
     window.__nextgenReactRoot.render(<App />);
+    setTimeout(preloadPages, 150);
 }

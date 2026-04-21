@@ -1,5 +1,3 @@
-// file: database/migrations/2025_04_17_000001_add_description_to_departments_table.php
-
 <?php
 
 use Illuminate\Database\Migrations\Migration;

@@ -5,12 +5,22 @@ namespace App\Http\Controllers;
 use App\Models\AssetLog;
 use App\Models\Item;
 use App\Models\SystemNotification;
+use App\Models\User;
+use App\Services\StockInventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class InventoryController extends Controller
 {
+    protected StockInventoryService $stockInventoryService;
+
+    public function __construct(StockInventoryService $stockInventoryService)
+    {
+        $this->stockInventoryService = $stockInventoryService;
+    }
+
     protected function getIntSetting(string $key, int $default): int
     {
         $value = DB::table('settings')->where('key', $key)->value('value');
@@ -22,25 +32,39 @@ class InventoryController extends Controller
         return (int) $value;
     }
 
+    protected function lowStockQuery(int $defaultThreshold)
+    {
+        return Item::query()
+            ->where('quantity', '>', 0)
+            ->where(function ($query) use ($defaultThreshold) {
+                $query->where(function ($sub) {
+                    $sub->whereNotNull('reorder_level')
+                        ->whereColumn('quantity', '<=', 'reorder_level');
+                })->orWhere(function ($sub) use ($defaultThreshold) {
+                    $sub->whereNull('reorder_level')
+                        ->where('quantity', '<=', $defaultThreshold);
+                });
+            });
+    }
+
     public function index(Request $request)
     {
         $lowStockThreshold = $this->getIntSetting('low_stock_threshold', 5);
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
 
-        $query = Item::with(['category', 'supplier', 'department'])
-            ->orderBy('name');
+        $query = Item::with(['category', 'supplier'])->orderBy('name');
 
         if ($request->filled('search')) {
             $search = trim((string) $request->search);
 
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
                     ->orWhere('sku', 'like', "%{$search}%")
                     ->orWhere('asset_tag', 'like', "%{$search}%")
                     ->orWhere('serial_number', 'like', "%{$search}%")
                     ->orWhereHas('category', fn($sub) => $sub->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('supplier', fn($sub) => $sub->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('department', fn($sub) => $sub->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('supplier', fn($sub) => $sub->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -48,9 +72,10 @@ class InventoryController extends Controller
             if ($request->stock === 'out') {
                 $query->where('quantity', 0);
             } elseif ($request->stock === 'low') {
-                $query->where('quantity', '>', 0)->where('quantity', '<', $lowStockThreshold);
+                $query->whereIn('id', $this->lowStockQuery($lowStockThreshold)->select('id'));
             } elseif ($request->stock === 'available') {
-                $query->where('quantity', '>', 0);
+                $query->where('quantity', '>', 0)
+                    ->whereNotIn('id', $this->lowStockQuery($lowStockThreshold)->select('id'));
             }
         }
 
@@ -61,7 +86,7 @@ class InventoryController extends Controller
             [
                 'summary' => [
                     'totalItems' => Item::count(),
-                    'lowStockCount' => Item::where('quantity', '>', 0)->where('quantity', '<', $lowStockThreshold)->count(),
+                    'lowStockCount' => $this->lowStockQuery($lowStockThreshold)->count(),
                     'outOfStockCount' => Item::where('quantity', 0)->count(),
                 ],
             ]
@@ -72,25 +97,38 @@ class InventoryController extends Controller
     {
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1'],
+            'reference_no' => ['nullable', 'string', 'max:100'],
+            'supplier_id' => ['nullable', 'exists:suppliers,id'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $item->increment('quantity', $validated['quantity']);
-        $item->refresh();
+        try {
+            $movement = $this->stockInventoryService->stockIn(
+                $item,
+                (int) $validated['quantity'],
+                $validated['reference_no'] ?? null,
+                $validated['supplier_id'] ?? null,
+                $validated['notes'] ?? null
+            );
 
-        if (method_exists($item, 'syncAutomatedStatus')) {
-            $item->syncAutomatedStatus();
+            $updatedItem = $item->fresh()->load(['category', 'supplier']);
+
+            AssetLog::log(
+                $item->id,
+                AssetLog::ACTION_STOCK_IN,
+                "Stock in: +{$validated['quantity']}"
+            );
+
+            return response()->json([
+                'message' => 'Stock added successfully',
+                'movement' => $movement,
+                'item' => $updatedItem,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
         }
-
-        AssetLog::log(
-            $item->id,
-            AssetLog::ACTION_STOCK_IN,
-            "Stock in: +{$validated['quantity']}"
-        );
-
-        return response()->json([
-            'message' => 'Stock added successfully',
-            'item' => $item->load(['category', 'supplier', 'department']),
-        ]);
     }
 
     public function stockOut(Request $request, Item $item)
@@ -99,38 +137,94 @@ class InventoryController extends Controller
 
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1'],
+            'reference_no' => ['nullable', 'string', 'max:100'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        if ($validated['quantity'] > $item->quantity) {
-            return response()->json(['message' => 'Not enough stock available.'], 422);
+        try {
+            $movement = $this->stockInventoryService->stockOut(
+                $item,
+                (int) $validated['quantity'],
+                $validated['reference_no'] ?? null,
+                $validated['notes'] ?? null
+            );
+
+            $updatedItem = $item->fresh()->load(['category', 'supplier']);
+
+            AssetLog::log(
+                $item->id,
+                AssetLog::ACTION_STOCK_OUT,
+                "Stock out: -{$validated['quantity']}"
+            );
+
+            if ((int) $updatedItem->quantity > 0 && $updatedItem->isLowStock($lowStockThreshold)) {
+                $this->notifyAdmins(
+                    'low_stock',
+                    'Low Stock Alert',
+                    "{$updatedItem->name} is running low (Qty: {$updatedItem->quantity})",
+                    '/inventory',
+                    'item',
+                    $updatedItem->id
+                );
+            }
+
+            if ((int) $updatedItem->quantity === 0) {
+                $this->notifyAdmins(
+                    'inventory_alert',
+                    'Out of Stock Alert',
+                    "{$updatedItem->name} is now out of stock.",
+                    '/inventory',
+                    'item',
+                    $updatedItem->id
+                );
+            }
+
+            return response()->json([
+                'message' => 'Stock removed successfully',
+                'movement' => $movement,
+                'item' => $updatedItem,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
         }
+    }
 
-        $item->decrement('quantity', $validated['quantity']);
-        $item->refresh();
+    protected function notifyAdmins(
+        string $type,
+        string $title,
+        string $message,
+        string $url,
+        ?string $sourceType = null,
+        ?int $sourceId = null
+    ): void {
+        $admins = User::where('role', 'admin')->get();
 
-        if (method_exists($item, 'syncAutomatedStatus')) {
-            $item->syncAutomatedStatus();
-        }
-
-        AssetLog::log(
-            $item->id,
-            AssetLog::ACTION_STOCK_OUT,
-            "Stock out: -{$validated['quantity']}"
-        );
-
-        if ((int) $item->quantity < $lowStockThreshold) {
+        foreach ($admins as $admin) {
             SystemNotification::create([
-                'user_id' => Auth::id(),
-                'type' => 'warning',
-                'title' => 'Low Stock Alert',
-                'message' => "{$item->name} is running low (Qty: {$item->quantity})",
-                'url' => '/inventory',
+                'user_id' => $admin->id,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'url' => $url,
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'read_at' => null,
             ]);
         }
 
-        return response()->json([
-            'message' => 'Stock removed successfully',
-            'item' => $item->load(['category', 'supplier', 'department']),
-        ]);
+        if (Auth::check()) {
+            SystemNotification::create([
+                'user_id' => Auth::id(),
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'url' => $url,
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'read_at' => null,
+            ]);
+        }
     }
 }

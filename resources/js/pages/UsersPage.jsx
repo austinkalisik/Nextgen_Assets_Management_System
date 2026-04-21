@@ -3,163 +3,57 @@ import { useSearchParams } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { invalidateApiCache, useApi } from '../hooks/useApi';
+
+function defaultForm() {
+    return {
+        name: '',
+        email: '',
+        role: 'staff',
+        password: '',
+        password_confirmation: '',
+    };
+}
 
 export default function UsersPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { user: currentUser, impersonate, stopImpersonation, refreshUser } = useAuth();
-    const { settings} = useSettings();
+    const { settings } = useSettings();
+
     const canSwitchUser = String(settings.allow_user_impersonation ?? '1') === '1';
 
     const filters = useMemo(
         () => ({
             search: searchParams.get('search') ?? '',
             page: Number.parseInt(searchParams.get('page') ?? '1', 10),
+            per_page: 10,
         }),
         [searchParams]
     );
 
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const { data, loading, error, refetch } = useApi('/users', { params: filters }, { ttl: 180000 });
+    const users = data?.data || [];
+    const meta = {
+        current_page: data?.current_page || 1,
+        last_page: data?.last_page || 1,
+        total: data?.total || 0,
+    };
+
     const [success, setSuccess] = useState('');
-    const [showForm, setShowForm] = useState(false);
+    const [showForm, setShowForm] = useState(searchParams.get('create') === '1');
     const [editingId, setEditingId] = useState(null);
     const [searchInput, setSearchInput] = useState(filters.search);
-    const [meta, setMeta] = useState({
-        current_page: 1,
-        last_page: 1,
-        total: 0,
-    });
-
-    const [form, setForm] = useState({
-        name: '',
-        email: '',
-        role: 'staff',
-        password: '',
-        password_confirmation: '',
-    });
+    const [form, setForm] = useState(defaultForm());
 
     useEffect(() => {
         setSearchInput(filters.search);
     }, [filters.search]);
 
     useEffect(() => {
-        void fetchUsers();
-    }, [filters]);
-
-    async function fetchUsers() {
-        try {
-            setLoading(true);
-
-            const response = await apiClient.get('/users', {
-                params: {
-                    search: filters.search || undefined,
-                    page: filters.page > 0 ? filters.page : 1,
-                    per_page: 10,
-                },
-            });
-
-            const payload = response.data;
-
-            setUsers(payload.data || []);
-            setMeta({
-                current_page: payload.current_page || 1,
-                last_page: payload.last_page || 1,
-                total: payload.total || 0,
-            });
-            setError('');
-        } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to load users');
-        } finally {
-            setLoading(false);
+        if (searchParams.get('create') === '1' && !editingId) {
+            setShowForm(true);
         }
-    }
-
-    async function handleSubmit(event) {
-        event.preventDefault();
-
-        try {
-            const payload = {
-                name: form.name,
-                email: form.email,
-                role: form.role,
-            };
-
-            if (form.password) {
-                payload.password = form.password;
-                payload.password_confirmation = form.password_confirmation;
-            }
-
-            if (editingId) {
-                await apiClient.put(`/users/${editingId}`, payload);
-            } else {
-                await apiClient.post('/users', payload);
-            }
-
-            setSuccess(editingId ? 'User updated successfully.' : 'User created successfully.');
-            resetForm();
-            await fetchUsers();
-        } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to save user');
-        }
-    }
-
-    async function handleDelete(id) {
-        if (!window.confirm('Delete this user?')) {
-            return;
-        }
-
-        try {
-            await apiClient.delete(`/users/${id}`);
-            await fetchUsers();
-        } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to delete user');
-        }
-    }
-
-    async function handleImpersonate(id) {
-        try {
-            await impersonate(id);
-            await refreshUser();
-            setSuccess('Switched user successfully.');
-        } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to switch user');
-        }
-    }
-
-    async function handleStopImpersonation() {
-        try {
-            await stopImpersonation();
-            await refreshUser();
-            setSuccess('Returned to administrator account.');
-        } catch (err) {
-            setError(err?.response?.data?.message || 'Failed to stop impersonation');
-        }
-    }
-
-    function handleEdit(user) {
-        setForm({
-            name: user.name || '',
-            email: user.email || '',
-            role: user.role || 'staff',
-            password: '',
-            password_confirmation: '',
-        });
-        setEditingId(user.id);
-        setShowForm(true);
-    }
-
-    function resetForm() {
-        setForm({
-            name: '',
-            email: '',
-            role: 'staff',
-            password: '',
-            password_confirmation: '',
-        });
-        setEditingId(null);
-        setShowForm(false);
-    }
+    }, [searchParams, editingId]);
 
     function updateQuery(nextValues) {
         const next = new URLSearchParams(searchParams);
@@ -188,7 +82,120 @@ export default function UsersPage() {
         updateQuery({ page });
     }
 
-    if (loading) {
+    function resetForm() {
+        setForm(defaultForm());
+        setEditingId(null);
+        setShowForm(false);
+    }
+
+    function handleEdit(user) {
+        setForm({
+            name: user.name || '',
+            email: user.email || '',
+            role: user.role || 'staff',
+            password: '',
+            password_confirmation: '',
+        });
+
+        setEditingId(user.id);
+        setShowForm(true);
+        setSuccess('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleForm() {
+        setSuccess('');
+
+        if (showForm) {
+            resetForm();
+            return;
+        }
+
+        setForm(defaultForm());
+        setEditingId(null);
+        setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function refreshUsers() {
+        invalidateApiCache('/users');
+        await refetch();
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        try {
+            setSuccess('');
+
+            const payload = {
+                name: form.name.trim(),
+                email: form.email.trim(),
+                role: form.role,
+            };
+
+            if (form.password) {
+                payload.password = form.password;
+                payload.password_confirmation = form.password_confirmation;
+            }
+
+            if (editingId) {
+                await apiClient.put(`/users/${editingId}`, payload);
+                setSuccess('User updated successfully.');
+            } else {
+                payload.password = form.password;
+                payload.password_confirmation = form.password_confirmation;
+                await apiClient.post('/users', payload);
+                setSuccess('User created successfully.');
+            }
+
+            resetForm();
+            await refreshUsers();
+            await refreshUser();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function handleDelete(id) {
+        if (!window.confirm('Are you sure you want to delete this user?')) {
+            return;
+        }
+
+        try {
+            setSuccess('');
+            await apiClient.delete(`/users/${id}`);
+            setSuccess('User deleted successfully.');
+            await refreshUsers();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function handleImpersonate(userId) {
+        try {
+            setSuccess('');
+            await impersonate(userId);
+            setSuccess('User switched successfully.');
+            await refreshUsers();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function handleStopImpersonation() {
+        try {
+            setSuccess('');
+            await stopImpersonation();
+            setSuccess('Returned to admin successfully.');
+            await refreshUsers();
+            await refreshUser();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    if (loading && !data) {
         return <div className="text-slate-500">Loading users...</div>;
     }
 
@@ -197,9 +204,7 @@ export default function UsersPage() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">Users</h1>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Manage system users and switch-user access
-                    </p>
+                    <p className="mt-1 text-sm text-slate-500">Manage system users, roles, and switch-user access.</p>
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row">
@@ -209,36 +214,28 @@ export default function UsersPage() {
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             placeholder="Search users..."
-                            className="w-72 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="input-shell w-72"
                         />
-                        <button
-                            type="submit"
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        >
+                        <button type="submit" className="btn-secondary">
                             Find
                         </button>
                     </form>
 
-                    <button
-                        type="button"
-                        onClick={() => setShowForm((prev) => !prev)}
-                        className="rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700"
-                    >
+                    <button type="button" onClick={toggleForm} className="btn-primary">
                         {showForm ? 'Cancel' : 'Add User'}
                     </button>
+
+                    {currentUser?.is_impersonating ? (
+                        <button type="button" onClick={handleStopImpersonation} className="btn-secondary">
+                            Return to Admin
+                        </button>
+                    ) : null}
                 </div>
             </div>
 
-            {currentUser?.is_impersonating ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    You are in switch-user mode.
-                    <button
-                        type="button"
-                        onClick={handleStopImpersonation}
-                        className="ml-3 font-semibold underline"
-                    >
-                        Return to admin
-                    </button>
+            {success ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {success}
                 </div>
             ) : null}
 
@@ -248,145 +245,106 @@ export default function UsersPage() {
                 </div>
             ) : null}
 
-            {success ? (
-                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                    {success}
-                </div>
-            ) : null}
-
             {showForm ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold">
-                        {editingId ? 'Edit User' : 'Add User'}
-                    </h2>
+                <div className="panel">
+                    <div className="panel-body">
+                        <h2 className="mb-4 text-lg font-semibold">{editingId ? 'Edit User' : 'Add User'}</h2>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Name
-                                </label>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
                                 <input
                                     type="text"
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-shell w-full"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Email
-                                </label>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
                                 <input
                                     type="email"
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-shell w-full"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Role
-                                </label>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Role</label>
                                 <select
                                     value={form.role}
                                     onChange={(e) => setForm({ ...form, role: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
+                                    className="input-shell w-full"
                                 >
-                                    <option value="admin">Admin</option>
-                                    <option value="manager">Manager</option>
-                                    <option value="asset_officer">Asset Officer</option>
                                     <option value="staff">Staff</option>
+                                    <option value="admin">Admin</option>
                                 </select>
                             </div>
 
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Password
+                                    Password {editingId ? '(leave blank to keep current)' : ''}
                                 </label>
                                 <input
                                     type="password"
                                     value={form.password}
                                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder={
-                                        editingId
-                                            ? 'Leave blank to keep current password'
-                                            : 'Default is password if blank'
-                                    }
+                                    className="input-shell w-full"
+                                    required={!editingId}
                                 />
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Confirm Password
-                                </label>
+                                <label className="mb-1 block text-sm font-medium text-slate-700">Confirm Password</label>
                                 <input
                                     type="password"
                                     value={form.password_confirmation}
-                                    onChange={(e) =>
-                                        setForm({ ...form, password_confirmation: e.target.value })
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })}
+                                    className="input-shell w-full"
+                                    required={!editingId || Boolean(form.password)}
                                 />
                             </div>
-                        </div>
 
-                        <div className="flex gap-3">
-                            <button
-                                type="submit"
-                                className="rounded-xl bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
-                            >
-                                {editingId ? 'Update' : 'Create'} User
-                            </button>
+                            <div className="md:col-span-2 flex gap-3 pt-2">
+                                <button type="submit" className="btn-primary">
+                                    {editingId ? 'Update User' : 'Create User'}
+                                </button>
 
-                            <button
-                                type="button"
-                                onClick={resetForm}
-                                className="rounded-xl bg-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-300"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
+                                <button type="button" onClick={resetForm} className="btn-secondary">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="table-shell">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                        <thead className="table-head">
                             <tr>
                                 <th className="px-6 py-4 text-left font-semibold">Name</th>
                                 <th className="px-6 py-4 text-left font-semibold">Email</th>
                                 <th className="px-6 py-4 text-left font-semibold">Role</th>
-                                <th className="px-6 py-4 text-left font-semibold">Assignments</th>
+                                <th className="px-6 py-4 text-left font-semibold">Active Assignments</th>
                                 <th className="px-6 py-4 text-left font-semibold">Actions</th>
                             </tr>
                         </thead>
 
                         <tbody className="divide-y divide-slate-100">
-                            {users.length ? (
+                            {users.length > 0 ? (
                                 users.map((user) => (
-                                    <tr key={user.id} className="hover:bg-slate-50">
-                                        <td className="px-6 py-4 font-medium text-slate-900">
-                                            {user.name}
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-700">
-                                            {user.email}
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-700">
-                                            {user.role}
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-700">
-                                            {user.active_assignments_count ?? 0}
-                                        </td>
-                                        <td className="space-x-2 px-6 py-4">
+                                    <tr key={user.id} className="table-row">
+                                        <td className="px-6 py-4 font-medium text-slate-900">{user.name}</td>
+                                        <td className="px-6 py-4 text-slate-700">{user.email}</td>
+                                        <td className="px-6 py-4 text-slate-700">{user.role}</td>
+                                        <td className="px-6 py-4 text-slate-700">{user.active_assignments_count ?? 0}</td>
+                                        <td className="space-x-3 px-6 py-4">
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(user)}
@@ -403,7 +361,10 @@ export default function UsersPage() {
                                                 Delete
                                             </button>
 
-                                            {canSwitchUser && currentUser?.role === 'admin' && !currentUser?.is_impersonating && Number(currentUser?.id) !== Number(user.id) ? (
+                                            {canSwitchUser &&
+                                            currentUser?.role === 'admin' &&
+                                            !currentUser?.is_impersonating &&
+                                            Number(currentUser?.id) !== Number(user.id) ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => handleImpersonate(user.id)}
@@ -436,7 +397,7 @@ export default function UsersPage() {
                             type="button"
                             disabled={meta.current_page <= 1}
                             onClick={() => goToPage(meta.current_page - 1)}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="btn-secondary !px-3 !py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Previous
                         </button>
@@ -445,7 +406,7 @@ export default function UsersPage() {
                             type="button"
                             disabled={meta.current_page >= meta.last_page}
                             onClick={() => goToPage(meta.current_page + 1)}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="btn-secondary !px-3 !py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Next
                         </button>
@@ -455,3 +416,4 @@ export default function UsersPage() {
         </div>
     );
 }
+

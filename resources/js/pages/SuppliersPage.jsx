@@ -25,7 +25,6 @@ export default function SuppliersPage() {
             createLabel="Add Supplier"
             csvConfig={{
                 filename: 'suppliers.csv',
-                headers: ['Supplier Name', 'Email', 'Phone', 'Address'],
                 mapRow: (item) => ({
                     'Supplier Name': item.name || '',
                     Email: item.email || '',

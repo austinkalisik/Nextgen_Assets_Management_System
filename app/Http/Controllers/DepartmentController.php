@@ -11,7 +11,12 @@ class DepartmentController extends Controller
     {
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
 
-        $query = Department::withCount('items')->latest();
+        $query = Department::query()
+            ->withCount([
+                'assignments',
+                'activeAssignments',
+            ])
+            ->latest();
 
         if ($request->filled('search')) {
             $search = trim((string) $request->search);
@@ -39,6 +44,11 @@ class DepartmentController extends Controller
 
     public function show(Department $department)
     {
+        $department->loadCount([
+            'assignments',
+            'activeAssignments',
+        ]);
+
         return response()->json($department);
     }
 
@@ -51,17 +61,26 @@ class DepartmentController extends Controller
 
         $department->update($validated);
 
-        return response()->json($department->fresh());
+        return response()->json(
+            $department->fresh()->loadCount([
+                'assignments',
+                'activeAssignments',
+            ])
+        );
     }
 
     public function destroy(Department $department)
     {
-        if ($department->items()->exists() || $department->assignments()->exists()) {
-            return response()->json(['message' => 'Cannot delete department with linked records.'], 422);
+        if ($department->assignments()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete department with linked assignments.',
+            ], 422);
         }
 
         $department->delete();
 
-        return response()->json(['message' => 'Department deleted successfully']);
+        return response()->json([
+            'message' => 'Department deleted successfully',
+        ]);
     }
 }

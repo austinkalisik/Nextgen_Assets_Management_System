@@ -9,32 +9,39 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('assignments', function (Blueprint $table) {
-            $table->unsignedBigInteger('assigned_department_id')->nullable()->after('user_id');
-        });
+        if (!Schema::hasTable('assignments')) {
+            return;
+        }
 
-        // Optional: backfill existing rows with the item's current department if possible
-        if (Schema::hasColumn('assignments', 'item_id')) {
-            $assignments = DB::table('assignments')->get();
+        if (Schema::hasColumn('assignments', 'assigned_department_id')) {
+            DB::table('assignments')
+                ->whereNull('department_id')
+                ->whereNotNull('assigned_department_id')
+                ->update([
+                    'department_id' => DB::raw('assigned_department_id'),
+                ]);
 
-            foreach ($assignments as $assignment) {
-                $item = DB::table('items')->where('id', $assignment->item_id)->first();
-
-                if ($item && isset($item->department_id)) {
-                    DB::table('assignments')
-                        ->where('id', $assignment->id)
-                        ->update([
-                            'assigned_department_id' => $item->department_id,
-                        ]);
+            Schema::table('assignments', function (Blueprint $table) {
+                try {
+                    $table->dropForeign(['assigned_department_id']);
+                } catch (\Throwable $e) {
                 }
-            }
+
+                $table->dropColumn('assigned_department_id');
+            });
         }
     }
 
     public function down(): void
     {
-        Schema::table('assignments', function (Blueprint $table) {
-            $table->dropColumn('assigned_department_id');
-        });
+        if (!Schema::hasTable('assignments')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('assignments', 'assigned_department_id')) {
+            Schema::table('assignments', function (Blueprint $table) {
+                $table->unsignedBigInteger('assigned_department_id')->nullable()->after('user_id');
+            });
+        }
     }
 };

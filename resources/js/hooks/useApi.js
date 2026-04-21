@@ -1,4 +1,3 @@
-// file: resources/js/hooks/useApi.js
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import apiClient from '../api/client';
 

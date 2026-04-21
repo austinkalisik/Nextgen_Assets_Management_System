@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 
@@ -15,6 +15,7 @@ export default function NotificationsPage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [busyId, setBusyId] = useState(null);
+    const unreadCount = useMemo(() => items.filter((item) => !item.is_read).length, [items]);
 
     async function loadNotifications() {
         try {
@@ -92,76 +93,87 @@ export default function NotificationsPage() {
         }
     }
 
+    if (loading) {
+        return <div className="text-slate-500">Loading notifications...</div>;
+    }
+
     return (
         <div className="space-y-6">
-            <div className="flex items-end justify-between">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
-                    <p className="mt-1 text-sm text-slate-500">View and manage your system alerts.</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Open alerts, mark items as read or unread, and keep track of system activity.
+                    </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleMarkAllRead}
-                    className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                    Mark All Read
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600">
+                        Unread: <span className="font-semibold text-slate-900">{unreadCount}</span>
+                    </div>
+
+                    <button type="button" onClick={handleMarkAllRead} className="btn-secondary">
+                        Mark All Read
+                    </button>
+                </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                {loading ? (
-                    <div className="p-6 text-sm text-slate-500">Loading notifications...</div>
-                ) : items.length === 0 ? (
-                    <div className="p-6 text-sm text-slate-500">No notifications found.</div>
-                ) : (
-                    <div className="divide-y divide-slate-200">
-                        {items.map((notification) => (
-                            <div
-                                key={notification.id}
-                                className={[
-                                    'flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between',
-                                    notification.is_read ? 'bg-white' : 'bg-blue-50/40',
-                                ].join(' ')}
-                            >
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-semibold text-slate-900">{notification.title}</h3>
+            <div className="space-y-4">
+                {items.length > 0 ? (
+                    items.map((notification) => (
+                        <div
+                            key={notification.id}
+                            className={`rounded-2xl border p-5 shadow-sm transition ${
+                                notification.is_read
+                                    ? 'border-slate-200 bg-white'
+                                    : 'border-blue-200 bg-blue-50/50'
+                            }`}
+                        >
+                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-lg font-semibold text-slate-900">{notification.title}</h2>
                                         {!notification.is_read ? (
-                                            <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                                            <span className="inline-flex rounded-full bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white">
                                                 New
                                             </span>
                                         ) : null}
                                     </div>
 
-                                    <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
+                                    <p className="mt-2 text-sm text-slate-600">{notification.message}</p>
 
-                                    <p className="mt-2 text-xs text-slate-400">
-                                        {formatDate(notification.created_at)}
-                                    </p>
+                                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                        <span>{notification.type || 'general'}</span>
+                                        <span>•</span>
+                                        <span>{formatDate(notification.created_at)}</span>
+                                    </div>
                                 </div>
 
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <button
                                         type="button"
                                         onClick={() => handleOpen(notification)}
                                         disabled={busyId === notification.id}
-                                        className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                                        className="btn-primary disabled:opacity-60"
                                     >
-                                        Open
+                                        {busyId === notification.id ? 'Opening...' : 'Open'}
                                     </button>
 
                                     <button
                                         type="button"
                                         onClick={() => handleToggleRead(notification)}
                                         disabled={busyId === notification.id}
-                                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                        className="btn-secondary disabled:opacity-60"
                                     >
                                         {notification.is_read ? 'Mark Unread' : 'Mark Read'}
                                     </button>
                                 </div>
                             </div>
-                        ))}
+                        </div>
+                    ))
+                ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-slate-500 shadow-sm">
+                        No notifications available.
                     </div>
                 )}
             </div>

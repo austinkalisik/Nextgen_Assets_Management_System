@@ -20,8 +20,6 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'created_at',
-        'updated_at',
     ];
 
     protected $casts = [
@@ -59,7 +57,10 @@ class User extends Authenticatable
             return null;
         }
 
-        return route('profile.photo.show', ['user' => $this->id, 'v' => optional($this->updated_at)?->timestamp]);
+        return route('profile.photo.show', [
+            'user' => $this->id,
+            'v' => optional($this->updated_at)?->timestamp,
+        ]);
     }
 
     public function isAdmin(): bool

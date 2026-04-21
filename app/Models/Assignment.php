@@ -3,57 +3,63 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Assignment extends Model
 {
     protected $fillable = [
         'item_id',
         'user_id',
+        'receiver_name',
         'department_id',
+        'quantity',
         'assigned_at',
-        'returned_at'
+        'returned_at',
     ];
 
     protected $casts = [
+        'quantity' => 'integer',
         'assigned_at' => 'datetime',
         'returned_at' => 'datetime',
     ];
 
-        //  Newly Added ReactJS
-        protected $appends = ['is_active'];
+    protected $appends = [
+        'is_active',
+        'receiver_label',
+    ];
 
-protected $hidden = [
-    'created_at',
-    'updated_at',
-];
+    protected $hidden = [
+        'created_at',
+        'updated_at',
+    ];
 
-public function getIsActiveAttribute(): bool
-{
-    return $this->isActive();
-}
+    public function getIsActiveAttribute(): bool
+    {
+        return $this->isActive();
+    }
 
+    public function getReceiverLabelAttribute(): string
+    {
+        return $this->receiver_name ?: ($this->user?->name ?? '-');
+    }
 
-    //  Asset relationship
-    public function item()
+    public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
     }
 
-    //  User assigned to asset
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    //  Department (FIXED - consistent with DB)
-    public function assignedDepartment()
+    public function assignedDepartment(): BelongsTo
     {
         return $this->belongsTo(Department::class, 'department_id');
     }
 
-    //  Helper: check if active
     public function isActive(): bool
     {
-        return is_null($this->returned_at);
+        return $this->returned_at === null;
     }
 }

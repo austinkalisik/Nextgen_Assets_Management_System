@@ -9,15 +9,23 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Item extends Model
 {
+    public const STATUS_AVAILABLE = 'available';
+    public const STATUS_MAINTENANCE = 'maintenance';
+    public const STATUS_LOST = 'lost';
+    public const STATUS_RETIRED = 'retired';
+
     protected $fillable = [
         'name',
         'sku',
+        'brand',
+        'description',
         'category_id',
         'supplier_id',
-        'department_id',
         'asset_tag',
         'serial_number',
         'quantity',
+        'reorder_level',
+        'unit_cost',
         'status',
         'location',
         'purchase_date',
@@ -26,30 +34,29 @@ class Item extends Model
     protected $casts = [
         'purchase_date' => 'date',
         'quantity' => 'integer',
+        'reorder_level' => 'integer',
+        'unit_cost' => 'decimal:2',
     ];
 
-    public const STATUS_AVAILABLE = 'available';
-    public const STATUS_ASSIGNED = 'assigned';
-    public const STATUS_MAINTENANCE = 'maintenance';
-    public const STATUS_RETIRED = 'retired';
+    protected $appends = [
+        'is_low_stock',
+        'is_assignable',
+    ];
 
-    /* ================= ReactJs ================= */
-protected $appends = ['is_low_stock'];
+    protected $hidden = [
+        'created_at',
+        'updated_at',
+    ];
 
-protected $hidden = [
-    'created_at',
-    'updated_at',
-];
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->isLowStock();
+    }
 
-public function getIsLowStockAttribute(): bool
-{
-    return $this->isLowStock();
-}
-
-
-
-
-    /* ================= RELATIONSHIPS ================= */
+    public function getIsAssignableAttribute(): bool
+    {
+        return $this->isAssignable();
+    }
 
     public function category(): BelongsTo
     {
@@ -61,14 +68,14 @@ public function getIsLowStockAttribute(): bool
         return $this->belongsTo(Supplier::class);
     }
 
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
-
     public function assignments(): HasMany
     {
         return $this->hasMany(Assignment::class);
+    }
+
+    public function activeAssignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class)->whereNull('returned_at');
     }
 
     public function activeAssignment(): HasOne
@@ -83,16 +90,14 @@ public function getIsLowStockAttribute(): bool
         return $this->hasMany(AssetLog::class);
     }
 
-    /* ================= STATUS HELPERS ================= */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 
     public function isAvailable(): bool
     {
         return $this->status === self::STATUS_AVAILABLE;
-    }
-
-    public function isAssigned(): bool
-    {
-        return $this->status === self::STATUS_ASSIGNED;
     }
 
     public function isMaintenance(): bool
@@ -105,40 +110,47 @@ public function getIsLowStockAttribute(): bool
         return $this->status === self::STATUS_RETIRED;
     }
 
+    public function isLost(): bool
+    {
+        return $this->status === self::STATUS_LOST;
+    }
+
     public function hasActiveAssignment(): bool
     {
-        return $this->activeAssignment()->exists();
+        return $this->activeAssignments()->exists();
     }
 
-    public function isLowStock(int $threshold = 3): bool
+    public function isLowStock(?int $threshold = null): bool
     {
-        return $this->quantity <= $threshold;
+        $threshold = $threshold ?? $this->reorder_level ?? 5;
+
+        return (int) $this->quantity > 0 && (int) $this->quantity <= $threshold;
     }
 
-    /* ================= AUTOMATION ================= */
+    public function isAssignable(): bool
+    {
+        return $this->status === self::STATUS_AVAILABLE && (int) $this->quantity > 0;
+    }
+
+    public function getCalculatedQuantity(): int
+    {
+        return (int) $this->stockMovements()
+            ->get()
+            ->sum(fn(StockMovement $movement) => $movement->signed_quantity);
+    }
 
     public function syncAutomatedStatus(): void
-{
-    if ($this->status === self::STATUS_RETIRED) {
-        return;
-    }
+    {
+        if ((int) $this->quantity < 0) {
+            $this->quantity = 0;
+        }
 
-    if ($this->quantity < 0) {
-        $this->quantity = 0;
-    }
+        if (in_array($this->status, [self::STATUS_MAINTENANCE, self::STATUS_RETIRED, self::STATUS_LOST], true)) {
+            $this->save();
+            return;
+        }
 
-    $newStatus = self::STATUS_AVAILABLE;
-
-    if ($this->quantity <= 0) {
-        $newStatus = self::STATUS_MAINTENANCE;
-    } elseif ($this->activeAssignment()->exists()) {
-        $newStatus = self::STATUS_ASSIGNED;
-    }
-
-    if ($this->status !== $newStatus) {
-        $this->status = $newStatus;
-        $this->quantity = max(0, $this->quantity);
+        $this->status = self::STATUS_AVAILABLE;
         $this->save();
     }
-}
 }
