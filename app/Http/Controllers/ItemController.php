@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AssetLog;
 use App\Models\Item;
-use App\Models\SystemNotification;
-use App\Models\User;
 use App\Services\StockInventoryService;
+use App\Services\SystemNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,10 +14,14 @@ use Illuminate\Validation\ValidationException;
 class ItemController extends Controller
 {
     protected StockInventoryService $stockInventoryService;
+    protected SystemNotificationService $notificationService;
 
-    public function __construct(StockInventoryService $stockInventoryService)
-    {
+    public function __construct(
+        StockInventoryService $stockInventoryService,
+        SystemNotificationService $notificationService
+    ) {
         $this->stockInventoryService = $stockInventoryService;
+        $this->notificationService = $notificationService;
     }
 
     public function index(Request $request)
@@ -46,8 +49,16 @@ class ItemController extends Controller
             });
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('stock')) {
+            if ($request->stock === 'out') {
+                $query->where('quantity', 0);
+            } elseif ($request->stock === 'low') {
+                $query->where('quantity', '>', 0)
+                    ->whereColumn('quantity', '<=', 'reorder_level');
+            } elseif ($request->stock === 'available') {
+                $query->where('quantity', '>', 0)
+                    ->whereColumn('quantity', '>', 'reorder_level');
+            }
         }
 
         if ($request->filled('category_id')) {
@@ -79,9 +90,9 @@ class ItemController extends Controller
         $payload = $this->normalizePayload($validated, true);
         $initialQuantity = (int) $payload['quantity'];
 
-        if (($payload['asset_tag'] || $payload['serial_number']) && $initialQuantity !== 1) {
+        if ($payload['serial_number'] && $initialQuantity !== 1) {
             throw ValidationException::withMessages([
-                'quantity' => 'Serialized or tagged assets must have quantity 1.',
+                'quantity' => 'Serialized assets with a serial number are tracked one-by-one, so initial quantity must be 1.',
             ]);
         }
 
@@ -260,6 +271,12 @@ class ItemController extends Controller
 
         $payload = $this->normalizePayload($validated, false);
 
+        if ($payload['serial_number'] && (int) $item->quantity !== 1) {
+            throw ValidationException::withMessages([
+                'serial_number' => 'Serial Number is only allowed when the current quantity is 1.',
+            ]);
+        }
+
         $item->update($payload);
 
         if (method_exists($item, 'syncAutomatedStatus')) {
@@ -360,9 +377,6 @@ class ItemController extends Controller
             'supplier_id' => $validated['supplier_id'],
             'asset_tag' => $this->normalizeNullable($validated['asset_tag'] ?? null),
             'serial_number' => $this->normalizeNullable($validated['serial_number'] ?? null),
-            'reorder_level' => array_key_exists('reorder_level', $validated) && $validated['reorder_level'] !== null
-                ? (int) $validated['reorder_level']
-                : 5,
             'unit_cost' => array_key_exists('unit_cost', $validated) && $validated['unit_cost'] !== null
                 ? (float) $validated['unit_cost']
                 : null,
@@ -370,6 +384,14 @@ class ItemController extends Controller
             'location' => $this->normalizeNullable($validated['location'] ?? null),
             'purchase_date' => $validated['purchase_date'] ?? null,
         ];
+
+        if (array_key_exists('reorder_level', $validated)) {
+            $payload['reorder_level'] = $validated['reorder_level'] !== null
+                ? (int) $validated['reorder_level']
+                : null;
+        } elseif ($includeQuantity) {
+            $payload['reorder_level'] = 5;
+        }
 
         if ($includeQuantity) {
             $payload['quantity'] = (int) ($validated['quantity'] ?? 0);
@@ -393,19 +415,6 @@ class ItemController extends Controller
         ?string $sourceType = null,
         ?int $sourceId = null
     ): void {
-        $admins = User::where('role', 'admin')->get();
-
-        foreach ($admins as $admin) {
-            SystemNotification::create([
-                'user_id' => $admin->id,
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'url' => $url,
-                'source_type' => $sourceType,
-                'source_id' => $sourceId,
-                'read_at' => null,
-            ]);
-        }
+        $this->notificationService->notifyAdmins($type, $title, $message, $url, $sourceType, $sourceId);
     }
 }

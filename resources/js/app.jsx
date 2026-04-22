@@ -17,6 +17,7 @@ const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
 const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage'));
 const SuppliersPage = lazy(() => import('./pages/SuppliersPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -30,6 +31,7 @@ function preloadPages() {
         import('./pages/DepartmentsPage'),
         import('./pages/SuppliersPage'),
         import('./pages/NotificationsPage'),
+        import('./pages/ActivityLogsPage'),
         import('./pages/ProfilePage'),
         import('./pages/UsersPage'),
         import('./pages/SettingsPage'),
@@ -42,7 +44,7 @@ function LoadingScreen() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
             <div className="text-center">
-                <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+                <div className="w-12 h-12 mx-auto border-4 border-blue-200 rounded-full animate-spin border-t-blue-600" />
                 <p className="mt-4 text-sm font-medium text-slate-600">Loading NextGen Assets...</p>
                 <p className="mt-1 text-xs text-slate-500">Preparing your workspace</p>
             </div>
@@ -54,7 +56,7 @@ function PageLoader() {
     return (
         <div className="flex min-h-[320px] items-center justify-center">
             <div className="text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+                <div className="w-8 h-8 mx-auto border-4 border-blue-200 rounded-full animate-spin border-t-blue-600" />
                 <p className="mt-3 text-sm text-slate-600">Loading page...</p>
             </div>
         </div>
@@ -168,6 +170,15 @@ function AppRoutes() {
                 element={
                     <ProtectedRoute>
                         <NotificationsPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/activity-logs"
+                element={
+                    <ProtectedRoute>
+                        <ActivityLogsPage />
                     </ProtectedRoute>
                 }
             />

@@ -41,6 +41,8 @@ class Item extends Model
     protected $appends = [
         'is_low_stock',
         'is_assignable',
+        'date_added',
+        'date_added_at',
     ];
 
     protected $hidden = [
@@ -56,6 +58,16 @@ class Item extends Model
     public function getIsAssignableAttribute(): bool
     {
         return $this->isAssignable();
+    }
+
+    public function getDateAddedAttribute(): ?string
+    {
+        return $this->created_at?->toDateString();
+    }
+
+    public function getDateAddedAtAttribute(): ?string
+    {
+        return $this->created_at?->toIso8601String();
     }
 
     public function category(): BelongsTo
@@ -124,7 +136,7 @@ class Item extends Model
     {
         $threshold = $threshold ?? $this->reorder_level ?? 5;
 
-        return (int) $this->quantity > 0 && (int) $this->quantity <= $threshold;
+        return (int) $this->quantity <= $threshold;
     }
 
     public function isAssignable(): bool

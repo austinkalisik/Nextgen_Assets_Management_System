@@ -23,14 +23,21 @@ class AssetLog extends Model
         'notes',
     ];
     protected $casts = [
-        'updated_at',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public static function log(int $itemId, string $action, ?string $notes = null): void
     {
+        $userId = Auth::id() ?? User::query()->value('id');
+
+        if (!$userId) {
+            return;
+        }
+
         self::create([
             'item_id' => $itemId,
-            'user_id' => Auth::id() ?? 1,
+            'user_id' => $userId,
             'action' => $action,
             'notes' => $notes,
         ]);

@@ -7,12 +7,12 @@ function StatCard({ label, value, gradient, icon: Icon }) {
         <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-soft`}>
             <div className="relative z-10 flex items-center justify-between gap-4">
                 <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-white/80">{label}</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-white/80">{label}</p>
                     <p className="mt-2 text-3xl font-bold">{value ?? 0}</p>
                 </div>
-                {Icon ? <Icon className="h-8 w-8 text-white/80" /> : null}
+                {Icon ? <Icon className="w-8 h-8 text-white/80" /> : null}
             </div>
-            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+            <div className="absolute w-24 h-24 rounded-full -right-6 -top-6 bg-white/10" />
         </div>
     );
 }
@@ -52,7 +52,7 @@ function formatDate(value) {
     return new Date(value).toLocaleDateString();
 }
 
-const BoxIcon = ({ className = 'h-5 w-5' }) => (
+const BoxIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="m3 7 9-4 9 4-9 4-9-4Z" />
         <path d="m3 7 9 4 9-4" />
@@ -61,14 +61,14 @@ const BoxIcon = ({ className = 'h-5 w-5' }) => (
     </svg>
 );
 
-const CheckCircleIcon = ({ className = 'h-5 w-5' }) => (
+const CheckCircleIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
         <polyline points="22,4 12,14.01 9,11.01" />
     </svg>
 );
 
-const UserCheckIcon = ({ className = 'h-5 w-5' }) => (
+const UserCheckIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
@@ -76,13 +76,13 @@ const UserCheckIcon = ({ className = 'h-5 w-5' }) => (
     </svg>
 );
 
-const WrenchIcon = ({ className = 'h-5 w-5' }) => (
+const WrenchIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
     </svg>
 );
 
-const AlertTriangleIcon = ({ className = 'h-5 w-5' }) => (
+const AlertTriangleIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
         <line x1="12" x2="12" y1="9" y2="13" />
@@ -90,21 +90,21 @@ const AlertTriangleIcon = ({ className = 'h-5 w-5' }) => (
     </svg>
 );
 
-const ClockIcon = ({ className = 'h-5 w-5' }) => (
+const ClockIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
         <polyline points="12,6 12,12 16,14" />
     </svg>
 );
 
-const PlusIcon = ({ className = 'h-5 w-5' }) => (
+const PlusIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <line x1="12" x2="12" y1="5" y2="19" />
         <line x1="5" x2="19" y1="12" y2="12" />
     </svg>
 );
 
-const ClipboardIcon = ({ className = 'h-5 w-5' }) => (
+const ClipboardIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="M9 5h6" />
         <path d="M8 3h8v4H8z" />
@@ -112,7 +112,7 @@ const ClipboardIcon = ({ className = 'h-5 w-5' }) => (
     </svg>
 );
 
-const LayersIcon = ({ className = 'h-5 w-5' }) => (
+const LayersIcon = ({ className = 'w-5 h-5' }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="m12 3 9 4.5-9 4.5L3 7.5 12 3Z" />
         <path d="m3 12.5 9 4.5 9-4.5" />
@@ -196,7 +196,7 @@ export default function DashboardPage() {
         return (
             <div className="flex items-center justify-center py-16">
                 <div className="text-center">
-                    <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+                    <div className="w-10 h-10 mx-auto border-4 border-blue-200 rounded-full animate-spin border-t-blue-600" />
                     <p className="mt-3 text-sm text-slate-500">Loading dashboard...</p>
                 </div>
             </div>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
     if (error && !data) {
         return (
             <div className="space-y-4">
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="px-4 py-3 text-sm text-red-700 border border-red-200 rounded-xl bg-red-50">
                     Failed to load dashboard data: {error}
                 </div>
                 <button type="button" onClick={() => void refetch()} className="btn-primary">
@@ -220,18 +220,18 @@ export default function DashboardPage() {
         <div className="space-y-8">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div className="min-w-0">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <div className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow-sm border-slate-200 text-slate-500">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
                         System overview
                     </div>
 
                     <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Admin Dashboard</h1>
 
-                    <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+                    <p className="max-w-2xl mt-2 text-sm text-slate-500 sm:text-base">
                         Operational control center for assets, assignments, departments, and system activity.
                     </p>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
                         <button type="button" onClick={() => void refetch()} className="btn-secondary">
                             {refreshing ? 'Refreshing...' : 'Refresh'}
                         </button>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                         </Link>
                     </div>
 
-                    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-3 mt-5 sm:grid-cols-3">
                         {quickActions.map((action) => (
                             <ActionCard key={action.to} {...action} />
                         ))}
@@ -249,18 +249,18 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:w-[360px]">
-                    <div className="panel p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Assets</p>
+                    <div className="p-4 panel">
+                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Assets</p>
                         <p className="mt-2 text-2xl font-bold text-slate-900">{data?.total_assets ?? 0}</p>
                     </div>
 
-                    <div className="panel p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Active</p>
+                    <div className="p-4 panel">
+                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Active</p>
                         <p className="mt-2 text-2xl font-bold text-slate-900">{data?.assigned ?? 0}</p>
                     </div>
 
-                    <div className="panel p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Notifications</p>
+                    <div className="p-4 panel">
+                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Notifications</p>
                         <p className="mt-2 text-2xl font-bold text-slate-900">{data?.notifications_count ?? 0}</p>
                     </div>
                 </div>
@@ -284,11 +284,11 @@ export default function DashboardPage() {
                             <table className="min-w-full text-sm">
                                 <thead className="table-head">
                                     <tr>
-                                        <th className="px-6 py-4 text-left font-semibold">Asset</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Receiver</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Department</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Date</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Status</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Asset</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Receiver</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Department</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Date</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Status</th>
                                     </tr>
                                 </thead>
 

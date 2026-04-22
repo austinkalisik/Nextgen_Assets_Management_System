@@ -4,21 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\AssetLog;
 use App\Models\Item;
-use App\Models\SystemNotification;
-use App\Models\User;
 use App\Services\StockInventoryService;
+use App\Services\SystemNotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class InventoryController extends Controller
 {
     protected StockInventoryService $stockInventoryService;
+    protected SystemNotificationService $notificationService;
 
-    public function __construct(StockInventoryService $stockInventoryService)
-    {
+    public function __construct(
+        StockInventoryService $stockInventoryService,
+        SystemNotificationService $notificationService
+    ) {
         $this->stockInventoryService = $stockInventoryService;
+        $this->notificationService = $notificationService;
     }
 
     protected function getIntSetting(string $key, int $default): int
@@ -199,32 +201,6 @@ class InventoryController extends Controller
         ?string $sourceType = null,
         ?int $sourceId = null
     ): void {
-        $admins = User::where('role', 'admin')->get();
-
-        foreach ($admins as $admin) {
-            SystemNotification::create([
-                'user_id' => $admin->id,
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'url' => $url,
-                'source_type' => $sourceType,
-                'source_id' => $sourceId,
-                'read_at' => null,
-            ]);
-        }
-
-        if (Auth::check()) {
-            SystemNotification::create([
-                'user_id' => Auth::id(),
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'url' => $url,
-                'source_type' => $sourceType,
-                'source_id' => $sourceId,
-                'read_at' => null,
-            ]);
-        }
+        $this->notificationService->notifyAdmins($type, $title, $message, $url, $sourceType, $sourceId);
     }
 }
