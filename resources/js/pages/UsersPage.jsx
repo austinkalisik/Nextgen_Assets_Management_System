@@ -5,6 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { invalidateApiCache, useApi } from '../hooks/useApi';
 
+const ROLE_OPTIONS = [
+    { value: 'admin', label: 'Admin', note: 'Full system access', className: 'bg-red-50 text-red-700 border-red-200' },
+    { value: 'manager', label: 'Manager', note: 'Approves and oversees operations', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    { value: 'asset_officer', label: 'Asset Officer', note: 'Manages inventory and assignments', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    { value: 'staff', label: 'Staff', note: 'Standard user access', className: 'bg-slate-50 text-slate-700 border-slate-200' },
+];
+
 function defaultForm() {
     return {
         name: '',
@@ -15,11 +22,66 @@ function defaultForm() {
     };
 }
 
+function roleMeta(role) {
+    return ROLE_OPTIONS.find((option) => option.value === role) || ROLE_OPTIONS[ROLE_OPTIONS.length - 1];
+}
+
+function initials(name) {
+    return (name || 'User')
+        .split(' ')
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+}
+
+function RoleBadge({ role }) {
+    const meta = roleMeta(role);
+
+    return (
+        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.className}`}>
+            {meta.label}
+        </span>
+    );
+}
+
+function UserActions({ user, currentUser, canSwitchUser, busyId, onEdit, onDelete, onImpersonate }) {
+    const isCurrentUser = Number(currentUser?.id) === Number(user.id);
+    const canImpersonate = canSwitchUser && currentUser?.role === 'admin' && !currentUser?.is_impersonating && !isCurrentUser;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => onEdit(user)} className="btn-secondary !px-3 !py-2">
+                Edit
+            </button>
+
+            {canImpersonate ? (
+                <button
+                    type="button"
+                    onClick={() => onImpersonate(user.id)}
+                    disabled={busyId === user.id}
+                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
+                >
+                    Switch
+                </button>
+            ) : null}
+
+            <button
+                type="button"
+                onClick={() => onDelete(user.id)}
+                disabled={busyId === user.id || isCurrentUser}
+                className="btn-danger !px-3 !py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+                Delete
+            </button>
+        </div>
+    );
+}
+
 export default function UsersPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { user: currentUser, impersonate, stopImpersonation, refreshUser } = useAuth();
     const { settings } = useSettings();
-
     const canSwitchUser = String(settings.allow_user_impersonation ?? '1') === '1';
 
     const filters = useMemo(
@@ -39,11 +101,22 @@ export default function UsersPage() {
         total: data?.total || 0,
     };
 
+    const roleCounts = useMemo(
+        () =>
+            users.reduce((counts, user) => {
+                counts[user.role] = (counts[user.role] || 0) + 1;
+                return counts;
+            }, {}),
+        [users]
+    );
+
     const [success, setSuccess] = useState('');
+    const [actionError, setActionError] = useState('');
     const [showForm, setShowForm] = useState(searchParams.get('create') === '1');
     const [editingId, setEditingId] = useState(null);
     const [searchInput, setSearchInput] = useState(filters.search);
     const [form, setForm] = useState(defaultForm());
+    const [busyId, setBusyId] = useState(null);
 
     useEffect(() => {
         setSearchInput(filters.search);
@@ -100,11 +173,13 @@ export default function UsersPage() {
         setEditingId(user.id);
         setShowForm(true);
         setSuccess('');
+        setActionError('');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function toggleForm() {
         setSuccess('');
+        setActionError('');
 
         if (showForm) {
             resetForm();
@@ -127,6 +202,7 @@ export default function UsersPage() {
 
         try {
             setSuccess('');
+            setActionError('');
 
             const payload = {
                 name: form.name.trim(),
@@ -153,45 +229,54 @@ export default function UsersPage() {
             await refreshUsers();
             await refreshUser();
         } catch (err) {
-            console.error(err);
+            setActionError(err?.response?.data?.message || 'Unable to save user. Check the form and try again.');
         }
     }
 
     async function handleDelete(id) {
-        if (!window.confirm('Are you sure you want to delete this user?')) {
+        if (!window.confirm('Delete this user? Users with assignment history cannot be removed.')) {
             return;
         }
 
         try {
+            setBusyId(id);
             setSuccess('');
+            setActionError('');
             await apiClient.delete(`/users/${id}`);
             setSuccess('User deleted successfully.');
             await refreshUsers();
         } catch (err) {
-            console.error(err);
+            setActionError(err?.response?.data?.message || 'Unable to delete user.');
+        } finally {
+            setBusyId(null);
         }
     }
 
     async function handleImpersonate(userId) {
         try {
+            setBusyId(userId);
             setSuccess('');
+            setActionError('');
             await impersonate(userId);
             setSuccess('User switched successfully.');
             await refreshUsers();
         } catch (err) {
-            console.error(err);
+            setActionError(err?.response?.data?.message || 'Unable to switch user.');
+        } finally {
+            setBusyId(null);
         }
     }
 
     async function handleStopImpersonation() {
         try {
             setSuccess('');
+            setActionError('');
             await stopImpersonation();
             setSuccess('Returned to admin successfully.');
             await refreshUsers();
             await refreshUser();
         } catch (err) {
-            console.error(err);
+            setActionError(err?.response?.data?.message || 'Unable to return to admin.');
         }
     }
 
@@ -200,59 +285,81 @@ export default function UsersPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="space-y-5">
+            <div className="page-header">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Users</h1>
-                    <p className="mt-1 text-sm text-slate-500">Manage system users, roles, and switch-user access.</p>
+                    <h1 className="page-title">Users</h1>
+                    <p className="page-subtitle">Manage staff accounts, roles, assignment ownership, and safe switch-user access.</p>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row">
-                    <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-                        <input
-                            type="text"
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            placeholder="Search users..."
-                            className="input-shell w-72"
-                        />
-                        <button type="submit" className="btn-secondary">
-                            Find
-                        </button>
-                    </form>
-
-                    <button type="button" onClick={toggleForm} className="btn-primary">
-                        {showForm ? 'Cancel' : 'Add User'}
-                    </button>
-
+                <div className="flex flex-col gap-2 sm:flex-row">
                     {currentUser?.is_impersonating ? (
                         <button type="button" onClick={handleStopImpersonation} className="btn-secondary">
                             Return to Admin
                         </button>
                     ) : null}
+                    <button type="button" onClick={toggleForm} className="btn-primary">
+                        {showForm ? 'Close Form' : 'Add User'}
+                    </button>
                 </div>
             </div>
 
-            {success ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {success}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="metric-card">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Users</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-950">{meta.total}</p>
                 </div>
-            ) : null}
+                {ROLE_OPTIONS.slice(0, 3).map((role) => (
+                    <div key={role.value} className="metric-card">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{role.label}</p>
+                        <p className="mt-2 text-2xl font-bold text-slate-950">{roleCounts[role.value] || 0}</p>
+                    </div>
+                ))}
+            </div>
 
-            {error ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
+            <div className="panel">
+                <div className="panel-body">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <form onSubmit={handleSearchSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <input
+                                type="search"
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                placeholder="Search name, email, or role"
+                                className="input-shell w-full sm:w-80"
+                            />
+                            <button type="submit" className="btn-secondary">
+                                Find
+                            </button>
+                        </form>
+
+                        <p className="text-sm text-slate-500">
+                            Page {meta.current_page} of {meta.last_page}, {meta.total} total
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {success ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div> : null}
+            {actionError || error ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {actionError || error}
                 </div>
             ) : null}
 
             {showForm ? (
                 <div className="panel">
                     <div className="panel-body">
-                        <h2 className="mb-4 text-lg font-semibold">{editingId ? 'Edit User' : 'Add User'}</h2>
+                        <div className="mb-5 flex flex-col gap-1">
+                            <h2 className="section-title">{editingId ? 'Edit User' : 'Create User'}</h2>
+                            <p className="section-subtitle">
+                                Choose the role that matches the officer's responsibilities. Passwords must be confirmed before saving.
+                            </p>
+                        </div>
 
-                        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                                <label className="field-label">Full Name</label>
                                 <input
                                     type="text"
                                     value={form.name}
@@ -263,7 +370,7 @@ export default function UsersPage() {
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
+                                <label className="field-label">Email Address</label>
                                 <input
                                     type="email"
                                     value={form.email}
@@ -274,21 +381,22 @@ export default function UsersPage() {
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Role</label>
+                                <label className="field-label">Role</label>
                                 <select
                                     value={form.role}
                                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                                     className="input-shell w-full"
                                 >
-                                    <option value="staff">Staff</option>
-                                    <option value="admin">Admin</option>
+                                    {ROLE_OPTIONS.map((role) => (
+                                        <option key={role.value} value={role.value}>
+                                            {role.label} - {role.note}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Password {editingId ? '(leave blank to keep current)' : ''}
-                                </label>
+                                <label className="field-label">Password {editingId ? '(optional)' : ''}</label>
                                 <input
                                     type="password"
                                     value={form.password}
@@ -299,7 +407,7 @@ export default function UsersPage() {
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Confirm Password</label>
+                                <label className="field-label">Confirm Password</label>
                                 <input
                                     type="password"
                                     value={form.password_confirmation}
@@ -309,11 +417,10 @@ export default function UsersPage() {
                                 />
                             </div>
 
-                            <div className="md:col-span-2 flex gap-3 pt-2">
+                            <div className="flex flex-col gap-2 pt-1 sm:flex-row lg:col-span-2">
                                 <button type="submit" className="btn-primary">
                                     {editingId ? 'Update User' : 'Create User'}
                                 </button>
-
                                 <button type="button" onClick={resetForm} className="btn-secondary">
                                     Cancel
                                 </button>
@@ -323,15 +430,65 @@ export default function UsersPage() {
                 </div>
             ) : null}
 
-            <div className="table-shell">
+            <div className="mobile-card-list">
+                {users.length > 0 ? (
+                    users.map((user) => (
+                        <div key={user.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white">
+                                    {initials(user.name)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h2 className="font-semibold text-slate-950">{user.name}</h2>
+                                        <RoleBadge role={user.role} />
+                                    </div>
+                                    <p className="mt-1 break-all text-sm text-slate-500">{user.email}</p>
+                                    <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                                        <div className="rounded-lg bg-slate-50 px-2 py-2">
+                                            <p className="font-bold text-slate-950">{user.active_assignments_count ?? 0}</p>
+                                            <p className="text-slate-500">Active</p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-50 px-2 py-2">
+                                            <p className="font-bold text-slate-950">{user.assignments_count ?? 0}</p>
+                                            <p className="text-slate-500">History</p>
+                                        </div>
+                                        <div className="rounded-lg bg-slate-50 px-2 py-2">
+                                            <p className="font-bold text-slate-950">{user.asset_logs_count ?? 0}</p>
+                                            <p className="text-slate-500">Logs</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4">
+                                        <UserActions
+                                            user={user}
+                                            currentUser={currentUser}
+                                            canSwitchUser={canSwitchUser}
+                                            busyId={busyId}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            onImpersonate={handleImpersonate}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
+                        No users found.
+                    </div>
+                )}
+            </div>
+
+            <div className="desktop-table table-shell">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="table-head">
                             <tr>
-                                <th className="px-6 py-4 text-left font-semibold">Name</th>
-                                <th className="px-6 py-4 text-left font-semibold">Email</th>
+                                <th className="px-6 py-4 text-left font-semibold">User</th>
                                 <th className="px-6 py-4 text-left font-semibold">Role</th>
-                                <th className="px-6 py-4 text-left font-semibold">Active Assignments</th>
+                                <th className="px-6 py-4 text-left font-semibold">Assignments</th>
+                                <th className="px-6 py-4 text-left font-semibold">Activity Logs</th>
                                 <th className="px-6 py-4 text-left font-semibold">Actions</th>
                             </tr>
                         </thead>
@@ -340,39 +497,36 @@ export default function UsersPage() {
                             {users.length > 0 ? (
                                 users.map((user) => (
                                     <tr key={user.id} className="table-row">
-                                        <td className="px-6 py-4 font-medium text-slate-900">{user.name}</td>
-                                        <td className="px-6 py-4 text-slate-700">{user.email}</td>
-                                        <td className="px-6 py-4 text-slate-700">{user.role}</td>
-                                        <td className="px-6 py-4 text-slate-700">{user.active_assignments_count ?? 0}</td>
-                                        <td className="space-x-3 px-6 py-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleEdit(user)}
-                                                className="text-blue-600 hover:underline"
-                                            >
-                                                Edit
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDelete(user.id)}
-                                                className="text-red-600 hover:underline"
-                                            >
-                                                Delete
-                                            </button>
-
-                                            {canSwitchUser &&
-                                            currentUser?.role === 'admin' &&
-                                            !currentUser?.is_impersonating &&
-                                            Number(currentUser?.id) !== Number(user.id) ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleImpersonate(user.id)}
-                                                    className="text-amber-600 hover:underline"
-                                                >
-                                                    Switch User
-                                                </button>
-                                            ) : null}
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">
+                                                    {initials(user.name)}
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-slate-950">{user.name}</p>
+                                                    <p className="text-sm text-slate-500">{user.email}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <RoleBadge role={user.role} />
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-700">
+                                            <span className="font-semibold text-slate-950">{user.active_assignments_count ?? 0}</span> active
+                                            <span className="mx-2 text-slate-300">|</span>
+                                            {user.assignments_count ?? 0} total
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-700">{user.asset_logs_count ?? 0}</td>
+                                        <td className="px-6 py-4">
+                                            <UserActions
+                                                user={user}
+                                                currentUser={currentUser}
+                                                canSwitchUser={canSwitchUser}
+                                                busyId={busyId}
+                                                onEdit={handleEdit}
+                                                onDelete={handleDelete}
+                                                onImpersonate={handleImpersonate}
+                                            />
                                         </td>
                                     </tr>
                                 ))
@@ -389,7 +543,7 @@ export default function UsersPage() {
 
                 <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                     <p>
-                        Showing page {meta.current_page} of {meta.last_page} · {meta.total} total
+                        Showing page {meta.current_page} of {meta.last_page} | {meta.total} total
                     </p>
 
                     <div className="flex items-center gap-2">
@@ -416,4 +570,3 @@ export default function UsersPage() {
         </div>
     );
 }
-

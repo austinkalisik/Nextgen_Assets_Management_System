@@ -18,7 +18,8 @@ class NotificationController extends Controller
 
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
 
-        $notifications = $user->notifications()
+        $notifications = $this->filteredQuery($request)
+            ->orderByRaw("CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END")
             ->latest()
             ->paginate($perPage);
 
@@ -27,6 +28,34 @@ class NotificationController extends Controller
         });
 
         return response()->json($notifications);
+    }
+
+    public function stats(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        return response()->json([
+            'total' => $user->notifications()->count(),
+            'unread' => $user->notifications()->whereNull('read_at')->count(),
+            'read' => $user->notifications()->whereNotNull('read_at')->count(),
+            'high_priority_unread' => $user->notifications()
+                ->where('priority', 'high')
+                ->whereNull('read_at')
+                ->count(),
+            'by_priority' => $user->notifications()
+                ->selectRaw('priority, count(*) as total')
+                ->groupBy('priority')
+                ->pluck('total', 'priority'),
+            'by_type' => $user->notifications()
+                ->selectRaw('type, count(*) as total')
+                ->groupBy('type')
+                ->orderBy('type')
+                ->pluck('total', 'type'),
+        ]);
     }
 
     public function unreadCount()
@@ -91,6 +120,34 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function destroy($id)
+    {
+        $notification = $this->findUserNotification($id);
+        $notification->delete();
+
+        return response()->json([
+            'message' => 'Notification deleted.',
+        ]);
+    }
+
+    public function clearRead()
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $deleted = $user->notifications()
+            ->whereNotNull('read_at')
+            ->delete();
+
+        return response()->json([
+            'message' => 'Read notifications cleared.',
+            'deleted' => $deleted,
+        ]);
+    }
+
     protected function findUserNotification($id): SystemNotification
     {
         $user = Auth::user();
@@ -109,13 +166,52 @@ class NotificationController extends Controller
             'title' => $notification->title,
             'message' => $notification->message,
             'type' => $notification->type,
+            'priority' => $notification->priority ?? 'normal',
             'url' => $this->resolveNotificationUrl($notification),
             'source_type' => $notification->source_type,
             'source_id' => $notification->source_id,
+            'data' => $notification->data ?? [],
             'read_at' => $notification->read_at,
             'created_at' => $notification->created_at,
             'is_read' => $notification->is_read,
         ];
+    }
+
+    protected function filteredQuery(Request $request)
+    {
+        $query = Auth::user()->notifications();
+
+        if ($request->filled('status')) {
+            if ($request->status === 'unread') {
+                $query->whereNull('read_at');
+            } elseif ($request->status === 'read') {
+                $query->whereNotNull('read_at');
+            }
+        }
+
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->where('type', $request->string('type')->toString());
+        }
+
+        if ($request->filled('priority') && $request->priority !== 'all') {
+            $query->where('priority', $request->string('priority')->toString());
+        }
+
+        if ($request->filled('source_type')) {
+            $query->where('source_type', $request->string('source_type')->toString());
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+
+            $query->where(function ($sub) use ($search) {
+                $sub->where('title', 'like', "%{$search}%")
+                    ->orWhere('message', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%");
+            });
+        }
+
+        return $query;
     }
 
     protected function resolveNotificationUrl(SystemNotification $notification): string

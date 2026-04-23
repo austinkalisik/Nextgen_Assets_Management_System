@@ -58,6 +58,10 @@ class ProfileController extends Controller
 
         unset($validated['current_password']);
 
+        if (($validated['email'] ?? null) !== $user->email) {
+            $validated['email_verified_at'] = null;
+        }
+
         if ($request->hasFile('profile_photo')) {
             if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
                 Storage::disk('public')->delete($user->profile_photo);
@@ -68,10 +72,32 @@ class ProfileController extends Controller
 
         $user->update($validated);
 
+        if (!$request->expectsJson() && !$request->is('api/*')) {
+            return redirect()->route('profile.edit')->with('status', 'profile-updated');
+        }
+
         return response()->json([
             'message' => 'Profile updated successfully.',
             'user' => $this->currentUserPayload($user),
         ]);
+    }
+
+    public function destroy(Request $request)
+    {
+        $request->validateWithBag('userDeletion', [
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = Auth::user();
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/');
     }
 
     public function deletePhoto()

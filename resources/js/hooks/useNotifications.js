@@ -3,8 +3,10 @@ import apiClient from '../api/client';
 
 let notificationsCache = null;
 let unreadCountCache = null;
+let notificationStatsCache = null;
 let notificationsPromise = null;
 const CACHE_TTL = 5 * 60 * 1000;
+const POLL_INTERVAL = 30 * 1000;
 
 function hasFreshCache() {
     if (!notificationsCache || unreadCountCache === null) {
@@ -19,6 +21,7 @@ async function fetchNotifications(force = false) {
         return {
             notifications: notificationsCache.data,
             unreadCount: unreadCountCache,
+            stats: notificationStatsCache,
         };
     }
 
@@ -28,21 +31,24 @@ async function fetchNotifications(force = false) {
 
     notificationsPromise = Promise.all([
         apiClient.get('/notifications', { params: { per_page: 8 } }),
-        apiClient.get('/notifications/unread-count'),
+        apiClient.get('/notifications/stats'),
     ])
-        .then(([notificationsResponse, unreadResponse]) => {
+        .then(([notificationsResponse, statsResponse]) => {
             const notifications = notificationsResponse.data.data || [];
-            const unreadCount = unreadResponse.data.count || 0;
+            const stats = statsResponse.data || {};
+            const unreadCount = stats.unread || 0;
 
             notificationsCache = {
                 data: notifications,
                 timestamp: Date.now(),
             };
             unreadCountCache = unreadCount;
+            notificationStatsCache = stats;
 
             return {
                 notifications,
                 unreadCount,
+                stats,
             };
         })
         .finally(() => {
@@ -52,23 +58,26 @@ async function fetchNotifications(force = false) {
     return notificationsPromise;
 }
 
-function updateNotificationCache(notifications, unreadCount) {
+function updateNotificationCache(notifications, unreadCount, stats = notificationStatsCache) {
     notificationsCache = {
         data: notifications,
         timestamp: Date.now(),
     };
     unreadCountCache = unreadCount;
+    notificationStatsCache = stats;
 }
 
 export function invalidateNotificationsCache() {
     notificationsCache = null;
     unreadCountCache = null;
+    notificationStatsCache = null;
     notificationsPromise = null;
 }
 
 export default function useNotifications() {
     const [notifications, setNotifications] = useState(() => notificationsCache?.data || []);
     const [unreadCount, setUnreadCount] = useState(() => unreadCountCache || 0);
+    const [stats, setStats] = useState(() => notificationStatsCache || {});
     const [loading, setLoading] = useState(() => !hasFreshCache());
 
     const loadNotifications = useCallback(async (force = false) => {
@@ -79,6 +88,7 @@ export default function useNotifications() {
 
             setNotifications(result.notifications);
             setUnreadCount(result.unreadCount);
+            setStats(result.stats || {});
         } catch (error) {
             console.error('Failed to load notifications', error);
         } finally {
@@ -88,18 +98,26 @@ export default function useNotifications() {
 
     const markRead = useCallback(
         async (id) => {
-            await apiClient.patch(`/notifications/${id}/read`);
+            const response = await apiClient.patch(`/notifications/${id}/read`);
+            const serverNotification = response.data.notification;
 
             setNotifications((prev) => {
+                const previous = prev.find((item) => item.id === id);
+                const wasUnread = previous ? !previous.is_read : false;
                 const next = prev.map((item) =>
                     item.id === id
-                        ? { ...item, is_read: true, read_at: item.read_at || new Date().toISOString() }
+                        ? { ...item, ...(serverNotification || {}), is_read: true, read_at: serverNotification?.read_at || item.read_at || new Date().toISOString() }
                         : item
                 );
 
-                const nextUnreadCount = Math.max(0, unreadCountCache !== null ? unreadCountCache - 1 : 0);
+                const nextUnreadCount = Math.max(0, (unreadCountCache || 0) - (wasUnread ? 1 : 0));
                 updateNotificationCache(next, nextUnreadCount);
                 setUnreadCount(nextUnreadCount);
+                setStats((prev) => ({
+                    ...prev,
+                    unread: nextUnreadCount,
+                    read: (prev.read || 0) + (wasUnread ? 1 : 0),
+                }));
 
                 return next;
             });
@@ -108,16 +126,24 @@ export default function useNotifications() {
     );
 
     const markUnread = useCallback(async (id) => {
-        await apiClient.patch(`/notifications/${id}/unread`);
+        const response = await apiClient.patch(`/notifications/${id}/unread`);
+        const serverNotification = response.data.notification;
 
         setNotifications((prev) => {
+            const previous = prev.find((item) => item.id === id);
+            const wasRead = previous ? previous.is_read : true;
             const next = prev.map((item) =>
-                item.id === id ? { ...item, is_read: false, read_at: null } : item
+                item.id === id ? { ...item, ...(serverNotification || {}), is_read: false, read_at: null } : item
             );
 
-            const nextUnreadCount = (unreadCountCache || 0) + 1;
+            const nextUnreadCount = (unreadCountCache || 0) + (wasRead ? 1 : 0);
             updateNotificationCache(next, nextUnreadCount);
             setUnreadCount(nextUnreadCount);
+            setStats((prev) => ({
+                ...prev,
+                unread: nextUnreadCount,
+                read: Math.max(0, (prev.read || 0) - (wasRead ? 1 : 0)),
+            }));
 
             return next;
         });
@@ -138,20 +164,54 @@ export default function useNotifications() {
         });
 
         setUnreadCount(0);
+        setStats((prev) => ({
+            ...prev,
+            unread: 0,
+            read: prev.total || prev.read || 0,
+        }));
+    }, []);
+
+    const deleteNotification = useCallback(async (id) => {
+        await apiClient.delete(`/notifications/${id}`);
+
+        setNotifications((prev) => {
+            const deleted = prev.find((item) => item.id === id);
+            const next = prev.filter((item) => item.id !== id);
+            const nextUnreadCount = Math.max(0, (unreadCountCache || 0) - (deleted && !deleted.is_read ? 1 : 0));
+
+            updateNotificationCache(next, nextUnreadCount);
+            setUnreadCount(nextUnreadCount);
+            setStats((prev) => ({
+                ...prev,
+                total: Math.max(0, (prev.total ?? ((prev.read || 0) + (prev.unread || 0))) - 1),
+                unread: nextUnreadCount,
+            }));
+
+            return next;
+        });
     }, []);
 
     useEffect(() => {
         void loadNotifications(false);
     }, [loadNotifications]);
 
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            void loadNotifications(true);
+        }, POLL_INTERVAL);
+
+        return () => window.clearInterval(intervalId);
+    }, [loadNotifications]);
+
     return {
         notifications,
         unreadCount,
+        stats,
         loading,
         loadNotifications,
         markRead,
         markUnread,
         markAllRead,
+        deleteNotification,
     };
 }
-

@@ -146,9 +146,14 @@ class UserController extends Controller
         session()->forget('impersonator_id');
 
         Auth::loginUsingId($impersonatorId);
+        session()->regenerate();
 
         return response()->json([
             'message' => 'Returned to administrator account.',
+            'user' => array_merge(Auth::user()->fresh()->toArray(), [
+                'is_impersonating' => false,
+                'impersonator_id' => null,
+            ]),
         ]);
     }
 }

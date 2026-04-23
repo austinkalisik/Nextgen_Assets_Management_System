@@ -16,3 +16,58 @@ const csrfToken = document
 if (csrfToken) {
     window.axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
 }
+
+function updateCsrfToken(token) {
+    if (!token) {
+        return;
+    }
+
+    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+
+    const meta = document.querySelector('meta[name="csrf-token"]');
+
+    if (meta) {
+        meta.setAttribute('content', token);
+    }
+}
+
+async function refreshCsrfToken() {
+    const response = await window.axios.get('/csrf-token', {
+        headers: {
+            'X-CSRF-REFRESH': '1',
+        },
+    });
+
+    updateCsrfToken(response.data?.token);
+
+    return response.data?.token;
+}
+
+window.axios.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+
+        if (
+            error?.response?.status === 419 &&
+            originalRequest &&
+            !originalRequest.__csrfRetry &&
+            !originalRequest.url?.includes('/csrf-token')
+        ) {
+            originalRequest.__csrfRetry = true;
+
+            const nextToken = await refreshCsrfToken();
+
+            if (nextToken) {
+                originalRequest.headers = {
+                    ...(originalRequest.headers || {}),
+                    'X-CSRF-TOKEN': nextToken,
+                };
+            }
+
+            return window.axios(originalRequest);
+        }
+
+        return Promise.reject(error);
+    }
+);

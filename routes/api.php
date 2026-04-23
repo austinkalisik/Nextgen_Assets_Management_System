@@ -18,6 +18,12 @@ use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
+    Route::get('/csrf-token', function () {
+        return response()
+            ->json(['token' => csrf_token()])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    });
+
     Route::post('/login', [AuthController::class, 'apiLogin']);
     Route::post('/logout', [AuthController::class, 'apiLogout']);
 
@@ -46,10 +52,13 @@ Route::middleware('web')->group(function () {
         Route::apiResource('users', UserController::class);
 
         Route::get('/notifications', [NotificationController::class, 'apiIndex']);
+        Route::get('/notifications/stats', [NotificationController::class, 'stats']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::delete('/notifications/read', [NotificationController::class, 'clearRead']);
         Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
         Route::patch('/notifications/{id}/unread', [NotificationController::class, 'markUnread']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
         Route::get('/settings', [SettingController::class, 'index']);
         Route::get('/settings/branding/logo/file', [SettingController::class, 'showLogo']);

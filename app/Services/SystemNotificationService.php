@@ -16,7 +16,9 @@ class SystemNotificationService
         ?string $url = null,
         ?string $sourceType = null,
         ?int $sourceId = null,
-        ?int $excludeUserId = null
+        ?int $excludeUserId = null,
+        ?string $priority = null,
+        ?array $data = null
     ): void {
         $excludeUserId = $excludeUserId ?? Auth::id();
         $admins = User::where('role', 'admin')->get();
@@ -29,11 +31,13 @@ class SystemNotificationService
             SystemNotification::create([
                 'user_id' => $admin->id,
                 'type' => $type,
+                'priority' => $priority ?? $this->priorityForType($type),
                 'title' => $title,
                 'message' => $message,
                 'url' => $url,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                'data' => $data,
             ]);
         }
     }
@@ -46,7 +50,9 @@ class SystemNotificationService
         ?string $url = null,
         ?string $sourceType = null,
         ?int $sourceId = null,
-        ?int $excludeUserId = null
+        ?int $excludeUserId = null,
+        ?string $priority = null,
+        ?array $data = null
     ): void {
         $excludeUserId = $excludeUserId ?? Auth::id();
 
@@ -57,11 +63,13 @@ class SystemNotificationService
         SystemNotification::create([
             'user_id' => $userId,
             'type' => $type,
+            'priority' => $priority ?? $this->priorityForType($type),
             'title' => $title,
             'message' => $message,
             'url' => $url,
             'source_type' => $sourceType,
             'source_id' => $sourceId,
+            'data' => $data,
         ]);
     }
 
@@ -73,7 +81,9 @@ class SystemNotificationService
         ?string $url = null,
         ?string $sourceType = null,
         ?int $sourceId = null,
-        ?int $excludeUserId = null
+        ?int $excludeUserId = null,
+        ?string $priority = null,
+        ?array $data = null
     ): void {
         foreach (collect($userIds)->unique() as $userId) {
             $this->notifyUser(
@@ -84,8 +94,29 @@ class SystemNotificationService
                 $url,
                 $sourceType,
                 $sourceId,
-                $excludeUserId
+                $excludeUserId,
+                $priority,
+                $data
             );
         }
+    }
+
+    protected function priorityForType(string $type): string
+    {
+        return match ($type) {
+            'assignment_overdue',
+            'asset_deleted',
+            'inventory_alert' => 'high',
+            'low_stock',
+            'maintenance_due' => 'medium',
+            'assignment_created',
+            'assignment_returned',
+            'asset_created',
+            'asset_updated',
+            'settings_updated',
+            'user_created',
+            'user_updated' => 'normal',
+            default => 'low',
+        };
     }
 }

@@ -1,128 +1,270 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
+function EyeIcon({ visible }) {
+    return visible ? (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7S18 19 12 19 2.5 12 2.5 12Z" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+    ) : (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="m3 3 18 18" />
+            <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+            <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c5 0 8.5 4.5 9.5 7a13 13 0 0 1-2.2 3.4" />
+            <path d="M6.1 6.1A12.8 12.8 0 0 0 2.5 12c1 2.5 4.5 7 9.5 7 1.4 0 2.7-.3 3.8-.8" />
+        </svg>
+    );
+}
+
+function LockIcon() {
+    return (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <rect x="4" y="10" width="16" height="10" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+    );
+}
+
+function getRememberedEmail() {
+    try {
+        return window.localStorage.getItem('nextgen-login-email') || '';
+    } catch {
+        return '';
+    }
+}
+
+function rememberEmail(email, shouldRemember) {
+    try {
+        if (shouldRemember) {
+            window.localStorage.setItem('nextgen-login-email', email);
+            return;
+        }
+
+        window.localStorage.removeItem('nextgen-login-email');
+    } catch {
+        return;
+    }
+}
 
 export default function LoginPage() {
     const navigate = useNavigate();
     const { login } = useAuth();
+    const rememberedEmail = useMemo(() => getRememberedEmail(), []);
 
     const [form, setForm] = useState({
-        email: 'admin@nextgen.local',
-        password: 'password',
+        email: rememberedEmail,
+        password: '',
     });
+    const [remember, setRemember] = useState(Boolean(rememberedEmail));
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [currentTime, setCurrentTime] = useState(() => new Date());
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => setCurrentTime(new Date()), 30000);
+        return () => window.clearInterval(intervalId);
+    }, []);
+
+    const canSubmit = form.email.trim() && form.password;
+    const timeLabel = currentTime.toLocaleString('en-PG', {
+        timeZone: 'Pacific/Port_Moresby',
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 
     async function handleSubmit(event) {
         event.preventDefault();
+
+        if (!canSubmit) {
+            setError('Enter your email and password to continue.');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
-        const result = await login(form.email, form.password);
+        const result = await login(form.email.trim(), form.password);
         setLoading(false);
 
         if (result.success) {
+            rememberEmail(form.email.trim(), remember);
             navigate('/dashboard', { replace: true });
-        } else {
-            setError(result.error);
+            return;
         }
+
+        setError(result.error || 'Invalid email or password.');
     }
 
     return (
-        <div className="min-h-screen bg-slate-100">
-            <div className="grid min-h-screen lg:grid-cols-2">
-                <div className="hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-                    <div>
-                        <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200">
-                            NextGen Assets
+        <main className="min-h-screen bg-slate-100 text-slate-950">
+            <div className="grid min-h-screen lg:grid-cols-[minmax(420px,0.95fr)_minmax(520px,1.05fr)]">
+                <section
+                    className="relative hidden overflow-hidden px-10 py-10 text-white lg:flex lg:flex-col lg:justify-between"
+                    style={{
+                        background:
+                            'linear-gradient(145deg, #06101f 0%, #0b1b34 48%, #0f2d46 100%)',
+                    }}
+                >
+                    <div
+                        className="absolute inset-0 opacity-40"
+                        style={{
+                            background:
+                                'radial-gradient(circle at 18% 18%, rgba(37, 99, 235, 0.55), transparent 30%), radial-gradient(circle at 80% 22%, rgba(20, 184, 166, 0.35), transparent 24%)',
+                        }}
+                    />
+
+                    <div className="relative z-10">
+                        <div className="inline-flex items-center gap-3 rounded-lg border border-white/15 bg-white/10 px-4 py-3 shadow-xl shadow-black/20 backdrop-blur">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white text-sm font-black text-blue-700">
+                                NG
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold">NextGen Assets</p>
+                                <p className="text-xs text-blue-100">Management System</p>
+                            </div>
                         </div>
 
-                        <h1 className="mt-8 text-4xl font-bold leading-tight">
-                            Smart assets control for modern operations.
-                        </h1>
-
-                        <p className="mt-4 max-w-xl text-sm text-slate-300">
-                            Track assets, assignments, departments, inventory, notifications, and operational activity in one secure platform.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs text-slate-300">Assets</p>
-                            <p className="mt-2 text-2xl font-bold">24/7</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs text-slate-300">Security</p>
-                            <p className="mt-2 text-2xl font-bold">Role-based</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs text-slate-300">Experience</p>
-                            <p className="mt-2 text-2xl font-bold">React SPA</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-center px-4 py-10">
-                    <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-bold text-slate-900">Sign in</h2>
-                            <p className="mt-2 text-sm text-slate-500">
-                                Login to NextGen Assets Management System
+                        <div className="mt-20 max-w-2xl">
+                            <p className="text-sm font-bold uppercase tracking-[0.18em] text-blue-200">Authorized Office Portal</p>
+                            <h1 className="mt-5 text-5xl font-black leading-[1.05] tracking-tight">
+                                Control every asset movement with confidence.
+                            </h1>
+                            <p className="mt-6 max-w-xl text-base leading-7 text-slate-200">
+                                A focused workspace for officers to manage inventory, assignments, returns, users, and operational alerts across the office network.
                             </p>
                         </div>
+                    </div>
 
-                        {error ? (
-                            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                                {error}
-                            </div>
-                        ) : null}
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Email
-                                </label>
-                                <input
-                                    type="email"
-                                    value={form.email}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({ ...prev, email: e.target.value }))
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Password
-                                </label>
-                                <input
-                                    type="password"
-                                    value={form.password}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({ ...prev, password: e.target.value }))
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                                    required
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
-                            >
-                                {loading ? 'Signing in...' : 'Login'}
-                            </button>
-                        </form>
-
-                        <div className="mt-6 rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
-                            Demo credentials: admin@nextgen.local / password
+                    <div className="relative z-10 grid gap-4 xl:grid-cols-3">
+                        <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Security</p>
+                            <p className="mt-3 text-2xl font-black">Role Based</p>
+                            <p className="mt-2 text-sm text-slate-300">Admin, manager, asset officer, and staff access.</p>
+                        </div>
+                        <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Office</p>
+                            <p className="mt-3 text-2xl font-black">Shared Link</p>
+                            <p className="mt-2 text-sm text-slate-300">Designed for officers using one system together.</p>
+                        </div>
+                        <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">PNG Time</p>
+                            <p className="mt-3 text-2xl font-black">{timeLabel}</p>
+                            <p className="mt-2 text-sm text-slate-300">Operational timestamps stay familiar.</p>
                         </div>
                     </div>
-                </div>
+                </section>
+
+                <section className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-12">
+                    <div className="w-full max-w-[520px]">
+                        <div className="mb-8 flex items-center gap-4 lg:hidden">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-sm font-black text-white">
+                                NG
+                            </div>
+                            <div>
+                                <p className="text-base font-black text-slate-950">NextGen Assets</p>
+                                <p className="text-sm text-slate-500">Management System</p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.16)]">
+                            <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                                        <LockIcon />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-3xl font-black tracking-tight text-slate-950">Sign in</h2>
+                                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                                            Enter your officer account to continue to the dashboard.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-6 py-6 sm:px-8">
+                                {error ? (
+                                    <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                                        {error}
+                                    </div>
+                                ) : null}
+
+                                <form onSubmit={handleSubmit} className="space-y-5">
+                                    <div>
+                                        <label className="field-label">Email Address</label>
+                                        <input
+                                            type="email"
+                                            value={form.email}
+                                            onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                                            className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                            placeholder="your.email@office.com"
+                                            autoComplete="email"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="field-label">Password</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={form.password}
+                                                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                                                className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 pr-12 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                                placeholder="Enter password"
+                                                autoComplete="current-password"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword((prev) => !prev)}
+                                                className="absolute inset-y-0 right-3 flex items-center text-slate-400 transition hover:text-slate-700"
+                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                            >
+                                                <EyeIcon visible={showPassword} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600">
+                                            <input
+                                                type="checkbox"
+                                                checked={remember}
+                                                onChange={(event) => setRemember(event.target.checked)}
+                                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            Remember email
+                                        </label>
+                                        <p className="text-sm font-medium text-slate-500">Need access? Contact admin.</p>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading || !canSubmit}
+                                        className="flex h-12 w-full items-center justify-center rounded-lg bg-blue-600 px-5 text-base font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {loading ? 'Signing in...' : 'Sign In'}
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div className="rounded-b-xl border-t border-slate-200 bg-slate-50 px-6 py-4 sm:px-8">
+                                <p className="text-sm leading-6 text-slate-600">
+                                    Use only your assigned account. Always sign out when using a shared office computer.
+                                </p>
+                            </div>
+                        </div>
+
+                        <p className="mt-6 text-center text-sm font-medium text-slate-500">
+                            Protected workspace for authorized officers only.
+                        </p>
+                    </div>
+                </section>
             </div>
-        </div>
+        </main>
     );
 }

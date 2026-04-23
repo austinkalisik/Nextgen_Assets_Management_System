@@ -1,6 +1,6 @@
 export const navigationSections = [
     {
-        label: 'Main Menu',
+        label: 'Operations',
         items: [
             {
                 label: 'Dashboard',
@@ -29,7 +29,7 @@ export const navigationSections = [
         ],
     },
     {
-        label: 'Management',
+        label: 'Administration',
         items: [
             {
                 label: 'Categories',

@@ -1,0 +1,92 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "NextGen: Start Laravel",
+            "type": "shell",
+            "command": "php artisan serve --host=127.0.0.1 --port=8000",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "dedicated",
+                "group": "nextgen",
+                "clear": true
+            }
+        },
+        {
+            "label": "NextGen: Start Vite",
+            "type": "shell",
+            "command": "npm run dev",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "dedicated",
+                "group": "nextgen",
+                "clear": true
+            }
+        },
+        {
+            "label": "NextGen: Start App Local",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "NextGen: Start Laravel",
+                "NextGen: Start Vite"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "NextGen: Start Laravel LAN",
+            "type": "shell",
+            "command": "npm run serve:lan",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "dedicated",
+                "group": "nextgen",
+                "clear": true
+            }
+        },
+        {
+            "label": "NextGen: Start Vite LAN",
+            "type": "shell",
+            "command": "npm run dev:lan",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "dedicated",
+                "group": "nextgen",
+                "clear": true
+            }
+        },
+        {
+            "label": "NextGen: Start App LAN",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "NextGen: Start Laravel LAN",
+                "NextGen: Start Vite LAN"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "NextGen: Clear Laravel Cache",
+            "type": "shell",
+            "command": "php artisan optimize:clear",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

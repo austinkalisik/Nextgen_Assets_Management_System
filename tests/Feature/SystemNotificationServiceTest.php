@@ -38,6 +38,7 @@ class SystemNotificationServiceTest extends TestCase
         $this->assertDatabaseHas('system_notifications', [
             'user_id' => $otherAdmin->id,
             'type' => 'asset_updated',
+            'priority' => 'normal',
             'title' => 'Asset Updated',
             'source_type' => 'item',
             'source_id' => 10,
@@ -88,8 +89,32 @@ class SystemNotificationServiceTest extends TestCase
         $this->assertDatabaseHas('system_notifications', [
             'user_id' => $receiver->id,
             'type' => 'assignment_created',
+            'priority' => 'normal',
             'source_type' => 'assignment',
             'source_id' => 20,
+        ]);
+    }
+
+    public function test_notification_priority_is_inferred_for_critical_inventory_events(): void
+    {
+        $actor = $this->user('Asset Officer', 'asset_officer');
+        $admin = $this->user('System Administrator', 'admin');
+
+        $this->actingAs($actor);
+
+        app(SystemNotificationService::class)->notifyAdmins(
+            'inventory_alert',
+            'Inventory Alert',
+            'Stock is below the required threshold.',
+            '/inventory',
+            'item',
+            7
+        );
+
+        $this->assertDatabaseHas('system_notifications', [
+            'user_id' => $admin->id,
+            'type' => 'inventory_alert',
+            'priority' => 'high',
         ]);
     }
 

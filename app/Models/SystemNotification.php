@@ -9,11 +9,13 @@ class SystemNotification extends Model
     protected $fillable = [
         'user_id',
         'type',
+        'priority',
         'title',
         'message',
         'url',
         'source_type',
         'source_id',
+        'data',
         'read_at',
     ];
 
@@ -31,6 +33,7 @@ class SystemNotification extends Model
     protected function casts(): array
     {
         return [
+            'data' => 'array',
             'read_at' => 'datetime',
         ];
     }

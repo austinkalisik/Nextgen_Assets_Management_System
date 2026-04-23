@@ -180,6 +180,19 @@ function getIcon(name) {
     return ICONS[name] || ICONS.default;
 }
 
+function notificationPriorityClass(priority) {
+    return {
+        high: 'bg-red-100 text-red-700',
+        medium: 'bg-amber-100 text-amber-700',
+        normal: 'bg-blue-100 text-blue-700',
+        low: 'bg-slate-100 text-slate-600',
+    }[priority || 'normal'] || 'bg-blue-100 text-blue-700';
+}
+
+function notificationLabel(value) {
+    return (value || 'general').replace(/_/g, ' ');
+}
+
 function initials(name) {
     if (!name) {
         return 'SA';
@@ -207,14 +220,14 @@ function Avatar({ user }) {
                 key={photoUrl}
                 src={photoUrl}
                 alt={user?.name || 'User'}
-                className="h-10 w-10 rounded-full object-cover ring-2 ring-white/10"
+                className="h-10 w-10 rounded-lg object-cover ring-2 ring-white/10"
                 onError={() => setBroken(true)}
             />
         );
     }
 
     return (
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-white">
             {initials(user?.name)}
         </div>
     );
@@ -233,14 +246,14 @@ function BrandMark({ systemName, systemLogoUrl }) {
                 key={systemLogoUrl}
                 src={systemLogoUrl}
                 alt={systemName || 'System Logo'}
-                className="h-11 w-11 rounded-xl bg-white object-contain p-1 shadow-lg shadow-blue-700/30"
+                className="h-11 w-11 rounded-lg bg-white object-contain p-1 shadow-lg shadow-blue-700/30"
                 onError={() => setBroken(true)}
             />
         );
     }
 
     return (
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg shadow-blue-700/30">
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg shadow-blue-700/30">
             <BoxIcon />
         </div>
     );
@@ -263,13 +276,13 @@ function SidebarItem({ item, pathname, onNavigate, unreadCount }) {
             to={item.to}
             onClick={onNavigate}
             className={[
-                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/20'
                     : 'text-slate-300 hover:bg-white/5 hover:text-white',
             ].join(' ')}
         >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/5">
                 <Icon />
             </span>
             <span className="truncate">{item.label}</span>
@@ -347,7 +360,7 @@ function SidebarContent({
                     </div>
                 </div>
 
-                <div className="mt-3 rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-[11px] text-slate-400">
+                <div className="mt-3 rounded-md border border-white/5 bg-white/5 px-3 py-2 text-[11px] text-slate-400">
                     {companyWebsite?.replace(/^https?:\/\//, '') || 'nextgenpng.net'}
                 </div>
             </div>
@@ -368,7 +381,7 @@ function SidebarContent({
             </div>
 
             <div className="border-t border-white/5 px-4 py-4">
-                <div className="rounded-2xl border border-white/5 bg-white/5 p-3">
+                <div className="rounded-lg border border-white/5 bg-white/5 p-3">
                     <div className="flex items-center gap-3">
                         <Avatar user={user} />
                         <div className="min-w-0 flex-1">
@@ -381,7 +394,7 @@ function SidebarContent({
                 <button
                     type="button"
                     onClick={onLogout}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/5 hover:text-white"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/5 hover:text-white"
                 >
                     <LogoutIcon />
                     Sign Out
@@ -393,7 +406,7 @@ function SidebarContent({
 
 function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRead, onClose, loading }) {
     return (
-        <div className="absolute right-0 top-14 z-50 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="fixed inset-x-3 top-20 z-50 max-h-[calc(100vh-6rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:absolute sm:inset-auto sm:right-0 sm:top-14 sm:w-[380px]">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                 <div>
                     <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
@@ -409,7 +422,7 @@ function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRea
                 </button>
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[60vh] overflow-y-auto sm:max-h-96">
                 {loading ? (
                     <div className="px-4 py-6 text-sm text-slate-500">Loading notifications...</div>
                 ) : notifications.length === 0 ? (
@@ -427,11 +440,18 @@ function NotificationDropdown({ notifications, unreadCount, onOpen, onMarkAllRea
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                    <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
+                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold capitalize ${notificationPriorityClass(notification.priority)}`}>
+                                            {notificationLabel(notification.priority)}
+                                        </span>
+                                    </div>
                                     <p className="mt-1 line-clamp-2 text-xs text-slate-600">{notification.message}</p>
-                                    <p className="mt-2 text-[11px] text-slate-400">
-                                        {new Date(notification.created_at).toLocaleString()}
-                                    </p>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                                        <span className="capitalize">{notificationLabel(notification.type)}</span>
+                                        <span>|</span>
+                                        <span>{new Date(notification.created_at).toLocaleString()}</span>
+                                    </div>
                                 </div>
 
                                 {!notification.is_read ? <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" /> : null}
@@ -460,6 +480,7 @@ export default function Layout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [globalSearch, setGlobalSearch] = useState('');
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [impersonationError, setImpersonationError] = useState('');
     const notificationsRef = useRef(null);
 
     useEffect(() => {
@@ -469,7 +490,7 @@ export default function Layout({ children }) {
 
     useEffect(() => {
         function handleClickOutside(event) {
-            if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+            if (!event.target.closest('[data-notification-root="true"]')) {
                 setNotificationsOpen(false);
             }
         }
@@ -505,10 +526,12 @@ export default function Layout({ children }) {
 
     async function handleStopImpersonation() {
         try {
+            setImpersonationError('');
             await stopImpersonation();
-            navigate('/users');
+            navigate('/dashboard', { replace: true });
         } catch (error) {
             console.error('Failed to stop impersonation', error);
+            setImpersonationError(error?.response?.data?.message || 'Could not return to admin. Please refresh and try again.');
         }
     }
 
@@ -543,8 +566,8 @@ export default function Layout({ children }) {
     }
 
     return (
-        <div className="flex min-h-screen bg-[#f5f7fb]">
-            <aside className="hidden w-[270px] shrink-0 border-r border-slate-200/70 lg:flex">
+        <div className="flex min-h-screen bg-[#f4f7fb]">
+            <aside className="sticky top-0 hidden h-screen w-[280px] shrink-0 border-r border-slate-200/70 lg:flex">
                 <SidebarContent
                     pathname={location.pathname}
                     systemName={systemName}
@@ -562,7 +585,7 @@ export default function Layout({ children }) {
             {sidebarOpen ? (
                 <div className="fixed inset-0 z-50 lg:hidden">
                     <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={closeSidebar} />
-                    <aside className="relative z-10 h-full w-[280px] border-r border-white/10">
+                    <aside className="relative z-10 h-full w-[min(86vw,320px)] border-r border-white/10">
                         <SidebarContent
                             pathname={location.pathname}
                             systemName={systemName}
@@ -583,7 +606,10 @@ export default function Layout({ children }) {
                 {user?.is_impersonating ? (
                     <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 sm:px-6">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="text-sm font-medium text-amber-800">You are currently impersonating another user.</p>
+                            <div>
+                                <p className="text-sm font-medium text-amber-800">You are currently impersonating another user.</p>
+                                {impersonationError ? <p className="mt-1 text-xs font-semibold text-red-600">{impersonationError}</p> : null}
+                            </div>
                             <button
                                 type="button"
                                 onClick={handleStopImpersonation}
@@ -595,32 +621,63 @@ export default function Layout({ children }) {
                     </div>
                 ) : null}
 
-                <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-                    <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
-                        <div className="flex items-center gap-3">
+                <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+                    <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
                             <button
                                 type="button"
                                 onClick={() => setSidebarOpen(true)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
                                 aria-label="Open menu"
                             >
                                 <MenuIcon />
                             </button>
 
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-900">{systemName}</h2>
-                                <p className="text-xs text-slate-500">{systemTagline}</p>
+                                <div className="min-w-0">
+                                    <h2 className="truncate text-base font-bold text-slate-900 sm:text-lg">{systemName}</h2>
+                                    <p className="truncate text-xs text-slate-500">{systemTagline}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 xl:hidden">
+                                <div className="relative" ref={notificationsRef} data-notification-root="true">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNotificationsOpen((prev) => !prev)}
+                                        className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                                        aria-label="Open notifications"
+                                    >
+                                        <BellIcon />
+                                        {unreadCount > 0 ? (
+                                            <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                                {unreadCount}
+                                            </span>
+                                        ) : null}
+                                    </button>
+
+                                    {notificationsOpen ? (
+                                        <NotificationDropdown
+                                            notifications={notifications}
+                                            unreadCount={unreadCount}
+                                            onOpen={handleOpenNotification}
+                                            onMarkAllRead={markAllRead}
+                                            onClose={() => setNotificationsOpen(false)}
+                                            loading={notificationsLoading}
+                                        />
+                                    ) : null}
+                                </div>
                             </div>
                         </div>
 
-                        <form onSubmit={handleGlobalSearchSubmit} className="flex w-full max-w-xl items-center gap-3">
+                        <form onSubmit={handleGlobalSearchSubmit} className="flex w-full items-center gap-2 xl:max-w-xl">
                             <div className="relative flex-1">
                                 <input
                                     type="text"
                                     value={globalSearch}
                                     onChange={(event) => setGlobalSearch(event.target.value)}
                                     placeholder="Search inventory..."
-                                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                                    className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
                                     <SearchIcon />
@@ -629,18 +686,18 @@ export default function Layout({ children }) {
 
                             <button
                                 type="submit"
-                                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:px-5"
                             >
                                 Search
                             </button>
                         </form>
 
-                        <div className="flex items-center gap-3">
-                            <div className="relative" ref={notificationsRef}>
+                        <div className="hidden items-center gap-3 xl:flex">
+                            <div className="relative" ref={notificationsRef} data-notification-root="true">
                                 <button
                                     type="button"
                                     onClick={() => setNotificationsOpen((prev) => !prev)}
-                                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                                 >
                                     <BellIcon />
                                     {unreadCount > 0 ? (
@@ -662,7 +719,7 @@ export default function Layout({ children }) {
                                 ) : null}
                             </div>
 
-                            <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 sm:flex">
+                            <div className="hidden items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 sm:flex">
                                 <Avatar user={user} />
                                 <div className="min-w-0">
                                     <p className="truncate text-xs text-slate-500">System Administrator</p>
@@ -673,7 +730,7 @@ export default function Layout({ children }) {
                             <button
                                 type="button"
                                 onClick={handleLogout}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                             >
                                 Logout
                             </button>
@@ -682,7 +739,7 @@ export default function Layout({ children }) {
                 </header>
 
                 <main className="flex-1 overflow-auto">
-                    <div className="w-full px-4 py-6 sm:px-6 xl:px-8 2xl:px-10">
+                    <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-6 xl:px-8 2xl:px-10">
                         {children}
                     </div>
                 </main>

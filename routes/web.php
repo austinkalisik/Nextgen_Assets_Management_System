@@ -10,11 +10,21 @@ Route::get('/', function () {
     return view('spa');
 });
 
-Route::get('/login', function () {
+Route::get('/dashboard', function () {
     return view('spa');
-})->name('login');
+})->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', function () {
+        return view('spa');
+    })->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+require __DIR__.'/auth.php';
 
 Route::get('/{any}', function () {
     return view('spa');
 })->where('any', '^(?!api|storage|build).*$');
-

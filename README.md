@@ -61,59 +61,98 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-For LAN access from this machine, use:
-
-```env
-APP_URL=http://192.168.31.6
-VITE_DEV_SERVER_HOST=192.168.31.6
-VITE_DEV_SERVER_PORT=5173
-```
-
 Create the database in phpMyAdmin (or MySQL CLI), then run migrations + seeders:
 
 ```bash
 php artisan migrate --seed
+php artisan storage:link
 ```
 
-If you changed profile photo handling and storage links are needed:
+Clear cached configuration after environment changes:
 
 ```bash
-php artisan storage:link
+php artisan optimize:clear
 ```
 
 ---
 
-## 4) Run the app
+## 4) Run locally for development
 
-Run frontend dev server:
+Use two terminals:
+
+```bash
+php artisan serve --host=127.0.0.1 --port=8000
+```
 
 ```bash
 npm run dev
 ```
 
-Run backend server:
+Open:
+
+- `http://127.0.0.1:8000`
+
+VS Code users can run:
+
+```text
+Ctrl + Shift + P -> Tasks: Run Task -> NextGen: Start App Local
+```
+
+---
+
+## 5) Run on an office LAN
+
+Find the server PC LAN IP, then update `.env`. Example:
+
+```env
+APP_URL=http://192.168.31.34:8000
+VITE_DEV_SERVER_BIND_HOST=0.0.0.0
+VITE_DEV_SERVER_HOST=192.168.31.34
+VITE_DEV_SERVER_PORT=5173
+```
+
+Run:
 
 ```bash
-php artisan serve --host=192.168.31.6 --port=80
+npm run serve:lan
+npm run dev:lan
 ```
 
 Open:
 
-- Laravel API/UI shell: `http://192.168.31.6`
+- `http://192.168.31.34:8000`
 
-If port 80 is already used by Apache/IIS, run Laravel on port 8000 instead:
+VS Code users can run:
 
-```bash
-php artisan serve --host=192.168.31.6 --port=8000
+```text
+Ctrl + Shift + P -> Tasks: Run Task -> NextGen: Start App LAN
 ```
 
-Then set `APP_URL=http://192.168.31.6:8000` and open `http://192.168.31.6:8000`.
+Allow Windows Firewall inbound TCP ports `8000` and `5173` if other office PCs cannot connect.
 
 ---
 
-## 5) Activity Logs (Audit Trail)
+## 6) Test and verify before pushing
 
-The system now includes an **Activity Logs** page for monitoring operations:
+Recommended verification:
+
+```bash
+php artisan test
+npm run build
+```
+
+Useful targeted checks:
+
+```bash
+php artisan test --filter=Notification
+php artisan test --filter=AssignmentQuantityValidationTest
+```
+
+---
+
+## 7) Activity Logs (Audit Trail)
+
+The system includes an **Activity Logs** page for monitoring operations:
 
 - asset creation/update/deletion
 - assignment and return actions
@@ -135,7 +174,7 @@ Main filters supported:
 
 ---
 
-## 6) Notification behavior
+## 8) Notification behavior
 
 Notifications are created for relevant recipients, but the system intentionally avoids notifying the same user who triggered the action.
 
@@ -143,7 +182,7 @@ This keeps alerts meaningful and reduces noise for operators.
 
 ---
 
-## 7) Access control model
+## 9) Access control model
 
 Authenticated users can access read operations.
 
@@ -159,7 +198,7 @@ Settings write endpoints are restricted to:
 
 ---
 
-## 8) Recommended developer commands
+## 10) Recommended developer commands
 
 ```bash
 # PHP syntax checks
@@ -174,7 +213,7 @@ php artisan test
 
 ---
 
-## 9) Troubleshooting
+## 11) Troubleshooting
 
 ### Composer install fails
 
@@ -206,7 +245,7 @@ php artisan migrate
 
 ---
 
-## 10) Production notes
+## 12) Production notes
 
 - Use `APP_ENV=production` and `APP_DEBUG=false`
 - Configure queue/mail drivers properly

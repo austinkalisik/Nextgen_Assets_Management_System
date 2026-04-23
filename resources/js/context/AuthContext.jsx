@@ -103,8 +103,14 @@ export function AuthProvider({ children }) {
     );
 
     const stopImpersonation = useCallback(async () => {
-        await apiClient.post('/users/stop-impersonation');
-        await fetchMe();
+        const response = await apiClient.post('/users/stop-impersonation');
+        const restoredUser = response?.data?.user ?? (await fetchMe());
+
+        if (restoredUser) {
+            setUser(restoredUser);
+        }
+
+        return restoredUser;
     }, [fetchMe]);
 
     const value = useMemo(
