@@ -50,12 +50,10 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'role' => ['required', 'in:admin,manager,asset_officer,staff'],
-            'password' => ['nullable', 'confirmed', Password::min(6)],
+            'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
-        $validated['password'] = empty($validated['password'])
-            ? Hash::make('password')
-            : Hash::make($validated['password']);
+        $validated['password'] = Hash::make($validated['password']);
 
         $user = User::create($validated);
 

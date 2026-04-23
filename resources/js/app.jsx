@@ -17,6 +17,7 @@ const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
 const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage'));
 const SuppliersPage = lazy(() => import('./pages/SuppliersPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -30,6 +31,7 @@ function preloadPages() {
         import('./pages/DepartmentsPage'),
         import('./pages/SuppliersPage'),
         import('./pages/NotificationsPage'),
+        import('./pages/ActivityLogsPage'),
         import('./pages/ProfilePage'),
         import('./pages/UsersPage'),
         import('./pages/SettingsPage'),
@@ -168,6 +170,15 @@ function AppRoutes() {
                 element={
                     <ProtectedRoute>
                         <NotificationsPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/activity-logs"
+                element={
+                    <ProtectedRoute>
+                        <ActivityLogsPage />
                     </ProtectedRoute>
                 }
             />

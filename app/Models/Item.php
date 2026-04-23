@@ -124,7 +124,7 @@ class Item extends Model
     {
         $threshold = $threshold ?? $this->reorder_level ?? 5;
 
-        return (int) $this->quantity > 0 && (int) $this->quantity <= $threshold;
+        return (int) $this->quantity <= $threshold;
     }
 
     public function isAssignable(): bool

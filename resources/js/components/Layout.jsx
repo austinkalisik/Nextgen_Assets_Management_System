@@ -142,6 +142,14 @@ function FolderIcon() {
     );
 }
 
+function ActivityIcon() {
+    return (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M3 12h4l2-5 4 10 2-5h6" />
+        </svg>
+    );
+}
+
 function LogoutIcon() {
     return (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -164,6 +172,7 @@ const ICONS = {
     settings: SettingsIcon,
     profile: UserIcon,
     notifications: BellIcon,
+    activityLogs: ActivityIcon,
     default: FolderIcon,
 };
 

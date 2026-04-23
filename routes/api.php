@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -27,30 +29,16 @@ Route::middleware('web')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
 
         Route::get('/items', [ItemController::class, 'index']);
-        Route::post('/items', [ItemController::class, 'store']);
         Route::get('/items/{item}', [ItemController::class, 'show']);
-        Route::put('/items/{item}', [ItemController::class, 'update']);
-        Route::delete('/items/{item}', [ItemController::class, 'destroy']);
 
         Route::get('/assignments', [AssignmentController::class, 'index']);
-        Route::post('/assignments', [AssignmentController::class, 'store']);
-        Route::put('/assignments/{assignment}/return', [AssignmentController::class, 'returnItem']);
 
         Route::get('/inventory', [InventoryController::class, 'index']);
-        Route::post('/inventory/{item}/stock-in', [InventoryController::class, 'stockIn']);
-        Route::post('/inventory/{item}/stock-out', [InventoryController::class, 'stockOut']);
 
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/types', [StockMovementController::class, 'types']);
         Route::get('/items/{item}/stock-movements', [StockMovementController::class, 'itemHistory']);
-        Route::post('/items/{item}/stock-in', [StockMovementController::class, 'stockIn']);
-        Route::post('/items/{item}/stock-out', [StockMovementController::class, 'stockOut']);
-        Route::post('/items/{item}/stock-adjustment', [StockMovementController::class, 'adjustment']);
-        Route::post('/items/{item}/stock-return', [StockMovementController::class, 'stockReturn']);
-
-        Route::apiResource('categories', CategoryController::class);
-        Route::apiResource('departments', DepartmentController::class);
-        Route::apiResource('suppliers', SupplierController::class);
+        Route::get('/activity-logs', [ActivityLogController::class, 'index']);
 
         Route::post('/users/stop-impersonation', [UserController::class, 'stopImpersonation']);
         Route::post('/users/{user}/impersonate', [UserController::class, 'impersonate']);
@@ -64,8 +52,39 @@ Route::middleware('web')->group(function () {
 
         Route::get('/settings', [SettingController::class, 'index']);
         Route::get('/settings/branding/logo/file', [SettingController::class, 'showLogo']);
-        Route::post('/settings/branding/logo', [SettingController::class, 'uploadLogo']);
-        Route::delete('/settings/branding/logo', [SettingController::class, 'deleteLogo']);
-        Route::put('/settings/{key}', [SettingController::class, 'update']);
+
+        Route::middleware(RoleMiddleware::class.':admin,manager,asset_officer')->group(function () {
+            Route::post('/items', [ItemController::class, 'store']);
+            Route::put('/items/{item}', [ItemController::class, 'update']);
+            Route::delete('/items/{item}', [ItemController::class, 'destroy']);
+
+            Route::post('/assignments', [AssignmentController::class, 'store']);
+            Route::put('/assignments/{assignment}/return', [AssignmentController::class, 'returnItem']);
+
+            Route::post('/inventory/{item}/stock-in', [InventoryController::class, 'stockIn']);
+            Route::post('/inventory/{item}/stock-out', [InventoryController::class, 'stockOut']);
+
+            Route::post('/items/{item}/stock-in', [StockMovementController::class, 'stockIn']);
+            Route::post('/items/{item}/stock-out', [StockMovementController::class, 'stockOut']);
+            Route::post('/items/{item}/stock-adjustment', [StockMovementController::class, 'adjustment']);
+            Route::post('/items/{item}/stock-return', [StockMovementController::class, 'stockReturn']);
+
+            Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
+            Route::apiResource('departments', DepartmentController::class)->except(['index', 'show']);
+            Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
+        });
+
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/categories/{category}', [CategoryController::class, 'show']);
+        Route::get('/departments', [DepartmentController::class, 'index']);
+        Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+        Route::get('/suppliers', [SupplierController::class, 'index']);
+        Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+
+        Route::middleware(RoleMiddleware::class.':admin')->group(function () {
+            Route::post('/settings/branding/logo', [SettingController::class, 'uploadLogo']);
+            Route::delete('/settings/branding/logo', [SettingController::class, 'deleteLogo']);
+            Route::put('/settings/{key}', [SettingController::class, 'update']);
+        });
     });
 });

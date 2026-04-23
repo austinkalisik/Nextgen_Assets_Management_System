@@ -43,7 +43,7 @@ class SupplierController extends Controller
 
     public function show(Supplier $supplier)
     {
-        $supplier->load('items.category', 'items.department');
+        $supplier->load('items.category', 'items.assignments.assignedDepartment');
 
         return response()->json($supplier);
     }

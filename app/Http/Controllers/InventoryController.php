@@ -200,23 +200,15 @@ class InventoryController extends Controller
         ?int $sourceId = null
     ): void {
         $admins = User::where('role', 'admin')->get();
+        $actorId = (int) (Auth::id() ?? 0);
 
         foreach ($admins as $admin) {
+            if ($actorId > 0 && (int) $admin->id === $actorId) {
+                continue;
+            }
+
             SystemNotification::create([
                 'user_id' => $admin->id,
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'url' => $url,
-                'source_type' => $sourceType,
-                'source_id' => $sourceId,
-                'read_at' => null,
-            ]);
-        }
-
-        if (Auth::check()) {
-            SystemNotification::create([
-                'user_id' => Auth::id(),
                 'type' => $type,
                 'title' => $title,
                 'message' => $message,

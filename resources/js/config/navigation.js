@@ -56,6 +56,12 @@ export const navigationSections = [
                 icon: 'notifications',
             },
             {
+                label: 'Activity Logs',
+                to: '/activity-logs',
+                match: ['/activity-logs'],
+                icon: 'activityLogs',
+            },
+            {
                 label: 'Settings',
                 to: '/settings',
                 match: ['/settings'],
@@ -72,4 +78,3 @@ export const navigationSections = [
 ];
 
 export const navigationItems = navigationSections.flatMap((section) => section.items);
-

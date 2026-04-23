@@ -360,9 +360,6 @@ class ItemController extends Controller
             'supplier_id' => $validated['supplier_id'],
             'asset_tag' => $this->normalizeNullable($validated['asset_tag'] ?? null),
             'serial_number' => $this->normalizeNullable($validated['serial_number'] ?? null),
-            'reorder_level' => array_key_exists('reorder_level', $validated) && $validated['reorder_level'] !== null
-                ? (int) $validated['reorder_level']
-                : 5,
             'unit_cost' => array_key_exists('unit_cost', $validated) && $validated['unit_cost'] !== null
                 ? (float) $validated['unit_cost']
                 : null,
@@ -370,6 +367,14 @@ class ItemController extends Controller
             'location' => $this->normalizeNullable($validated['location'] ?? null),
             'purchase_date' => $validated['purchase_date'] ?? null,
         ];
+
+        if (array_key_exists('reorder_level', $validated)) {
+            $payload['reorder_level'] = $validated['reorder_level'] !== null
+                ? (int) $validated['reorder_level']
+                : null;
+        } elseif ($includeQuantity) {
+            $payload['reorder_level'] = 5;
+        }
 
         if ($includeQuantity) {
             $payload['quantity'] = (int) ($validated['quantity'] ?? 0);
@@ -394,8 +399,13 @@ class ItemController extends Controller
         ?int $sourceId = null
     ): void {
         $admins = User::where('role', 'admin')->get();
+        $actorId = (int) (Auth::id() ?? 0);
 
         foreach ($admins as $admin) {
+            if ($actorId > 0 && (int) $admin->id === $actorId) {
+                continue;
+            }
+
             SystemNotification::create([
                 'user_id' => $admin->id,
                 'type' => $type,

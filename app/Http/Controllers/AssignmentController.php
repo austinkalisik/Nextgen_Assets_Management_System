@@ -10,6 +10,7 @@ use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\StockInventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -223,8 +224,13 @@ class AssignmentController extends Controller
         ?int $sourceId = null
     ): void {
         $admins = User::query()->where('role', 'admin')->get();
+        $actorId = (int) (Auth::id() ?? 0);
 
         foreach ($admins as $admin) {
+            if ($actorId > 0 && (int) $admin->id === $actorId) {
+                continue;
+            }
+
             SystemNotification::create([
                 'user_id' => $admin->id,
                 'type' => $type,
@@ -247,6 +253,12 @@ class AssignmentController extends Controller
         ?string $sourceType = null,
         ?int $sourceId = null
     ): void {
+        $actorId = (int) (Auth::id() ?? 0);
+
+        if ($actorId > 0 && $userId === $actorId) {
+            return;
+        }
+
         SystemNotification::create([
             'user_id' => $userId,
             'type' => $type,
