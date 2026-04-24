@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "austinkalisik/nextgen-assets-management-system",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "A Laravel and React asset management system for inventory, assignments, stock movement, notifications, and office operations.",
+    "keywords": ["laravel", "react", "vite", "asset-management", "inventory"],
     "license": "MIT",
     "require": {
         "php": "^8.3",

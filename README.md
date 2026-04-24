@@ -1,84 +1,62 @@
 # Nextgen Assets Management System
 
-Nextgen Assets Management System is a Laravel + ReactJS CRUD application for managing inventory, assignments, stock movement, notifications, activity logs, branding, and office operations.
+Nextgen Assets Management System is a full-stack Laravel and React application for managing office assets, inventory, assignments, stock movements, users, notifications, activity logs, reports, and branding.
 
-It is owned by **Nextgen Technology** and can be used internally by Nextgen Technology or rolled out to other departments that want to adopt the software.
+The project is designed so another developer can clone it, configure a database, seed demo users, run the app locally, and verify it with automated tests.
 
-Repository:
-- `https://github.com/austinkalisik/Nextgen_Assets_Management_System`
+## Features
 
-## What you get
+- Dashboard with asset, inventory, assignment, and notification summaries
+- Asset and inventory management with stock in, stock out, low stock, and out-of-stock alerts
+- Asset assignment and return workflows
+- Categories, suppliers, departments, users, roles, and profile management
+- In-app notifications with optional email copies
+- Activity logs and audit-friendly asset history
+- Branding/settings management
+- PDF/report support through `barryvdh/laravel-dompdf`
+- Docker setup for quick containerized evaluation
 
-- Dashboard and system overview
-- Inventory / Items with depreciation support
-- Assignments and returns
-- Suppliers, categories, and departments
-- Users and profile management
-- Notifications
-- Activity logs / audit trail
-- Settings / branding
+## Tech Stack
 
-## Stack
-
-- Backend: Laravel 13
-- Frontend: React 19 + Vite
-- Database: MySQL / MariaDB
-- PDF support: `barryvdh/laravel-dompdf`
+- Backend: Laravel 13, PHP 8.3+
+- Frontend: React 19, Vite, Tailwind CSS
+- Database: MySQL or MariaDB
+- Testing: PHPUnit with SQLite in-memory test database
+- Container option: Docker Compose with MySQL 8
 
 ## Requirements
 
-- PHP `8.3+`
-- Composer `2+`
-- Node.js `20+`
+- PHP 8.3 or newer
+- Composer 2 or newer
+- Node.js 20 or newer
 - npm
-- MySQL / MariaDB
+- MySQL or MariaDB
 - Git
 
-For Windows/XAMPP users:
-- start MySQL before running migrations
-- Apache is optional because local development can use `php artisan serve`
+For Windows/XAMPP users, start MySQL before running migrations. Apache is optional because local development uses `php artisan serve`.
 
-## Fastest local setup
+## Quick Start
 
-After cloning, the easiest setup path is:
+Clone the repository:
 
 ```bash
 git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
 cd Nextgen_Assets_Management_System
-composer run bootstrap
 ```
 
-What `composer run bootstrap` does:
-- installs Composer dependencies
-- creates `.env` from `.env.example` if missing
-- generates `APP_KEY` if missing
-- creates the storage link
-- runs migrations and seeders
-- clears cached Laravel state
-- installs npm dependencies
-- builds frontend assets
+Create a MySQL database named:
 
-Important:
-- update your `.env` database credentials before running bootstrap if you are not using the default local MySQL setup
+```text
+nextgen_assets
+```
 
-## Manual local setup
-
-If you prefer doing it step by step:
+Copy the environment file and update database credentials if needed:
 
 ```bash
-git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
-cd Nextgen_Assets_Management_System
-composer install
-npm install
 cp .env.example .env
-php artisan key:generate
-php artisan storage:link
-php artisan migrate --seed
-php artisan optimize:clear
-npm run build
 ```
 
-Example `.env` database values for local MySQL/XAMPP:
+Default local database settings:
 
 ```env
 DB_CONNECTION=mysql
@@ -89,50 +67,118 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-## Running in development
+Run the bootstrap script:
 
-Use two terminals:
+```bash
+composer run bootstrap
+```
+
+The bootstrap script installs PHP and npm dependencies, creates the app key, creates the storage link, runs migrations and seeders, clears Laravel cache, and builds frontend assets.
+
+## Run Locally
+
+Use two terminals.
+
+Terminal 1:
 
 ```bash
 php artisan serve --host=127.0.0.1 --port=8000
 ```
+
+Terminal 2:
 
 ```bash
 npm run dev
 ```
 
 Open:
-- `http://127.0.0.1:8000`
-
-## Running in VS Code
-
-This repo includes ready-made VS Code tasks in [.vscode/tasks.json](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\.vscode\tasks.json:1>).
-
-Useful tasks:
-- `NextGen: Bootstrap Project`
-- `NextGen: Start App Local`
-- `NextGen: Start App LAN`
-- `NextGen: Verify Project`
-- `NextGen: Clear Laravel Cache`
-
-Run them from:
 
 ```text
-Ctrl + Shift + P -> Tasks: Run Task
+http://127.0.0.1:8000
 ```
 
-## Seeded accounts
+Do not open the Vite URL directly for normal app usage. Vite serves frontend assets; Laravel serves the application.
 
-Default seeded users:
+## Demo Accounts
 
-- `admin@nextgen.local` / `password`
-- `assets@nextgen.local` / `password`
-- `support@nextgen.local` / `password`
-- `operations@nextgen.local` / `password`
+After running seeders, use any of these accounts:
 
-## Office LAN development
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@nextgen.local` | `password` |
+| Asset Officer | `assets@nextgen.local` | `password` |
+| ICT Support | `support@nextgen.local` | `password` |
+| Operations Manager | `operations@nextgen.local` | `password` |
 
-Update `.env`:
+## Manual Setup
+
+Use this if you prefer running each step yourself:
+
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan storage:link
+php artisan migrate --seed
+php artisan optimize:clear
+npm run build
+```
+
+Then start Laravel and Vite as shown in the Run Locally section.
+
+## Testing and Verification
+
+Run the full project verification:
+
+```bash
+composer verify
+```
+
+This runs:
+
+- `php artisan test`
+- `npm run build`
+
+You can also run them separately:
+
+```bash
+php artisan test
+npm run build
+```
+
+Tests use SQLite in memory, so they do not require your local MySQL database.
+
+## Docker Quick Start
+
+This repo includes Docker support:
+
+- `Dockerfile`
+- `docker-compose.yml`
+- `.env.docker.example`
+- `docker/entrypoint.sh`
+
+Run:
+
+```bash
+docker compose up --build
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
+
+Docker notes:
+
+- The app container runs migrations and seeders on startup.
+- MySQL runs inside Docker and is exposed to the host on port `3307`.
+- Docker uses `.env.docker.example` by default.
+
+## Office LAN Development
+
+For access from other devices on the same network, update `.env` with your machine IP:
 
 ```env
 APP_URL=http://192.168.31.34:8000
@@ -148,62 +194,83 @@ npm run serve:lan
 npm run dev:lan
 ```
 
-Allow Windows Firewall inbound TCP ports `8000` and `5173` if needed.
+Open the `APP_URL` value in your browser. Allow Windows Firewall inbound TCP ports `8000` and `5173` if needed.
 
-## Docker quick start
+## VS Code Tasks
 
-This repo now includes:
-- [Dockerfile](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\Dockerfile:1>)
-- [docker-compose.yml](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\docker-compose.yml:1>)
-- [.env.docker.example](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\.env.docker.example:1>)
+The repo includes ready-made tasks in `.vscode/tasks.json`.
 
-Run:
+Useful tasks:
 
-```bash
-docker compose up --build
+- `NextGen: Bootstrap Project`
+- `NextGen: Start App Local`
+- `NextGen: Start App LAN`
+- `NextGen: Verify Project`
+- `NextGen: Clear Laravel Cache`
+
+Run them from:
+
+```text
+Ctrl + Shift + P -> Tasks: Run Task
 ```
 
-Open:
-- `http://127.0.0.1:8000`
+## Troubleshooting
 
-Docker notes:
-- the app container runs migrations and seeders on startup
-- MySQL is exposed on host port `3307`
-- Docker uses `.env.docker.example` inside the container unless you provide your own `.env`
-
-## Verification
-
-Run the standard verification checks:
+If login fails, confirm MySQL is running and the database exists:
 
 ```bash
-composer verify
+php artisan migrate --seed
+php artisan optimize:clear
 ```
 
-That runs:
-- Laravel tests
-- frontend production build
+If assets do not refresh during development, keep both Laravel and Vite running:
 
-Current status:
-- `php artisan test` passes
-- `npm run build` passes
+```bash
+php artisan serve --host=127.0.0.1 --port=8000
+npm run dev
+```
 
-## Production readiness
+If storage files or profile photos do not load:
 
-This repo is now easier to clone and run, but production deployment still needs normal environment hardening.
+```bash
+php artisan storage:link --force
+```
 
-Before production:
-- set `APP_ENV=production`
-- set `APP_DEBUG=false`
-- use real database credentials
-- configure real mail settings
-- use HTTPS
-- use a proper process manager / web server setup
-- configure backups and monitoring
-- review queue and storage strategy
+If cached config points to old URLs or database credentials:
 
-## Documentation references
+```bash
+php artisan optimize:clear
+```
 
-- [wireframe/ERD - Nextgen Assets Management System.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\ERD%20-%20Nextgen%20Assets%20Management%20System.txt:1>)
-- [wireframe/Schema Alignment Notes.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\Schema%20Alignment%20Notes.txt:1>)
-- [wireframe/Detailed ASCII Wireframes.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\Detailed%20ASCII%20Wireframes.txt:1>)
-- [wireframe/Detailed Design Spec.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\Detailed%20Design%20Spec.txt:1>)
+## Repository Hygiene
+
+Important generated or local-only files are ignored:
+
+- `.env`
+- `vendor/`
+- `node_modules/`
+- `public/build/`
+- `public/storage/`
+- Laravel logs and caches
+
+Commit source files, migrations, seeders, tests, configuration examples, and documentation. Do not commit real production secrets.
+
+## Production Notes
+
+Before production deployment:
+
+- Set `APP_ENV=production`
+- Set `APP_DEBUG=false`
+- Generate and protect a real `APP_KEY`
+- Use real database credentials
+- Configure mail settings if email notifications are needed
+- Serve through HTTPS
+- Configure queues, backups, logs, and monitoring
+- Review user accounts and seeded demo credentials
+
+## Project References
+
+- `wireframe/ERD - Nextgen Assets Management System.txt`
+- `wireframe/Schema Alignment Notes.txt`
+- `wireframe/Detailed ASCII Wireframes.txt`
+- `wireframe/Detailed Design Spec.txt`
