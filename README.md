@@ -35,6 +35,77 @@ The project is designed so another developer can clone it, configure a database,
 
 For Windows/XAMPP users, start MySQL before running migrations. Apache is optional because local development uses `php artisan serve`.
 
+## First Time Clone and Run
+
+Use these commands when you fork or clone the project for the first time.
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
+cd Nextgen_Assets_Management_System
+```
+
+2. Create a MySQL database:
+
+```sql
+CREATE DATABASE nextgen_assets;
+```
+
+3. Copy the environment file:
+
+```bash
+cp .env.example .env
+```
+
+On Windows PowerShell, use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+4. Check your `.env` database settings:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=nextgen_assets
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+5. Install and prepare the project:
+
+```bash
+composer run bootstrap
+```
+
+6. Start Laravel in the first terminal:
+
+```bash
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+7. Start React/Vite in the second terminal:
+
+```bash
+npm run dev
+```
+
+8. Open the system:
+
+```text
+http://127.0.0.1:8000
+```
+
+Default login:
+
+```text
+admin@nextgen.local
+password
+```
+
 ## Quick Start
 
 Clone the repository:
