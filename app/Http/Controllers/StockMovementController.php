@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\StockMovement;
 use App\Services\StockInventoryService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class StockMovementController extends Controller
 {
+    private const REPORT_TIMEZONE = 'Pacific/Port_Moresby';
+
     protected StockInventoryService $service;
 
     public function __construct(StockInventoryService $service)
@@ -32,11 +35,11 @@ class StockMovementController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+            $query->where('created_at', '>=', $this->startOfReportDay((string) $request->date_from));
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+            $query->where('created_at', '<=', $this->endOfReportDay((string) $request->date_to));
         }
 
         if ($request->filled('search')) {
@@ -191,5 +194,19 @@ class StockMovementController extends Controller
         return response()->json([
             'types' => StockMovement::TYPES,
         ]);
+    }
+
+    protected function startOfReportDay(string $date): CarbonImmutable
+    {
+        return CarbonImmutable::parse($date, self::REPORT_TIMEZONE)
+            ->startOfDay()
+            ->utc();
+    }
+
+    protected function endOfReportDay(string $date): CarbonImmutable
+    {
+        return CarbonImmutable::parse($date, self::REPORT_TIMEZONE)
+            ->endOfDay()
+            ->utc();
     }
 }

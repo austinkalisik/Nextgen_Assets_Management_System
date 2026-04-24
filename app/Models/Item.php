@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Item extends Model
 {
+    public const DEPRECIATION_METHOD_NONE = 'none';
+    public const DEPRECIATION_METHOD_STRAIGHT_LINE = 'straight_line';
+
     public const STATUS_AVAILABLE = 'available';
     public const STATUS_MAINTENANCE = 'maintenance';
     public const STATUS_LOST = 'lost';
@@ -26,6 +29,11 @@ class Item extends Model
         'quantity',
         'reorder_level',
         'unit_cost',
+        'is_depreciable',
+        'depreciation_method',
+        'useful_life_years',
+        'salvage_value',
+        'depreciation_start_date',
         'status',
         'location',
         'purchase_date',
@@ -36,11 +44,24 @@ class Item extends Model
         'quantity' => 'integer',
         'reorder_level' => 'integer',
         'unit_cost' => 'decimal:2',
+        'is_depreciable' => 'boolean',
+        'useful_life_years' => 'integer',
+        'salvage_value' => 'decimal:2',
+        'depreciation_start_date' => 'date',
     ];
 
     protected $appends = [
         'is_low_stock',
         'is_assignable',
+        'depreciation_enabled',
+        'annual_depreciation',
+        'monthly_depreciation',
+        'accumulated_depreciation_per_unit',
+        'current_book_value_per_unit',
+        'accumulated_depreciation_total',
+        'current_book_value_total',
+        'depreciation_end_date',
+        'is_fully_depreciated',
         'date_added',
         'date_added_at',
     ];
@@ -58,6 +79,89 @@ class Item extends Model
     public function getIsAssignableAttribute(): bool
     {
         return $this->isAssignable();
+    }
+
+    public function getDepreciationEnabledAttribute(): bool
+    {
+        return $this->depreciationEnabled();
+    }
+
+    public function getAnnualDepreciationAttribute(): ?float
+    {
+        if (! $this->depreciationEnabled()) {
+            return null;
+        }
+
+        return round($this->depreciableBasePerUnit() / (int) $this->useful_life_years, 2);
+    }
+
+    public function getMonthlyDepreciationAttribute(): ?float
+    {
+        $annual = $this->annual_depreciation;
+
+        return $annual !== null ? round($annual / 12, 2) : null;
+    }
+
+    public function getAccumulatedDepreciationPerUnitAttribute(): ?float
+    {
+        if (! $this->depreciationEnabled()) {
+            return null;
+        }
+
+        $monthly = $this->monthly_depreciation;
+
+        if ($monthly === null) {
+            return null;
+        }
+
+        return round(min($this->depreciableBasePerUnit(), $monthly * $this->depreciationElapsedMonths()), 2);
+    }
+
+    public function getCurrentBookValuePerUnitAttribute(): ?float
+    {
+        if (! $this->depreciationEnabled()) {
+            return null;
+        }
+
+        $current = (float) $this->unit_cost - (float) $this->accumulated_depreciation_per_unit;
+
+        return round(max((float) ($this->salvage_value ?? 0), $current), 2);
+    }
+
+    public function getAccumulatedDepreciationTotalAttribute(): ?float
+    {
+        if ($this->accumulated_depreciation_per_unit === null) {
+            return null;
+        }
+
+        return round((float) $this->accumulated_depreciation_per_unit * max(0, (int) $this->quantity), 2);
+    }
+
+    public function getCurrentBookValueTotalAttribute(): ?float
+    {
+        if ($this->current_book_value_per_unit === null) {
+            return null;
+        }
+
+        return round((float) $this->current_book_value_per_unit * max(0, (int) $this->quantity), 2);
+    }
+
+    public function getDepreciationEndDateAttribute(): ?string
+    {
+        if (! $this->depreciationEnabled()) {
+            return null;
+        }
+
+        return $this->depreciation_start_date
+            ? $this->depreciation_start_date->copy()->addYears((int) $this->useful_life_years)->toDateString()
+            : null;
+    }
+
+    public function getIsFullyDepreciatedAttribute(): bool
+    {
+        return $this->depreciationEnabled()
+            && $this->current_book_value_per_unit !== null
+            && (float) $this->current_book_value_per_unit <= (float) ($this->salvage_value ?? 0);
     }
 
     public function getDateAddedAttribute(): ?string
@@ -144,6 +248,15 @@ class Item extends Model
         return $this->status === self::STATUS_AVAILABLE && (int) $this->quantity > 0;
     }
 
+    public function depreciationEnabled(): bool
+    {
+        return (bool) $this->is_depreciable
+            && $this->depreciation_method === self::DEPRECIATION_METHOD_STRAIGHT_LINE
+            && $this->unit_cost !== null
+            && (int) $this->useful_life_years > 0
+            && $this->depreciation_start_date !== null;
+    }
+
     public function getCalculatedQuantity(): int
     {
         return (int) $this->stockMovements()
@@ -164,5 +277,25 @@ class Item extends Model
 
         $this->status = self::STATUS_AVAILABLE;
         $this->save();
+    }
+
+    protected function depreciableBasePerUnit(): float
+    {
+        return max(0, (float) $this->unit_cost - (float) ($this->salvage_value ?? 0));
+    }
+
+    protected function depreciationElapsedMonths(): int
+    {
+        if (! $this->depreciation_start_date) {
+            return 0;
+        }
+
+        $months = $this->depreciation_start_date->diffInMonths(now(), false);
+
+        if ($months <= 0) {
+            return 0;
+        }
+
+        return min($months, max(0, (int) $this->useful_life_years * 12));
     }
 }

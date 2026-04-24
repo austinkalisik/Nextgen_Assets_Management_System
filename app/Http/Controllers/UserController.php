@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -17,6 +18,19 @@ class UserController extends Controller
             403,
             'Only administrators can manage users.'
         );
+    }
+
+    protected function impersonationAllowed(): bool
+    {
+        $value = DB::table('settings')
+            ->where('key', 'allow_user_impersonation')
+            ->value('value');
+
+        if ($value === null) {
+            return true;
+        }
+
+        return (string) $value === '1';
     }
 
     public function index(Request $request)
@@ -119,6 +133,10 @@ class UserController extends Controller
     public function impersonate(User $user)
     {
         $this->ensureAdmin();
+
+        if (! $this->impersonationAllowed()) {
+            return response()->json(['message' => 'User impersonation is disabled by system settings.'], 403);
+        }
 
         if ((int) $user->id === (int) Auth::id()) {
             return response()->json(['message' => 'You cannot impersonate yourself.'], 422);

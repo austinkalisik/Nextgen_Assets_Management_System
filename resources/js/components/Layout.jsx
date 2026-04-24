@@ -349,18 +349,18 @@ function SidebarContent({
     unreadCount,
 }) {
     return (
-        <div className="flex h-full flex-col bg-[#081122] text-white">
-            <div className="border-b border-white/5 px-5 py-5">
+        <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.22),_transparent_24%),linear-gradient(180deg,#06101f_0%,#09162d_48%,#081121_100%)] text-white">
+            <div className="border-b border-white/10 px-5 py-5">
                 <div className="flex items-center gap-3">
                     <BrandMark systemName={systemName} systemLogoUrl={systemLogoUrl} />
 
                     <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold">{systemName}</p>
-                        <p className="truncate text-[11px] text-slate-400">{systemTagline}</p>
+                        <p className="truncate text-sm font-bold leading-tight text-white">{systemName}</p>
+                        <p className="truncate pt-0.5 text-[11px] text-blue-100/75">{systemTagline}</p>
                     </div>
                 </div>
 
-                <div className="mt-3 rounded-md border border-white/5 bg-white/5 px-3 py-2 text-[11px] text-slate-400">
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-[11px] text-blue-100/70 shadow-inner shadow-white/5">
                     {companyWebsite?.replace(/^https?:\/\//, '') || 'nextgenpng.net'}
                 </div>
             </div>
@@ -380,12 +380,12 @@ function SidebarContent({
                 </div>
             </div>
 
-            <div className="border-t border-white/5 px-4 py-4">
-                <div className="rounded-lg border border-white/5 bg-white/5 p-3">
+            <div className="border-t border-white/10 px-4 py-4">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3 shadow-[0_10px_30px_rgba(2,6,23,0.25)]">
                     <div className="flex items-center gap-3">
                         <Avatar user={user} />
                         <div className="min-w-0 flex-1">
-                            <p className="text-[11px] text-slate-400">Signed in as</p>
+                            <p className="text-[11px] text-blue-100/55">Signed in as</p>
                             <p className="truncate text-sm font-semibold text-white">{displayName}</p>
                         </div>
                     </div>
@@ -394,7 +394,7 @@ function SidebarContent({
                 <button
                     type="button"
                     onClick={onLogout}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/5 hover:text-white"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/8 hover:text-white"
                 >
                     <LogoutIcon />
                     Sign Out
@@ -484,9 +484,13 @@ export default function Layout({ children }) {
     const notificationsRef = useRef(null);
 
     useEffect(() => {
+        if (location.pathname !== '/search') {
+            return;
+        }
+
         const params = new URLSearchParams(location.search);
-        setGlobalSearch(params.get('search') ?? '');
-    }, [location.search]);
+        setGlobalSearch(params.get('q') ?? '');
+    }, [location.pathname, location.search]);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -511,8 +515,8 @@ export default function Layout({ children }) {
         return user.name || user.email || 'System Administrator';
     }, [user]);
 
-    const systemName = settings.system_name || 'NextGen Assets';
-    const systemTagline = settings.system_tagline || 'Management System';
+    const systemName = settings.system_name || 'Nextgen Assets Management System';
+    const systemTagline = settings.system_tagline || 'Owned by Nextgen Technology';
     const companyWebsite = settings.company_website || 'https://nextgenpng.net/';
     const systemLogoUrl = settings.system_logo_url || '';
 
@@ -541,11 +545,11 @@ export default function Layout({ children }) {
         const query = globalSearch.trim();
 
         if (!query) {
-            navigate('/inventory');
+            navigate('/search');
             return;
         }
 
-        navigate(`/inventory?search=${encodeURIComponent(query)}`);
+        navigate(`/search?q=${encodeURIComponent(query)}`);
     }
 
     function closeSidebar() {
@@ -566,8 +570,8 @@ export default function Layout({ children }) {
     }
 
     return (
-        <div className="flex min-h-screen bg-[#f4f7fb]">
-            <aside className="sticky top-0 hidden h-screen w-[280px] shrink-0 border-r border-slate-200/70 lg:flex">
+        <div className="flex min-h-screen bg-transparent">
+            <aside className="sticky top-0 hidden h-screen w-[300px] shrink-0 border-r border-slate-200/40 lg:flex">
                 <SidebarContent
                     pathname={location.pathname}
                     systemName={systemName}
@@ -621,23 +625,18 @@ export default function Layout({ children }) {
                     </div>
                 ) : null}
 
-                <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+                <header className="sticky top-0 z-30 border-b border-white/70 bg-white/72 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
                     <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setSidebarOpen(true)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
-                                aria-label="Open menu"
-                            >
-                                <MenuIcon />
-                            </button>
-
-                                <div className="min-w-0">
-                                    <h2 className="truncate text-base font-bold text-slate-900 sm:text-lg">{systemName}</h2>
-                                    <p className="truncate text-xs text-slate-500">{systemTagline}</p>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setSidebarOpen(true)}
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
+                                    aria-label="Open menu"
+                                >
+                                    <MenuIcon />
+                                </button>
                             </div>
 
                             <div className="flex items-center gap-2 xl:hidden">
@@ -645,7 +644,7 @@ export default function Layout({ children }) {
                                     <button
                                         type="button"
                                         onClick={() => setNotificationsOpen((prev) => !prev)}
-                                        className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                                        className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/85 text-slate-600 transition hover:bg-white hover:text-slate-900"
                                         aria-label="Open notifications"
                                     >
                                         <BellIcon />
@@ -676,8 +675,8 @@ export default function Layout({ children }) {
                                     type="text"
                                     value={globalSearch}
                                     onChange={(event) => setGlobalSearch(event.target.value)}
-                                    placeholder="Search inventory..."
-                                    className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                                    placeholder="Search system records..."
+                                    className="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 pr-10 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                                 />
                                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
                                     <SearchIcon />
@@ -686,7 +685,7 @@ export default function Layout({ children }) {
 
                             <button
                                 type="submit"
-                                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:px-5"
+                                className="rounded-2xl bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(37,99,235,0.25)] transition hover:-translate-y-px hover:shadow-[0_16px_36px_rgba(37,99,235,0.34)] sm:px-5"
                             >
                                 Search
                             </button>
@@ -697,7 +696,7 @@ export default function Layout({ children }) {
                                 <button
                                     type="button"
                                     onClick={() => setNotificationsOpen((prev) => !prev)}
-                                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                                    className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/85 text-slate-600 transition hover:bg-white hover:text-slate-900"
                                 >
                                     <BellIcon />
                                     {unreadCount > 0 ? (
@@ -719,10 +718,10 @@ export default function Layout({ children }) {
                                 ) : null}
                             </div>
 
-                            <div className="hidden items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 sm:flex">
+                            <div className="hidden items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/85 px-3 py-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] sm:flex">
                                 <Avatar user={user} />
                                 <div className="min-w-0">
-                                    <p className="truncate text-xs text-slate-500">System Administrator</p>
+                                    <p className="truncate text-xs font-medium text-slate-500">System Administrator</p>
                                     <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
                                 </div>
                             </div>
@@ -730,7 +729,7 @@ export default function Layout({ children }) {
                             <button
                                 type="button"
                                 onClick={handleLogout}
-                                className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                className="rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-white"
                             >
                                 Logout
                             </button>
@@ -739,7 +738,7 @@ export default function Layout({ children }) {
                 </header>
 
                 <main className="flex-1 overflow-auto">
-                    <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-6 xl:px-8 2xl:px-10">
+                    <div className="mx-auto w-full max-w-[1680px] px-4 py-6 sm:px-6 xl:px-8 2xl:px-10">
                         {children}
                     </div>
                 </main>

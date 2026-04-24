@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import apiClient from '../api/client';
 import { downloadCsv } from '../utils/csv';
+import { fetchFilteredExportRows } from '../utils/exportData';
 import { invalidateApiCache, useApi } from '../hooks/useApi';
 
 function defaultForm() {
@@ -66,6 +67,7 @@ export default function CategoriesPage() {
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
+    const [exporting, setExporting] = useState(false);
 
     const requestOptions = useMemo(
         () => ({
@@ -212,15 +214,26 @@ export default function CategoriesPage() {
         }
     }
 
-    function handleExportCsv() {
-        downloadCsv(
-            'categories.csv',
-            categories.map((category) => ({
-                'Category Name': category.name || '',
-                Description: category.description || '',
-                'Linked Items': category.items_count ?? 0,
-            }))
-        );
+    async function handleExportCsv() {
+        try {
+            setExporting(true);
+            setError('');
+
+            const exportRows = await fetchFilteredExportRows('/categories', requestOptions.params);
+
+            downloadCsv(
+                'categories.csv',
+                exportRows.map((category) => ({
+                    'Category Name': category.name || '',
+                    Description: category.description || '',
+                    'Linked Items': category.items_count ?? 0,
+                }))
+            );
+        } catch (err) {
+            setError(err?.response?.data?.message || 'Failed to export categories.');
+        } finally {
+            setExporting(false);
+        }
     }
 
     if (loading && !data) {
@@ -236,8 +249,8 @@ export default function CategoriesPage() {
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row">
-                    <button type="button" onClick={handleExportCsv} className="btn-secondary">
-                        Export CSV
+                    <button type="button" onClick={handleExportCsv} disabled={exporting} className="btn-secondary disabled:opacity-60">
+                        {exporting ? 'Exporting...' : 'Export CSV'}
                     </button>
                     <button type="button" onClick={openCreateForm} className="btn-primary">
                         Add Category

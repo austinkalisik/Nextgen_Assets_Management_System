@@ -39,8 +39,8 @@ const HELP_TEXT = {
     low_stock_threshold: 'Items at or below this quantity appear as low stock.',
     assignment_overdue_days: 'Assignments older than this number of days are treated as overdue.',
     items_per_page: 'Default number of records shown in paginated office lists.',
-    email_notifications_enabled: 'Allows the system to send email notifications when mail is configured.',
-    maintenance_alerts_enabled: 'Enables reminders for maintenance-related alerts.',
+    email_notifications_enabled: 'Sends email copies of system notifications to users when mail is configured.',
+    maintenance_alerts_enabled: 'Creates maintenance-related alerts when assets are moved into maintenance.',
     allow_user_impersonation: 'Allows admins to switch into another user account for support.',
 };
 

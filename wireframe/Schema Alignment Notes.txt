@@ -1,0 +1,28 @@
+Nextgen Assets Management System
+Schema Alignment Notes
+
+What Was Updated
+- graph.png was regenerated from the live local project database
+- wireframe/erd-current.txt was generated as a text snapshot of the same ERD
+- wireframe notes were updated to match the generated ERD context
+
+Key Alignment Rule
+- graph.png matches the current generated model ERD
+- wireframe notes describe the same live generated ERD context
+- some generated columns are legacy database columns that still exist locally
+
+Legacy Columns Currently Visible In The Generated ERD
+- assignments.assigned_department_id
+- users.profile_photo_path
+
+Current App Logic Still Primarily Uses
+- assignments.department_id
+- users.profile_photo
+
+Generated ERD Scope
+- graph.png shows the current modeled operational entities
+- it does not include every database table such as settings or Laravel support tables
+
+Use This When Explaining The System
+- For product/demo explanation: use the business entities and relationships
+- For exact generated diagram explanation: refer to graph.png and wireframe/erd-current.txt

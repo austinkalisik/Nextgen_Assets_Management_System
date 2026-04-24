@@ -7,6 +7,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
@@ -79,16 +81,27 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (!Auth::attempt($credentials)) {
+        $throttleKey = Str::transliterate(Str::lower($credentials['email']) . '|' . $request->ip());
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             return response()->json([
-                'message' => 'Invalid credentials'
+                'message' => 'Too many login attempts. Please try again in ' . RateLimiter::availableIn($throttleKey) . ' seconds.',
+            ], 429);
+        }
+
+        if (!Auth::attempt($credentials)) {
+            RateLimiter::hit($throttleKey, 60);
+
+            return response()->json([
+                'message' => 'Invalid credentials',
             ], 401);
         }
 
+        RateLimiter::clear($throttleKey);
         $request->session()->regenerate();
 
         return response()->json([
-            'user' => Auth::user()
+            'user' => Auth::user(),
         ], 200);
     }
 

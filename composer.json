@@ -41,10 +41,15 @@
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php artisan key:generate",
-            "@php artisan migrate --force",
+            "@php -r \"$env = file_get_contents('.env'); if (! preg_match('/^APP_KEY=base64:.+/m', $env)) { passthru('php artisan key:generate --ansi', $code); exit($code); }\"",
+            "@php artisan storage:link --ansi --force",
+            "@php artisan migrate --seed --force --ansi",
+            "@php artisan optimize:clear --ansi",
             "npm install",
             "npm run build"
+        ],
+        "bootstrap": [
+            "@php scripts/bootstrap.php"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
@@ -53,6 +58,11 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "verify": [
+            "@php artisan config:clear --ansi",
+            "@php artisan test",
+            "npm run build"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

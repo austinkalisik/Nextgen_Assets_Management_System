@@ -7,12 +7,20 @@ import { invalidateApiCache, useApi } from '../hooks/useApi';
 const PNG_TIME_ZONE = 'Pacific/Port_Moresby';
 
 const TABS = [
-    { id: 'active', label: 'Active', status: 'active' },
-    { id: 'new', label: 'New Assignment', status: '' },
-    { id: 'returned', label: 'Returned', status: 'returned' },
-    { id: 'receivers', label: 'Receivers', status: '' },
-    { id: 'stock', label: 'Stock Position', status: '' },
-    { id: 'history', label: 'History', status: '' },
+    { id: 'active', label: 'Issued Out', description: 'Still with staff', status: 'active' },
+    { id: 'new', label: 'Give Out Asset', description: 'Record a handover', status: '' },
+    { id: 'returned', label: 'Returned', description: 'Back in stock', status: 'returned' },
+    { id: 'receivers', label: 'By Receiver', description: 'Staff statements', status: '' },
+    { id: 'stock', label: 'Stock Check', description: 'Available vs issued', status: '' },
+    { id: 'history', label: 'Full History', description: 'Audit trail', status: '' },
+];
+
+const PERIOD_OPTIONS = [
+    { id: 'all', label: 'All time' },
+    { id: 'today', label: 'Today' },
+    { id: 'month', label: 'This month' },
+    { id: 'year', label: 'This year' },
+    { id: 'custom', label: 'Choose dates' },
 ];
 
 function defaultForm() {
@@ -47,7 +55,16 @@ function formatDateTime(value) {
 }
 
 function toDateInputValue(date) {
-    return date.toISOString().slice(0, 10);
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: PNG_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    })
+        .formatToParts(date)
+        .reduce((next, part) => ({ ...next, [part.type]: part.value }), {});
+
+    return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function getPeriodRange(period, customStart = '', customEnd = '') {
@@ -73,6 +90,18 @@ function getPeriodRange(period, customStart = '', customEnd = '') {
     }
 
     return { date_start: '', date_end: '' };
+}
+
+function getPeriodLabel(period, customStart = '', customEnd = '') {
+    if (period === 'custom') {
+        if (customStart && customEnd) {
+            return `${customStart} to ${customEnd}`;
+        }
+
+        return 'Choose dates';
+    }
+
+    return PERIOD_OPTIONS.find((option) => option.id === period)?.label || 'All time';
 }
 
 function extractErrorMessage(error) {
@@ -151,13 +180,13 @@ function AssignmentCard({ assignment, onOpen, onReturn }) {
                     <p className="mt-1 text-sm text-slate-500">{assignment.item?.asset_tag || assignment.item?.sku || 'No tag'}</p>
                 </div>
                 <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadge(assignment.returned_at)}`}>
-                    {returned ? 'Returned' : 'Active'}
+                    {returned ? 'Returned' : 'Issued out'}
                 </span>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
-                    <p className="text-xs text-slate-500">Receiver</p>
+                    <p className="text-xs text-slate-500">Given To</p>
                     <p className="font-semibold text-slate-900">{receiver}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
@@ -169,14 +198,14 @@ function AssignmentCard({ assignment, onOpen, onReturn }) {
                     <p className="font-semibold text-slate-900">{assignment.assigned_department?.name || '-'}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
-                    <p className="text-xs text-slate-500">Assigned</p>
+                    <p className="text-xs text-slate-500">Date Given</p>
                     <p className="font-semibold text-slate-900">{formatDateTime(assignment.assigned_at)}</p>
                 </div>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
                 <button type="button" onClick={() => onOpen(assignment)} className="btn-secondary !px-3 !py-2">
-                    Open
+                    View
                 </button>
                 {!returned ? (
                     <button type="button" onClick={() => onReturn(assignment.id)} className="btn-primary !px-3 !py-2">
@@ -200,9 +229,9 @@ function AssignmentDetail({ assignment, onClose, onReturn }) {
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Selected Assignment</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Selected Record</p>
                     <h2 className="mt-1 text-xl font-bold text-slate-950">{assignment.item?.name || '-'}</h2>
-                    <p className="mt-1 text-sm text-slate-600">Receiver: {receiver}</p>
+                    <p className="mt-1 text-sm text-slate-600">Given to {receiver}</p>
                 </div>
                 <button type="button" onClick={onClose} className="btn-secondary !px-3 !py-2">
                     Close
@@ -224,14 +253,14 @@ function AssignmentDetail({ assignment, onClose, onReturn }) {
                 </div>
                 <div className="rounded-lg bg-white px-4 py-3">
                     <p className="text-xs text-slate-500">Status</p>
-                    <p className="font-semibold text-slate-950">{returned ? 'Returned' : 'Active'}</p>
+                    <p className="font-semibold text-slate-950">{returned ? 'Returned' : 'Issued out'}</p>
                 </div>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
                 {!returned ? (
                     <button type="button" onClick={() => onReturn(assignment.id)} className="btn-primary">
-                        Mark This Assignment Returned
+                        Mark Returned
                     </button>
                 ) : null}
             </div>
@@ -243,15 +272,24 @@ export default function AssignmentsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const initialTab = searchParams.get('tab') || (searchParams.get('create') === '1' ? 'new' : 'active');
     const [activeTab, setActiveTab] = useState(TABS.some((tab) => tab.id === initialTab) ? initialTab : 'active');
+    const [reportPeriod, setReportPeriod] = useState('all');
+    const [customDateStart, setCustomDateStart] = useState('');
+    const [customDateEnd, setCustomDateEnd] = useState('');
+    const reportDateRange = useMemo(
+        () => getPeriodRange(reportPeriod, customDateStart, customDateEnd),
+        [reportPeriod, customDateStart, customDateEnd]
+    );
 
     const filters = useMemo(
         () => ({
             search: searchParams.get('search') ?? '',
             status: searchParams.get('status') ?? (activeTab === 'active' ? 'active' : activeTab === 'returned' ? 'returned' : ''),
+            date_start: reportDateRange.date_start,
+            date_end: reportDateRange.date_end,
             page: Number.parseInt(searchParams.get('page') ?? '1', 10),
             per_page: 10,
         }),
-        [searchParams, activeTab]
+        [searchParams, activeTab, reportDateRange]
     );
 
     const { data, loading, error, refetch } = useApi('/assignments', { params: filters }, { ttl: 60000 });
@@ -274,9 +312,6 @@ export default function AssignmentsPage() {
     const [reportLoading, setReportLoading] = useState(false);
     const [selectedReceiver, setSelectedReceiver] = useState('');
     const [selectedAssignment, setSelectedAssignment] = useState(null);
-    const [reportPeriod, setReportPeriod] = useState('all');
-    const [customDateStart, setCustomDateStart] = useState('');
-    const [customDateEnd, setCustomDateEnd] = useState('');
     const [stockPage, setStockPage] = useState(1);
     const [receiverPage, setReceiverPage] = useState(1);
     const [historyPage, setHistoryPage] = useState(1);
@@ -293,14 +328,9 @@ export default function AssignmentsPage() {
         void fetchDepartmentsOptions();
     }, []);
 
-    const reportDateRange = useMemo(
-        () => getPeriodRange(reportPeriod, customDateStart, customDateEnd),
-        [reportPeriod, customDateStart, customDateEnd]
-    );
-
     useEffect(() => {
         void fetchAssignmentReport();
-    }, [filters.search, reportPeriod, customDateStart, customDateEnd]);
+    }, [filters.search, reportDateRange.date_start, reportDateRange.date_end]);
 
     useEffect(() => {
         if (departmentsList.length === 1 && !form.department_id) {
@@ -458,6 +488,21 @@ export default function AssignmentsPage() {
         updateQuery({ search: '', page: 1 });
     }
 
+    function changeReportPeriod(period) {
+        setReportPeriod(period);
+        updateQuery({ page: 1 });
+    }
+
+    function changeCustomDate(key, value) {
+        if (key === 'start') {
+            setCustomDateStart(value);
+        } else {
+            setCustomDateEnd(value);
+        }
+
+        updateQuery({ page: 1 });
+    }
+
     async function refreshAssignmentsPage() {
         setRefreshing(true);
 
@@ -579,7 +624,7 @@ export default function AssignmentsPage() {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Assignments</h1>
-                    <p className="page-subtitle">Assign assets, return issued stock, and open receiver statements from a simple tabbed workspace.</p>
+                    <p className="page-subtitle">Give assets to staff, confirm returns, and review receiver statements from one workspace.</p>
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -587,26 +632,26 @@ export default function AssignmentsPage() {
                         {refreshing ? 'Refreshing...' : 'Refresh'}
                     </button>
                     <button type="button" onClick={() => changeTab('new')} className="btn-primary">
-                        New Assignment
+                        Give Out Asset
                     </button>
                 </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Active Assignments</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Issued Out Now</p>
                     <p className="mt-2 text-2xl font-bold text-emerald-700">{reportTotals.active}</p>
                 </div>
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Returned Records</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Returned</p>
                     <p className="mt-2 text-2xl font-bold text-slate-950">{reportTotals.returned}</p>
                 </div>
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Receivers</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">People Holding Assets</p>
                     <p className="mt-2 text-2xl font-bold text-blue-700">{report.receivers.length}</p>
                 </div>
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Assigned Quantity</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Issued Qty</p>
                     <p className="mt-2 text-2xl font-bold text-amber-700">{reportTotals.assigned}</p>
                 </div>
             </div>
@@ -620,67 +665,90 @@ export default function AssignmentsPage() {
 
             <div className="panel">
                 <div className="panel-body space-y-4">
-                    <div className="flex gap-2 overflow-x-auto pb-1">
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.id}
                                 type="button"
                                 onClick={() => changeTab(tab.id)}
                                 className={[
-                                    'shrink-0 rounded-lg border px-4 py-2.5 text-sm font-semibold transition',
+                                    'min-h-16 rounded-lg border px-4 py-3 text-left transition',
                                     activeTab === tab.id
                                         ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
                                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
                                 ].join(' ')}
                             >
-                                {tab.label}
+                                <span className="block text-sm font-bold">{tab.label}</span>
+                                <span className={`mt-1 block text-xs ${activeTab === tab.id ? 'text-blue-100' : 'text-slate-500'}`}>
+                                    {tab.description}
+                                </span>
                             </button>
                         ))}
                     </div>
 
-                    <form onSubmit={handleSearchSubmit} className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <form onSubmit={handleSearchSubmit} className="grid gap-4 xl:grid-cols-[minmax(280px,1fr)_auto] xl:items-end">
                         <div className="flex flex-col gap-2 sm:flex-row">
                             <input
                                 type="search"
                                 value={searchInput}
                                 onChange={(event) => setSearchInput(event.target.value)}
-                                placeholder="Search receiver, asset, tag, SKU, department"
+                                placeholder="Find person, asset, tag, SKU, or department"
                                 className="input-shell w-full sm:w-96"
                             />
                             <button type="submit" className="btn-secondary">
-                                Search
+                                Find
                             </button>
                             <button type="button" onClick={clearSearch} className="btn-secondary">
                                 Clear
                             </button>
                         </div>
 
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <select
-                                value={reportPeriod}
-                                onChange={(event) => setReportPeriod(event.target.value)}
-                                className="input-shell"
-                            >
-                                <option value="all">All dates</option>
-                                <option value="today">Today</option>
-                                <option value="month">This month</option>
-                                <option value="year">This year</option>
-                                <option value="custom">Custom dates</option>
-                            </select>
-                            <input
-                                type="date"
-                                value={customDateStart}
-                                disabled={reportPeriod !== 'custom'}
-                                onChange={(event) => setCustomDateStart(event.target.value)}
-                                className="input-shell disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-                            />
-                            <input
-                                type="date"
-                                value={customDateEnd}
-                                disabled={reportPeriod !== 'custom'}
-                                onChange={(event) => setCustomDateEnd(event.target.value)}
-                                className="input-shell disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-                            />
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Report period</p>
+                                <p className="text-xs font-semibold text-slate-600">{getPeriodLabel(reportPeriod, customDateStart, customDateEnd)}</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                                {PERIOD_OPTIONS.map((period) => (
+                                    <button
+                                        key={period.id}
+                                        type="button"
+                                        onClick={() => changeReportPeriod(period.id)}
+                                        className={[
+                                            'rounded-lg border px-3 py-2 text-sm font-semibold transition',
+                                            reportPeriod === period.id
+                                                ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100',
+                                        ].join(' ')}
+                                    >
+                                        {period.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {reportPeriod === 'custom' ? (
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        From
+                                        <input
+                                            type="date"
+                                            value={customDateStart}
+                                            onChange={(event) => changeCustomDate('start', event.target.value)}
+                                            className="input-shell mt-1 w-full normal-case tracking-normal"
+                                        />
+                                    </label>
+                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        To
+                                        <input
+                                            type="date"
+                                            value={customDateEnd}
+                                            onChange={(event) => changeCustomDate('end', event.target.value)}
+                                            className="input-shell mt-1 w-full normal-case tracking-normal"
+                                        />
+                                    </label>
+                                </div>
+                            ) : null}
                         </div>
                     </form>
                 </div>
@@ -708,10 +776,10 @@ export default function AssignmentsPage() {
                                 <thead className="table-head">
                                     <tr>
                                         <th className="px-6 py-4 text-left font-semibold">Asset</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Receiver</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Given To</th>
                                         <th className="px-6 py-4 text-left font-semibold">Department</th>
                                         <th className="px-6 py-4 text-left font-semibold">Qty</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Assigned</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Date Given</th>
                                         <th className="px-6 py-4 text-left font-semibold">Status</th>
                                         <th className="px-6 py-4 text-left font-semibold">Actions</th>
                                     </tr>
@@ -730,17 +798,17 @@ export default function AssignmentsPage() {
                                                 <td className="px-6 py-4 text-slate-700">{formatDateTime(assignment.assigned_at)}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadge(assignment.returned_at)}`}>
-                                                        {assignment.returned_at ? 'Returned' : 'Active'}
+                                                        {assignment.returned_at ? 'Returned' : 'Issued out'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex flex-wrap gap-2">
                                                         <button type="button" onClick={() => setSelectedAssignment(assignment)} className="btn-secondary !px-3 !py-2">
-                                                            Open
+                                                            View
                                                         </button>
                                                         {!assignment.returned_at ? (
                                                             <button type="button" onClick={() => handleReturnAsset(assignment.id)} className="btn-primary !px-3 !py-2">
-                                                                Return
+                                                                Mark Returned
                                                             </button>
                                                         ) : null}
                                                     </div>
@@ -767,20 +835,20 @@ export default function AssignmentsPage() {
                 <section className="panel">
                     <div className="panel-body">
                         <div className="mb-5">
-                            <h2 className="section-title">Create Assignment</h2>
-                            <p className="section-subtitle">Select available stock, enter the receiver, choose department, and save.</p>
+                            <h2 className="section-title">Give Out Asset</h2>
+                            <p className="section-subtitle">Choose the item, the person receiving it, their department, and the quantity.</p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
-                                <label className="field-label">Asset / Item</label>
+                                    <label className="field-label">Item to Give Out</label>
                                 <select
                                     value={form.item_id}
                                     onChange={(event) => setForm((prev) => ({ ...prev, item_id: event.target.value }))}
                                     className="input-shell w-full"
                                     required
                                 >
-                                    <option value="">Select available asset</option>
+                                    <option value="">Choose an available item</option>
                                     {assignableItems.map((item) => (
                                         <option key={item.id} value={item.id}>
                                             {item.name} | {item.asset_tag || item.sku || 'No tag'} | Available: {item.quantity}
@@ -793,11 +861,11 @@ export default function AssignmentsPage() {
                             {selectedItem ? (
                                 <div className="grid gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 sm:grid-cols-4">
                                     <div>
-                                        <p className="text-xs font-semibold uppercase text-blue-500">Available</p>
+                                        <p className="text-xs font-semibold uppercase text-blue-500">Available Now</p>
                                         <p className="text-xl font-bold">{selectedItem.quantity}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold uppercase text-blue-500">Assigning</p>
+                                        <p className="text-xs font-semibold uppercase text-blue-500">Giving Out</p>
                                         <p className="text-xl font-bold">{Number.isInteger(requestedQuantity) && requestedQuantity > 0 ? requestedQuantity : 0}</p>
                                     </div>
                                     <div>
@@ -813,18 +881,18 @@ export default function AssignmentsPage() {
 
                             <div className="grid gap-4 lg:grid-cols-3">
                                 <div>
-                                    <label className="field-label">Receiver Name</label>
+                                    <label className="field-label">Person Receiving</label>
                                     <input
                                         type="text"
                                         value={form.receiver_name}
                                         onChange={(event) => setForm((prev) => ({ ...prev, receiver_name: event.target.value }))}
                                         className="input-shell w-full"
-                                        placeholder="Officer or staff receiving asset"
+                                        placeholder="Staff name"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label className="field-label">Receiving Department</label>
+                                    <label className="field-label">Department</label>
                                     <select
                                         value={form.department_id}
                                         onChange={(event) => setForm((prev) => ({ ...prev, department_id: event.target.value }))}
@@ -840,7 +908,7 @@ export default function AssignmentsPage() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="field-label">Quantity</label>
+                                    <label className="field-label">Quantity to Give</label>
                                     <input
                                         type="number"
                                         min="1"
@@ -856,7 +924,7 @@ export default function AssignmentsPage() {
 
                             <div className="flex flex-col gap-2 sm:flex-row">
                                 <button type="submit" disabled={!canSubmit} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
-                                    {submitting ? 'Creating...' : 'Create Assignment'}
+                                    {submitting ? 'Saving...' : 'Save Assignment'}
                                 </button>
                                 <button type="button" onClick={() => setForm(defaultForm())} className="btn-secondary">
                                     Clear Form

@@ -1,0 +1,203 @@
+
+Nextgen Assets Management System
+Low-Fidelity Wireframe Context
+
+ERD Reference
+- Main visual ERD: graph.png
+- Supporting text ERD: wireframe/ERD - Nextgen Assets Management System.txt
+- Generated ERD snapshot: wireframe/erd-current.txt
+
+System Overview
+- This is a Laravel + ReactJS CRUD application
+- It is an asset management and office operations system
+- It is owned by Nextgen Technology
+- It is intended for Nextgen Technology and can also be used by other departments if adopted
+
+Technology Structure
+- Laravel backend
+- ReactJS frontend
+- API-driven CRUD workflows
+- Database-backed modules for assets, assignments, suppliers, users, and settings
+
+Current ERD Alignment Notes
+- graph.png was regenerated from the live project database
+- The generated ERD shows the modeled operational entities used by the app
+- The generated ERD includes Item depreciation fields
+- The generated ERD may include a few legacy local columns that still exist in the database
+
+Main Modules
+- Dashboard
+- Inventory
+- Assignments
+- Suppliers
+- Categories
+- Departments
+- Users
+- Notifications
+- Activity Logs
+- Settings
+- Profile
+
+
+1. App Shell
+```text
++----------------------------------------------------------------------------------+
+| Sidebar                          | Top Bar                                       |
+|----------------------------------|-----------------------------------------------|
+| Logo + System Name               | Search | Notifications | User | Logout       |
+|                                  |                                               |
+| Operations                       |                                               |
+| - Dashboard                      |                                               |
+| - Inventory                      |                                               |
+| - Assignments                    |                                               |
+| - Suppliers                      |                                               |
+|                                  |                                               |
+| Administration                   |                                               |
+| - Categories                     |                                               |
+| - Departments                    |                                               |
+| - Users                          |                                               |
+| - Notifications                  |                                               |
+| - Activity Logs                  |                                               |
+| - Settings                       |                                               |
+| - Profile                        |                                               |
+|                                  |                                               |
+| Signed-in user card              | Main Content Area                             |
++----------------------------------------------------------------------------------+
+```
+
+2. Login Page
+```text
++----------------------------------------------------------------------------------+
+| Left Brand / Motion Area                | Right Login Panel                       |
+|-----------------------------------------|----------------------------------------|
+| Logo                                    | Sign In                                |
+| "Control every asset movement..."       | Email                                  |
+| Short explanation                       | Password                               |
+| Dynamic premium background              | Remember email                         |
+| 3 feature cards                         | Sign In button                         |
+| - Security                              | Contact admin note                     |
+| - Shared Link                           |                                        |
+| - PNG Time                              |                                        |
++----------------------------------------------------------------------------------+
+```
+
+3. Dashboard
+```text
++----------------------------------------------------------------------------------+
+| System overview badge                                                            |
+| Admin Dashboard                                                                  |
+| Short summary                                                                    |
+| [Refresh] [View all assets]                                                      |
+|                                                                                  |
+| [Add New Asset] [Assign Asset] [Stock Operations]                                |
+|                                                                                  |
+| [Total Assets] [Available] [Assigned] [Maintenance] [Low Stock] [Overdue]       |
+|                                                                                  |
+| Recent Assignments Table                          | Quick Actions                 |
+|--------------------------------------------------|-------------------------------|
+| Asset | Receiver | Department | Date | Status    | View Assets                   |
+| ...                                              | Manage Users                  |
+| ...                                              | System Settings               |
+|                                                  |                               |
+|                                                  | Performance / System Note     |
++----------------------------------------------------------------------------------+
+```
+
+4. Inventory Page
+```text
++----------------------------------------------------------------------------------+
+| Inventory                                                                        |
+| Search | Add Item | Export                                                       |
+| Filter: Stock State | Category | Clear Filters                                   |
+|                                                                                  |
+| Inventory Table                                                                  |
+|----------------------------------------------------------------------------------|
+| Name | Asset Tag | SKU | Brand | Category | Supplier | Qty | Book Value | Act  |
+| ...                                                                              |
+| ...                                                                              |
+|----------------------------------------------------------------------------------|
+| Pagination                                                                       |
++----------------------------------------------------------------------------------+
+
+When Add/Edit opens:
+
++-------------------------------- Inventory Form ----------------------------------+
+| Tracking Mode                                                                    |
+| Name*            Brand             SKU                                            |
+| Quantity*        Reorder Level     Unit Cost                                      |
+| Category*        Supplier*         Status*                                        |
+| Asset Tag        Serial Number     Location                                       |
+| Purchase Date    Description                                                    |
+|                                                                                  |
+| Depreciation Section                                                             |
+| [ ] Track depreciation                                                           |
+| Method | Useful Life | Salvage Value | Start Date                                |
+|                                                                                  |
+| [Save] [Cancel]                                                                  |
++----------------------------------------------------------------------------------+
+```
+
+5. Assignments Page
+```text
++----------------------------------------------------------------------------------+
+| Assignments                                                                      |
+| Search | Refresh | Export | New Assignment                                       |
+|                                                                                  |
+| Tabs: [Active] [New Assignment] [History/Report]                                 |
+|                                                                                  |
+| Active Assignments Table                                                         |
+| Item | Receiver | Department | Qty | Assigned Date | Status | Actions           |
+| ...                                                                              |
+|                                                                                  |
+| New Assignment Form                                                              |
+| Item* | Receiver* | Department* | Quantity* | Linked User(optional)              |
+| [Assign Asset]                                                                   |
++----------------------------------------------------------------------------------+
+```
+
+6. Settings Page
+```text
++----------------------------------------------------------------------------------+
+| Settings                                                          [Save Changes] |
+|                                                                                  |
+| [System Logo]            [Officer Profile Image]                                 |
+|                                                                                  |
+| [Organization]           [Operations]                 [Feature Controls]         |
+| System Name              Low Stock Threshold          Email Notifications        |
+| Tagline                  Assignment Overdue Days      Maintenance Alerts         |
+| Company Name             Items Per Page               Switch User Access         |
+| Website                                                                         |
+| Support Email                                                                    |
++----------------------------------------------------------------------------------+
+```
+
+7. Users Page
+```text
++----------------------------------------------------------------------------------+
+| Users                                                                            |
+| Search | Add User                                                                |
+|                                                                                  |
+| User Table                                                                       |
+| Name | Email | Role | Assignments | Activity Logs | Actions                     |
+| ...                                                                              |
+|                                                                                  |
+| Add/Edit User Form                                                               |
+| Name* | Email* | Role* | Password | Profile Image                               |
+| [Save] [Cancel]                                                                  |
++----------------------------------------------------------------------------------+
+```
+
+8. Notifications Page
+```text
++----------------------------------------------------------------------------------+
+| Notifications                                         [Mark all read] [Clear]    |
+| Filter: Status | Priority | Type | Search                                      |
+|                                                                                  |
+| Notification List                                                                |
+| [Priority] Title                                                                 |
+| Message preview                                                                  |
+| Time | Open                                                                       |
+|----------------------------------------------------------------------------------|
+| ...                                                                              |
++----------------------------------------------------------------------------------+
+```

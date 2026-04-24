@@ -1,56 +1,84 @@
-# NextGen Assets Management System
+# Nextgen Assets Management System
 
-NextGen Assets Management System is a Laravel + React application for managing inventory, assignments, users, suppliers, and operational visibility.
+Nextgen Assets Management System is a Laravel + ReactJS CRUD application for managing inventory, assignments, stock movement, notifications, activity logs, branding, and office operations.
 
-## Core modules
+It is owned by **Nextgen Technology** and can be used internally by Nextgen Technology or rolled out to other departments that want to adopt the software.
 
-- Dashboard
-- Inventory / Items
-- Assignments
-- Categories / Departments / Suppliers
+Repository:
+- `https://github.com/austinkalisik/Nextgen_Assets_Management_System`
+
+## What you get
+
+- Dashboard and system overview
+- Inventory / Items with depreciation support
+- Assignments and returns
+- Suppliers, categories, and departments
 - Users and profile management
 - Notifications
-- **Activity Logs (Audit Trail)**
-- Settings / Branding
+- Activity logs / audit trail
+- Settings / branding
 
----
+## Stack
 
-## 1) Prerequisites (Windows + XAMPP friendly)
+- Backend: Laravel 13
+- Frontend: React 19 + Vite
+- Database: MySQL / MariaDB
+- PDF support: `barryvdh/laravel-dompdf`
 
-Install:
+## Requirements
 
-- PHP `8.2+`
+- PHP `8.3+`
 - Composer `2+`
-- Node.js `18+` (Node `20+` recommended)
+- Node.js `20+`
 - npm
-- MySQL / MariaDB (XAMPP is fine)
+- MySQL / MariaDB
 - Git
 
-> If you are using XAMPP, make sure Apache and MySQL are running before starting Laravel.
+For Windows/XAMPP users:
+- start MySQL before running migrations
+- Apache is optional because local development can use `php artisan serve`
 
----
+## Fastest local setup
 
-## 2) Clone and install
+After cloning, the easiest setup path is:
+
+```bash
+git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
+cd Nextgen_Assets_Management_System
+composer run bootstrap
+```
+
+What `composer run bootstrap` does:
+- installs Composer dependencies
+- creates `.env` from `.env.example` if missing
+- generates `APP_KEY` if missing
+- creates the storage link
+- runs migrations and seeders
+- clears cached Laravel state
+- installs npm dependencies
+- builds frontend assets
+
+Important:
+- update your `.env` database credentials before running bootstrap if you are not using the default local MySQL setup
+
+## Manual local setup
+
+If you prefer doing it step by step:
 
 ```bash
 git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
 cd Nextgen_Assets_Management_System
 composer install
 npm install
-```
-
----
-
-## 3) Environment setup
-
-Copy environment file and generate app key:
-
-```bash
 cp .env.example .env
 php artisan key:generate
+php artisan storage:link
+php artisan migrate --seed
+php artisan optimize:clear
+npm run build
 ```
 
-Update your `.env` database values (example for local XAMPP):
+Example `.env` database values for local MySQL/XAMPP:
 
 ```env
 DB_CONNECTION=mysql
@@ -61,22 +89,7 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-Create the database in phpMyAdmin (or MySQL CLI), then run migrations + seeders:
-
-```bash
-php artisan migrate --seed
-php artisan storage:link
-```
-
-Clear cached configuration after environment changes:
-
-```bash
-php artisan optimize:clear
-```
-
----
-
-## 4) Run locally for development
+## Running in development
 
 Use two terminals:
 
@@ -89,20 +102,37 @@ npm run dev
 ```
 
 Open:
-
 - `http://127.0.0.1:8000`
 
-VS Code users can run:
+## Running in VS Code
+
+This repo includes ready-made VS Code tasks in [.vscode/tasks.json](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\.vscode\tasks.json:1>).
+
+Useful tasks:
+- `NextGen: Bootstrap Project`
+- `NextGen: Start App Local`
+- `NextGen: Start App LAN`
+- `NextGen: Verify Project`
+- `NextGen: Clear Laravel Cache`
+
+Run them from:
 
 ```text
-Ctrl + Shift + P -> Tasks: Run Task -> NextGen: Start App Local
+Ctrl + Shift + P -> Tasks: Run Task
 ```
 
----
+## Seeded accounts
 
-## 5) Run on an office LAN
+Default seeded users:
 
-Find the server PC LAN IP, then update `.env`. Example:
+- `admin@nextgen.local` / `password`
+- `assets@nextgen.local` / `password`
+- `support@nextgen.local` / `password`
+- `operations@nextgen.local` / `password`
+
+## Office LAN development
+
+Update `.env`:
 
 ```env
 APP_URL=http://192.168.31.34:8000
@@ -111,143 +141,69 @@ VITE_DEV_SERVER_HOST=192.168.31.34
 VITE_DEV_SERVER_PORT=5173
 ```
 
-Run:
+Then run:
 
 ```bash
 npm run serve:lan
 npm run dev:lan
 ```
 
+Allow Windows Firewall inbound TCP ports `8000` and `5173` if needed.
+
+## Docker quick start
+
+This repo now includes:
+- [Dockerfile](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\Dockerfile:1>)
+- [docker-compose.yml](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\docker-compose.yml:1>)
+- [.env.docker.example](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\.env.docker.example:1>)
+
+Run:
+
+```bash
+docker compose up --build
+```
+
 Open:
+- `http://127.0.0.1:8000`
 
-- `http://192.168.31.34:8000`
+Docker notes:
+- the app container runs migrations and seeders on startup
+- MySQL is exposed on host port `3307`
+- Docker uses `.env.docker.example` inside the container unless you provide your own `.env`
 
-VS Code users can run:
+## Verification
 
-```text
-Ctrl + Shift + P -> Tasks: Run Task -> NextGen: Start App LAN
-```
-
-Allow Windows Firewall inbound TCP ports `8000` and `5173` if other office PCs cannot connect.
-
----
-
-## 6) Test and verify before pushing
-
-Recommended verification:
+Run the standard verification checks:
 
 ```bash
-php artisan test
-npm run build
+composer verify
 ```
 
-Useful targeted checks:
+That runs:
+- Laravel tests
+- frontend production build
 
-```bash
-php artisan test --filter=Notification
-php artisan test --filter=AssignmentQuantityValidationTest
-```
+Current status:
+- `php artisan test` passes
+- `npm run build` passes
 
----
+## Production readiness
 
-## 7) Activity Logs (Audit Trail)
+This repo is now easier to clone and run, but production deployment still needs normal environment hardening.
 
-The system includes an **Activity Logs** page for monitoring operations:
+Before production:
+- set `APP_ENV=production`
+- set `APP_DEBUG=false`
+- use real database credentials
+- configure real mail settings
+- use HTTPS
+- use a proper process manager / web server setup
+- configure backups and monitoring
+- review queue and storage strategy
 
-- asset creation/update/deletion
-- assignment and return actions
-- stock in/out actions
+## Documentation references
 
-API endpoint:
-
-- `GET /api/activity-logs`
-
-Main filters supported:
-
-- `search`
-- `action`
-- `user_id`
-- `item_id`
-- `date_from`
-- `date_to`
-- `per_page`
-
----
-
-## 8) Notification behavior
-
-Notifications are created for relevant recipients, but the system intentionally avoids notifying the same user who triggered the action.
-
-This keeps alerts meaningful and reduces noise for operators.
-
----
-
-## 9) Access control model
-
-Authenticated users can access read operations.
-
-Write operations (create/update/delete and stock operations) are restricted to:
-
-- `admin`
-- `manager`
-- `asset_officer`
-
-Settings write endpoints are restricted to:
-
-- `admin`
-
----
-
-## 10) Recommended developer commands
-
-```bash
-# PHP syntax checks
-php -l app/Http/Controllers/ItemController.php
-
-# Clear cached config/routes/views after env changes
-php artisan optimize:clear
-
-# Run tests (when dependencies are fully installed)
-php artisan test
-```
-
----
-
-## 11) Troubleshooting
-
-### Composer install fails
-
-- Confirm internet/proxy access.
-- Retry with:
-
-```bash
-composer clear-cache
-composer install
-```
-
-### Database connection errors
-
-- Verify `.env` DB credentials.
-- Ensure MySQL service is running.
-- Confirm DB exists.
-
-### Frontend not loading assets
-
-- Make sure `npm run dev` is running.
-- Clear browser cache/hard refresh.
-
-### Route/cache weird behavior after pulling changes
-
-```bash
-php artisan optimize:clear
-php artisan migrate
-```
-
----
-
-## 12) Production notes
-
-- Use `APP_ENV=production` and `APP_DEBUG=false`
-- Configure queue/mail drivers properly
-- Use HTTPS
-- Use strong credentials and rotate secrets
+- [wireframe/ERD - Nextgen Assets Management System.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\ERD%20-%20Nextgen%20Assets%20Management%20System.txt:1>)
+- [wireframe/Schema Alignment Notes.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\Schema%20Alignment%20Notes.txt:1>)
+- [wireframe/Detailed ASCII Wireframes.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\Detailed%20ASCII%20Wireframes.txt:1>)
+- [wireframe/Detailed Design Spec.txt](</\\?\UNC\192.168.31.6\Austin\Testing\Testing AMS\Nextgen_Assets_Management_System\wireframe\Detailed%20Design%20Spec.txt:1>)

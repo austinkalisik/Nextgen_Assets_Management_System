@@ -21,31 +21,14 @@ const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-
-function preloadPages() {
-    [
-        import('./pages/DashboardPage'),
-        import('./pages/ItemsPage'),
-        import('./pages/AssignmentsPage'),
-        import('./pages/CategoriesPage'),
-        import('./pages/DepartmentsPage'),
-        import('./pages/SuppliersPage'),
-        import('./pages/NotificationsPage'),
-        import('./pages/ActivityLogsPage'),
-        import('./pages/ProfilePage'),
-        import('./pages/UsersPage'),
-        import('./pages/SettingsPage'),
-    ].forEach((pagePromise) => {
-        pagePromise.catch(() => {});
-    });
-}
+const GlobalSearchPage = lazy(() => import('./pages/GlobalSearchPage'));
 
 function LoadingScreen() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
             <div className="text-center">
                 <div className="w-12 h-12 mx-auto border-4 border-blue-200 rounded-full animate-spin border-t-blue-600" />
-                <p className="mt-4 text-sm font-medium text-slate-600">Loading NextGen Assets...</p>
+                <p className="mt-4 text-sm font-medium text-slate-600">Loading Nextgen Assets Management System...</p>
                 <p className="mt-1 text-xs text-slate-500">Preparing your workspace</p>
             </div>
         </div>
@@ -74,7 +57,7 @@ function GuestRoute({ children }) {
         return <Navigate to="/dashboard" replace />;
     }
 
-    return children;
+    return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>;
 }
 
 function ProtectedRoute({ children }) {
@@ -89,9 +72,11 @@ function ProtectedRoute({ children }) {
     }
 
     return (
-        <Layout>
-            <Suspense fallback={<PageLoader />}>{children}</Suspense>
-        </Layout>
+        <SettingsProvider>
+            <Layout>
+                <Suspense fallback={<PageLoader />}>{children}</Suspense>
+            </Layout>
+        </SettingsProvider>
     );
 }
 
@@ -202,6 +187,15 @@ function AppRoutes() {
             />
 
             <Route
+                path="/search"
+                element={
+                    <ProtectedRoute>
+                        <GlobalSearchPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
                 path="/settings"
                 element={
                     <ProtectedRoute>
@@ -219,9 +213,7 @@ function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <SettingsProvider>
-                    <AppRoutes />
-                </SettingsProvider>
+                <AppRoutes />
             </AuthProvider>
         </BrowserRouter>
     );
@@ -235,5 +227,4 @@ if (rootElement) {
     }
 
     window.__nextgenReactRoot.render(<App />);
-    setTimeout(preloadPages, 150);
 }

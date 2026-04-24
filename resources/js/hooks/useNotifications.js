@@ -6,7 +6,8 @@ let unreadCountCache = null;
 let notificationStatsCache = null;
 let notificationsPromise = null;
 const CACHE_TTL = 5 * 60 * 1000;
-const POLL_INTERVAL = 30 * 1000;
+const POLL_INTERVAL = 2 * 60 * 1000;
+const INITIAL_LOAD_DELAY = 1500;
 
 function hasFreshCache() {
     if (!notificationsCache || unreadCountCache === null) {
@@ -192,7 +193,16 @@ export default function useNotifications() {
     }, []);
 
     useEffect(() => {
-        void loadNotifications(false);
+        if (hasFreshCache()) {
+            void loadNotifications(false);
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            void loadNotifications(false);
+        }, INITIAL_LOAD_DELAY);
+
+        return () => window.clearTimeout(timeoutId);
     }, [loadNotifications]);
 
     useEffect(() => {

@@ -2,9 +2,23 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "NextGen: Bootstrap Project",
+            "type": "shell",
+            "command": "php scripts/bootstrap.php",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "shared",
+                "group": "nextgen",
+                "clear": true
+            }
+        },
+        {
             "label": "NextGen: Start Laravel",
             "type": "shell",
-            "command": "php artisan serve --host=127.0.0.1 --port=8000",
+            "command": "php artisan serve --host=0.0.0.0 --port=8000",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -87,6 +101,20 @@
                 "cwd": "${workspaceFolder}"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "NextGen: Verify Project",
+            "type": "shell",
+            "command": "composer verify",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "shared",
+                "group": "nextgen",
+                "clear": true
+            }
         }
     ]
 }

@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Item;
 use App\Services\StockInventoryService;
 use App\Services\SystemNotificationService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,8 @@ use InvalidArgumentException;
 
 class AssignmentController extends Controller
 {
+    private const REPORT_TIMEZONE = 'Pacific/Port_Moresby';
+
     protected StockInventoryService $stockInventoryService;
     protected SystemNotificationService $notificationService;
 
@@ -45,16 +48,47 @@ class AssignmentController extends Controller
 
         $this->applyAssignmentFilters($historyQuery, $request);
 
+        $filteredItemIds = $this->hasReportAssignmentFilter($request)
+            ? (clone $historyQuery)->reorder()->distinct()->pluck('item_id')
+            : collect();
+
         $history = $historyQuery->limit(500)->get();
 
-        $activeAssignedByItem = Assignment::query()
-            ->whereNull('returned_at')
+        $activeAssignedQuery = Assignment::query()->whereNull('returned_at');
+        $this->applyAssignmentFilters($activeAssignedQuery, $request);
+
+        $activeAssignedByItem = $activeAssignedQuery
             ->select('item_id', DB::raw('SUM(quantity) as total_quantity'))
             ->groupBy('item_id')
             ->pluck('total_quantity', 'item_id');
 
-        $items = Item::with(['category', 'supplier'])
+        $itemsQuery = Item::with(['category', 'supplier'])
             ->orderBy('name')
+            ->when($request->filled('search'), function ($query) use ($request, $filteredItemIds) {
+                $search = trim((string) $request->search);
+
+                $query->where(function ($q) use ($search, $filteredItemIds) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('asset_tag', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('brand', 'like', "%{$search}%")
+                        ->orWhereHas('category', function ($sub) use ($search) {
+                            $sub->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('supplier', function ($sub) use ($search) {
+                            $sub->where('name', 'like', "%{$search}%");
+                        });
+
+                    if ($filteredItemIds->isNotEmpty()) {
+                        $q->orWhereIn('id', $filteredItemIds);
+                    }
+                });
+            })
+            ->when(!$request->filled('search') && $this->hasReportAssignmentFilter($request), function ($query) use ($filteredItemIds) {
+                $query->whereIn('id', $filteredItemIds);
+            });
+
+        $items = $itemsQuery
             ->get()
             ->map(function (Item $item) use ($activeAssignedByItem) {
                 $availableQuantity = (int) $item->quantity;
@@ -361,12 +395,30 @@ class AssignmentController extends Controller
         }
 
         if ($request->filled('date_start')) {
-            $query->whereDate('assigned_at', '>=', $request->date('date_start')->toDateString());
+            $start = CarbonImmutable::parse((string) $request->date_start, self::REPORT_TIMEZONE)
+                ->startOfDay()
+                ->utc();
+
+            $query->where('assigned_at', '>=', $start);
         }
 
         if ($request->filled('date_end')) {
-            $query->whereDate('assigned_at', '<=', $request->date('date_end')->toDateString());
+            $end = CarbonImmutable::parse((string) $request->date_end, self::REPORT_TIMEZONE)
+                ->endOfDay()
+                ->utc();
+
+            $query->where('assigned_at', '<=', $end);
         }
+    }
+
+    protected function hasReportAssignmentFilter(Request $request): bool
+    {
+        return $request->filled('search')
+            || $request->filled('status')
+            || $request->filled('receiver')
+            || $request->filled('item_id')
+            || $request->filled('date_start')
+            || $request->filled('date_end');
     }
 
     protected function receiverLabel(Assignment $assignment): string

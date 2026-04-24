@@ -1,0 +1,39 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nextgen-assets-app
+    ports:
+      - "8000:80"
+    env_file:
+      - .env.docker.example
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - storage_data:/var/www/html/storage
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: nextgen-assets-db
+    environment:
+      MYSQL_DATABASE: nextgen_assets
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: nextgen
+      MYSQL_PASSWORD: nextgen
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  storage_data:

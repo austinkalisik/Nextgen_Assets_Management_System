@@ -4,33 +4,39 @@ import { useApi } from '../hooks/useApi';
 
 function StatCard({ label, value, gradient, icon: Icon }) {
     return (
-        <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-soft`}>
+        <div className={`group relative overflow-hidden rounded-[28px] bg-gradient-to-br ${gradient} p-5 text-white shadow-[0_18px_45px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.24)]`}>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_35%)]" />
             <div className="relative z-10 flex items-center justify-between gap-4">
                 <div>
-                    <p className="text-xs font-semibold tracking-wide uppercase text-white/80">{label}</p>
-                    <p className="mt-2 text-3xl font-bold">{value ?? 0}</p>
+                    <p className="text-[11px] font-semibold tracking-[0.22em] uppercase text-white/70">{label}</p>
+                    <p className="mt-3 text-3xl font-bold">{value ?? 0}</p>
                 </div>
-                {Icon ? <Icon className="w-8 h-8 text-white/80" /> : null}
+                {Icon ? (
+                    <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur">
+                        <Icon className="h-7 w-7 text-white/85" />
+                    </div>
+                ) : null}
             </div>
-            <div className="absolute w-24 h-24 rounded-full -right-6 -top-6 bg-white/10" />
+            <div className="absolute h-24 w-24 rounded-full -right-6 -top-6 bg-white/10" />
+            <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/35 to-transparent" />
         </div>
     );
 }
 
 function ActionCard({ to, title, description, icon: Icon, variant = 'primary' }) {
     const variants = {
-        primary: 'bg-blue-600 text-white hover:bg-blue-700',
-        secondary: 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50',
-        success: 'bg-emerald-600 text-white hover:bg-emerald-700',
+        primary: 'border border-blue-400/20 bg-gradient-to-br from-blue-600 via-blue-600 to-cyan-500 text-white shadow-[0_18px_40px_rgba(37,99,235,0.24)]',
+        secondary: 'border border-slate-200/80 bg-white/88 text-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.08)]',
+        success: 'border border-emerald-400/20 bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-500 text-white shadow-[0_18px_40px_rgba(16,185,129,0.24)]',
     };
 
     return (
         <Link
             to={to}
-            className={`group block rounded-2xl p-5 shadow-sm transition-all duration-200 hover:-translate-y-[1px] hover:shadow-soft ${variants[variant]}`}
+            className={`group block rounded-[28px] p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.14)] ${variants[variant]}`}
         >
             <div className="flex items-center gap-4">
-                <div className={`rounded-xl p-3 ${variant === 'secondary' ? 'bg-slate-100' : 'bg-white/15'}`}>
+                <div className={`rounded-2xl p-3.5 ${variant === 'secondary' ? 'bg-slate-100 text-slate-700' : 'bg-white/15 text-white'}`}>
                     {Icon ? <Icon className={`h-5 w-5 ${variant === 'secondary' ? 'text-slate-700' : 'text-white'}`} /> : null}
                 </div>
                 <div>
@@ -196,7 +202,7 @@ export default function DashboardPage() {
         return (
             <div className="flex items-center justify-center py-16">
                 <div className="text-center">
-                    <div className="w-10 h-10 mx-auto border-4 border-blue-200 rounded-full animate-spin border-t-blue-600" />
+                    <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
                     <p className="mt-3 text-sm text-slate-500">Loading dashboard...</p>
                 </div>
             </div>
@@ -206,7 +212,7 @@ export default function DashboardPage() {
     if (error && !data) {
         return (
             <div className="space-y-4">
-                <div className="px-4 py-3 text-sm text-red-700 border border-red-200 rounded-xl bg-red-50">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     Failed to load dashboard data: {error}
                 </div>
                 <button type="button" onClick={() => void refetch()} className="btn-primary">
@@ -218,53 +224,63 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                <div className="min-w-0">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow-sm border-slate-200 text-slate-500">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        System overview
+            <section className="relative overflow-hidden rounded-[34px] border border-white/80 bg-[linear-gradient(135deg,rgba(6,18,38,0.99)_0%,rgba(24,58,116,0.99)_48%,rgba(247,250,255,0.98)_48%,rgba(255,255,255,0.96)_100%)] px-6 py-7 shadow-[0_30px_80px_rgba(15,23,42,0.14)]">
+                <div className="absolute inset-y-0 left-0 w-[56%] bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.18),transparent_36%),radial-gradient(circle_at_70%_70%,rgba(37,99,235,0.22),transparent_42%)]" />
+                <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 xl:max-w-3xl">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-blue-50 shadow-lg shadow-slate-950/10 backdrop-blur">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                            System overview
+                        </div>
+
+                        <h1 className="mt-5 text-4xl font-bold tracking-tight text-white sm:text-5xl">Admin Dashboard</h1>
+
+                        <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50/95 sm:text-base">
+                            Operational control center for assets, assignments, departments, notifications, and daily asset movement.
+                        </p>
+
+                        <div className="mt-5 flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => void refetch()}
+                                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/10 backdrop-blur transition hover:bg-white/15"
+                            >
+                                {refreshing ? 'Refreshing...' : 'Refresh dashboard'}
+                            </button>
+
+                            <Link to="/items" className="text-sm font-semibold text-white transition hover:text-cyan-100">
+                                View all assets
+                            </Link>
+                        </div>
+
+                        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            {quickActions.map((action) => (
+                                <ActionCard key={action.to} {...action} />
+                            ))}
+                        </div>
                     </div>
 
-                    <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Admin Dashboard</h1>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:w-[390px]">
+                        <div className="metric-card border-slate-200/70">
+                            <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-slate-400">Assets</p>
+                            <p className="mt-3 text-3xl font-bold text-slate-950">{data?.total_assets ?? 0}</p>
+                            <p className="mt-1 text-xs text-slate-500">Tracked inventory records</p>
+                        </div>
 
-                    <p className="max-w-2xl mt-2 text-sm text-slate-500 sm:text-base">
-                        Operational control center for assets, assignments, departments, and system activity.
-                    </p>
+                        <div className="metric-card border-slate-200/70">
+                            <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-slate-400">Active</p>
+                            <p className="mt-3 text-3xl font-bold text-slate-950">{data?.assigned ?? 0}</p>
+                            <p className="mt-1 text-xs text-slate-500">Units in circulation</p>
+                        </div>
 
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
-                        <button type="button" onClick={() => void refetch()} className="btn-secondary">
-                            {refreshing ? 'Refreshing...' : 'Refresh'}
-                        </button>
-
-                        <Link to="/items" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
-                            View all assets
-                        </Link>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 mt-5 sm:grid-cols-3">
-                        {quickActions.map((action) => (
-                            <ActionCard key={action.to} {...action} />
-                        ))}
+                        <div className="metric-card border-slate-200/70">
+                            <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-slate-400">Notifications</p>
+                            <p className="mt-3 text-3xl font-bold text-slate-950">{data?.notifications_count ?? 0}</p>
+                            <p className="mt-1 text-xs text-slate-500">Unread alerts</p>
+                        </div>
                     </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:w-[360px]">
-                    <div className="p-4 panel">
-                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Assets</p>
-                        <p className="mt-2 text-2xl font-bold text-slate-900">{data?.total_assets ?? 0}</p>
-                    </div>
-
-                    <div className="p-4 panel">
-                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Active</p>
-                        <p className="mt-2 text-2xl font-bold text-slate-900">{data?.assigned ?? 0}</p>
-                    </div>
-
-                    <div className="p-4 panel">
-                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Notifications</p>
-                        <p className="mt-2 text-2xl font-bold text-slate-900">{data?.notifications_count ?? 0}</p>
-                    </div>
-                </div>
-            </div>
+            </section>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 {stats.map((stat) => (
@@ -275,20 +291,26 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
                 <div className="space-y-6 xl:col-span-3">
                     <div className="table-shell">
-                        <div className="panel-header">
-                            <h2 className="text-lg font-semibold text-slate-900">Recent Assignments</h2>
-                            <p className="mt-1 text-sm text-slate-500">Latest asset movement across departments.</p>
+                        <div className="panel-header flex items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900">Recent Assignments</h2>
+                                <p className="mt-1 text-sm text-slate-500">Latest asset movement across departments.</p>
+                            </div>
+
+                            <div className="hidden rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-medium text-slate-500 md:block">
+                                Live operations snapshot
+                            </div>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-sm">
                                 <thead className="table-head">
                                     <tr>
-                                        <th className="px-6 py-4 font-semibold text-left">Asset</th>
-                                        <th className="px-6 py-4 font-semibold text-left">Receiver</th>
-                                        <th className="px-6 py-4 font-semibold text-left">Department</th>
-                                        <th className="px-6 py-4 font-semibold text-left">Date</th>
-                                        <th className="px-6 py-4 font-semibold text-left">Status</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Asset</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Receiver</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Department</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Date</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Status</th>
                                     </tr>
                                 </thead>
 
@@ -329,29 +351,34 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="panel">
-                        <div className="panel-body">
+                    <div className="panel overflow-hidden">
+                        <div className="border-b border-slate-200/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.9),rgba(255,255,255,0.7))] px-6 py-5">
                             <h3 className="text-lg font-semibold text-slate-900">Quick Actions</h3>
                             <p className="mt-1 text-sm text-slate-500">Common tasks and shortcuts.</p>
+                        </div>
 
-                            <div className="mt-4 space-y-2">
-                                <Link to="/items" className="block rounded-xl px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+                        <div className="panel-body pt-4">
+                            <div className="space-y-2">
+                                <Link to="/items" className="block rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-200 hover:bg-slate-50">
                                     View All Assets
                                 </Link>
-                                <Link to="/users" className="block rounded-xl px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+                                <Link to="/users" className="block rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-200 hover:bg-slate-50">
                                     Manage Users
                                 </Link>
-                                <Link to="/settings" className="block rounded-xl px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+                                <Link to="/settings" className="block rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-200 hover:bg-slate-50">
                                     System Settings
                                 </Link>
                             </div>
                         </div>
                     </div>
 
-                    <div className="panel">
-                        <div className="panel-body">
+                    <div className="panel overflow-hidden">
+                        <div className="panel-body bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(241,245,249,0.82))]">
+                            <div className="mb-4 inline-flex rounded-2xl bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+                                Performance
+                            </div>
                             <h3 className="text-lg font-semibold text-slate-900">Slow Internet Friendly</h3>
-                            <p className="mt-1 text-sm text-slate-500">
+                            <p className="mt-2 text-sm leading-6 text-slate-500">
                                 Dashboard data is cached, so returning to this page should feel faster.
                             </p>
                         </div>

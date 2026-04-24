@@ -2,10 +2,11 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import apiClient from '../api/client';
 
 const AuthContext = createContext(null);
+const isLoginRoute = window.location.pathname === '/login';
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!isLoginRoute);
 
     const fetchMe = useCallback(async () => {
         try {

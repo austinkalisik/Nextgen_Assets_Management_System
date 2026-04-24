@@ -11,8 +11,8 @@ class SettingController extends Controller
     protected function ensureDefaults(): void
     {
         $defaults = [
-            'system_name' => 'NextGen Assets',
-            'system_tagline' => 'Management System',
+            'system_name' => 'Nextgen Assets Management System',
+            'system_tagline' => 'Owned by Nextgen Technology',
             'company_name' => 'NextGen Technology',
             'company_website' => 'https://nextgenpng.net/',
             'support_email' => 'support@nextgenpng.net',

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { invalidateApiCache, useApi } from '../hooks/useApi';
 import apiClient from '../api/client';
 import { downloadCsv } from '../utils/csv';
+import { fetchFilteredExportRows } from '../utils/exportData';
 
 function formatValue(value) {
     if (value === null || value === undefined || value === '') {
@@ -46,6 +47,7 @@ export function CRUDPage({
     const [editingId, setEditingId] = useState(null);
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
+    const [exporting, setExporting] = useState(false);
     const [form, setForm] = useState(() => getDefaultForm(fields));
     const [meta, setMeta] = useState({
         current_page: 1,
@@ -246,15 +248,26 @@ export function CRUDPage({
         }
     }
 
-    function handleExportCsv() {
+    async function handleExportCsv() {
         if (!csvConfig) {
             return;
         }
 
-        downloadCsv(
-            csvConfig.filename,
-            items.map((item) => csvConfig.mapRow(item))
-        );
+        try {
+            setExporting(true);
+            setError('');
+
+            const exportRows = await fetchFilteredExportRows(`/${endpoint}`, requestOptions.params);
+
+            downloadCsv(
+                csvConfig.filename,
+                exportRows.map((item) => csvConfig.mapRow(item))
+            );
+        } catch (err) {
+            setError(err?.response?.data?.message || `Failed to export ${title.toLowerCase()}.`);
+        } finally {
+            setExporting(false);
+        }
     }
 
     if (loading && !payload) {
@@ -288,8 +301,8 @@ export function CRUDPage({
                     </button>
 
                     {csvConfig ? (
-                        <button type="button" onClick={handleExportCsv} className="btn-secondary">
-                            Export CSV
+                        <button type="button" onClick={handleExportCsv} disabled={exporting} className="btn-secondary disabled:opacity-60">
+                            {exporting ? 'Exporting...' : 'Export CSV'}
                         </button>
                     ) : null}
                 </div>
@@ -473,5 +486,4 @@ export function CRUDPage({
 }
 
 export default CRUDPage;
-
 

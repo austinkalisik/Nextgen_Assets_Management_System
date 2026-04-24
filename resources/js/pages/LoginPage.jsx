@@ -27,6 +27,35 @@ function LockIcon() {
     );
 }
 
+function BrandMark({ mobile = false }) {
+    return (
+        <div className={`inline-flex items-center gap-3 rounded-lg border px-4 py-3 shadow-xl backdrop-blur ${mobile ? 'border-slate-200 bg-white shadow-slate-200/80' : 'border-white/15 bg-white/10 shadow-black/20'}`}>
+            <img
+                src="/nextgen-logo.png"
+                alt="NextGen Technology logo"
+                className={`${mobile ? 'h-12 w-auto' : 'h-10 w-auto'} rounded-sm object-contain`}
+            />
+            <div>
+                <p className={`text-sm font-bold ${mobile ? 'text-slate-950' : 'text-white'}`}>Nextgen Assets Management System</p>
+                <p className={`text-xs ${mobile ? 'text-slate-500' : 'text-blue-100'}`}>Owned by Nextgen Technology</p>
+            </div>
+        </div>
+    );
+}
+
+function MotionOrb({ className, style }) {
+    return <div className={`absolute rounded-full blur-3xl ${className}`} style={style} />;
+}
+
+function SignalColumn({ delay = '0s', left = '0%', height = '220px' }) {
+    return (
+        <div
+            className="animate-premium-sweep absolute bottom-0 w-px bg-gradient-to-t from-cyan-300/0 via-cyan-200/45 to-cyan-100/0"
+            style={{ left, height, animationDelay: delay }}
+        />
+    );
+}
+
 function getRememberedEmail() {
     try {
         return window.localStorage.getItem('nextgen-login-email') || '';
@@ -64,7 +93,7 @@ export default function LoginPage() {
     const [currentTime, setCurrentTime] = useState(() => new Date());
 
     useEffect(() => {
-        const intervalId = window.setInterval(() => setCurrentTime(new Date()), 30000);
+        const intervalId = window.setInterval(() => setCurrentTime(new Date()), 1000);
         return () => window.clearInterval(intervalId);
     }, []);
 
@@ -74,6 +103,7 @@ export default function LoginPage() {
         weekday: 'short',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
     });
 
     async function handleSubmit(event) {
@@ -109,24 +139,56 @@ export default function LoginPage() {
                             'linear-gradient(145deg, #06101f 0%, #0b1b34 48%, #0f2d46 100%)',
                     }}
                 >
+                    <div className="animate-premium-drift absolute inset-0 opacity-60">
+                        <div
+                            className="absolute inset-0"
+                            style={{
+                                backgroundImage:
+                                    'linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px)',
+                                backgroundSize: '80px 80px',
+                                maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.85), rgba(0,0,0,0.25))',
+                            }}
+                        />
+                    </div>
+
                     <div
-                        className="absolute inset-0 opacity-40"
+                        className="animate-premium-grid absolute inset-0 opacity-50"
                         style={{
                             background:
                                 'radial-gradient(circle at 18% 18%, rgba(37, 99, 235, 0.55), transparent 30%), radial-gradient(circle at 80% 22%, rgba(20, 184, 166, 0.35), transparent 24%)',
                         }}
                     />
 
+                    <MotionOrb
+                        className="animate-premium-float left-[6%] top-[16%] h-48 w-48 bg-blue-500/20"
+                        style={{ animationDelay: '0s' }}
+                    />
+                    <MotionOrb
+                        className="animate-premium-float right-[10%] top-[14%] h-40 w-40 bg-cyan-400/20"
+                        style={{ animationDelay: '1.2s' }}
+                    />
+                    <MotionOrb
+                        className="animate-premium-float bottom-[20%] left-[28%] h-56 w-56 bg-sky-500/14"
+                        style={{ animationDelay: '2.4s' }}
+                    />
+                    <MotionOrb
+                        className="animate-premium-float bottom-[10%] right-[14%] h-44 w-44 bg-emerald-400/12"
+                        style={{ animationDelay: '3.1s' }}
+                    />
+
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 top-[32%]">
+                        <div className="absolute bottom-0 left-[12%] right-[10%] top-[12%] rounded-[32px] border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" />
+                        <div className="absolute bottom-[8%] left-[16%] right-[14%] top-[18%] rounded-[28px] border border-cyan-200/8 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_40%)]" />
+                        <SignalColumn left="18%" delay="0s" height="260px" />
+                        <SignalColumn left="31%" delay="1.1s" height="300px" />
+                        <SignalColumn left="44%" delay="0.6s" height="250px" />
+                        <SignalColumn left="57%" delay="1.8s" height="320px" />
+                        <SignalColumn left="70%" delay="0.9s" height="280px" />
+                        <SignalColumn left="83%" delay="2.2s" height="240px" />
+                    </div>
+
                     <div className="relative z-10">
-                        <div className="inline-flex items-center gap-3 rounded-lg border border-white/15 bg-white/10 px-4 py-3 shadow-xl shadow-black/20 backdrop-blur">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white text-sm font-black text-blue-700">
-                                NG
-                            </div>
-                            <div>
-                                <p className="text-sm font-bold">NextGen Assets</p>
-                                <p className="text-xs text-blue-100">Management System</p>
-                            </div>
-                        </div>
+                        <BrandMark />
 
                         <div className="mt-20 max-w-2xl">
                             <p className="text-sm font-bold uppercase tracking-[0.18em] text-blue-200">Authorized Office Portal</p>
@@ -160,14 +222,8 @@ export default function LoginPage() {
 
                 <section className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-12">
                     <div className="w-full max-w-[520px]">
-                        <div className="mb-8 flex items-center gap-4 lg:hidden">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-sm font-black text-white">
-                                NG
-                            </div>
-                            <div>
-                                <p className="text-base font-black text-slate-950">NextGen Assets</p>
-                                <p className="text-sm text-slate-500">Management System</p>
-                            </div>
+                        <div className="mb-8 lg:hidden">
+                            <BrandMark mobile />
                         </div>
 
                         <div className="rounded-xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.16)]">

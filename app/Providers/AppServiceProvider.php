@@ -18,8 +18,8 @@ class AppServiceProvider extends ServiceProvider
     {
         View::composer('*', function ($view) {
             $appSettings = [
-                'system_name' => 'NextGen Assets',
-                'system_tagline' => 'Management System',
+                'system_name' => 'Nextgen Assets Management System',
+                'system_tagline' => 'Owned by Nextgen Technology',
             ];
 
             try {

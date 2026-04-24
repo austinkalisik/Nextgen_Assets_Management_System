@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AssetLog;
 use App\Models\Item;
+use App\Models\StockMovement;
 use App\Services\StockInventoryService;
 use App\Services\SystemNotificationService;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class ItemController extends Controller
     public function index(Request $request)
     {
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
+        $defaultReorderLevel = $this->getIntSetting('low_stock_threshold', 5);
 
         $query = Item::with(['category', 'supplier'])->latest();
 
@@ -53,11 +55,10 @@ class ItemController extends Controller
             if ($request->stock === 'out') {
                 $query->where('quantity', 0);
             } elseif ($request->stock === 'low') {
-                $query->where('quantity', '>', 0)
-                    ->whereColumn('quantity', '<=', 'reorder_level');
+                $query->whereIn('id', $this->lowStockQuery($defaultReorderLevel)->select('id'));
             } elseif ($request->stock === 'available') {
                 $query->where('quantity', '>', 0)
-                    ->whereColumn('quantity', '>', 'reorder_level');
+                    ->whereNotIn('id', $this->lowStockQuery($defaultReorderLevel)->select('id'));
             }
         }
 
@@ -82,6 +83,11 @@ class ItemController extends Controller
             'quantity' => ['required', 'integer', 'min:1'],
             'reorder_level' => ['nullable', 'integer', 'min:0'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'is_depreciable' => ['nullable', 'boolean'],
+            'depreciation_method' => ['nullable', 'in:none,straight_line'],
+            'useful_life_years' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'salvage_value' => ['nullable', 'numeric', 'min:0'],
+            'depreciation_start_date' => ['nullable', 'date'],
             'status' => ['required', 'in:available,maintenance,lost,retired'],
             'location' => ['nullable', 'string', 'max:255'],
             'purchase_date' => ['nullable', 'date'],
@@ -264,6 +270,11 @@ class ItemController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255', 'unique:items,serial_number,' . $item->id],
             'reorder_level' => ['nullable', 'integer', 'min:0'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'is_depreciable' => ['nullable', 'boolean'],
+            'depreciation_method' => ['nullable', 'in:none,straight_line'],
+            'useful_life_years' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'salvage_value' => ['nullable', 'numeric', 'min:0'],
+            'depreciation_start_date' => ['nullable', 'date'],
             'status' => ['required', 'in:available,maintenance,lost,retired'],
             'location' => ['nullable', 'string', 'max:255'],
             'purchase_date' => ['nullable', 'date'],
@@ -317,16 +328,24 @@ class ItemController extends Controller
 
     public function destroy(Item $item)
     {
+        if ($item->activeAssignments()->exists()) {
+            return response()->json(['message' => 'Cannot delete an item that is currently issued out. Mark active assignments as returned first.'], 422);
+        }
+
+        if ($item->assignments()->exists() || $this->hasProtectedDeleteHistory($item)) {
+            return response()->json(['message' => 'Cannot delete this item because it has assignment, stock movement, or audit history. Retire it instead to preserve records.'], 422);
+        }
+
         $itemName = $item->name;
         $itemId = $item->id;
 
-        AssetLog::log(
-            $item->id,
-            AssetLog::ACTION_DELETED,
-            $item->name . ' permanently deleted by ' . (Auth::user()?->name ?? 'System')
-        );
+        DB::transaction(function () use ($item) {
+            $item->loadMissing(['stockMovements', 'assetLogs']);
 
-        $item->delete();
+            $item->stockMovements()->delete();
+            $item->assetLogs()->delete();
+            $item->delete();
+        });
 
         $this->notifyAdmins(
             'asset_deleted',
@@ -340,9 +359,32 @@ class ItemController extends Controller
         return response()->json(['message' => 'Item deleted successfully']);
     }
 
+    protected function hasProtectedDeleteHistory(Item $item): bool
+    {
+        $item->loadMissing(['stockMovements', 'assetLogs']);
+
+        $hasProtectedStockMovements = $item->stockMovements->contains(function (StockMovement $movement) use ($item) {
+            return ! $this->isInitialStockMovement($item, $movement);
+        });
+
+        if ($hasProtectedStockMovements) {
+            return true;
+        }
+
+        return $item->assetLogs->contains(function (AssetLog $log) {
+            return ! in_array($log->action, [AssetLog::ACTION_CREATED, AssetLog::ACTION_UPDATED], true);
+        });
+    }
+
+    protected function isInitialStockMovement(Item $item, StockMovement $movement): bool
+    {
+        return $movement->type === StockMovement::TYPE_IN
+            && $movement->reference_no === 'ITEM-OPEN-' . $item->id;
+    }
+
     protected function findExistingStockItem(array $payload): ?Item
     {
-        if ($payload['asset_tag'] || $payload['serial_number']) {
+        if ($payload['asset_tag'] || $payload['serial_number'] || ! empty($payload['is_depreciable'])) {
             return null;
         }
 
@@ -366,6 +408,32 @@ class ItemController extends Controller
             ->first();
     }
 
+    protected function getIntSetting(string $key, int $default): int
+    {
+        $value = DB::table('settings')->where('key', $key)->value('value');
+
+        if (!is_numeric($value)) {
+            return $default;
+        }
+
+        return (int) $value;
+    }
+
+    protected function lowStockQuery(int $defaultReorderLevel)
+    {
+        return Item::query()
+            ->where('quantity', '>', 0)
+            ->where(function ($query) use ($defaultReorderLevel) {
+                $query->where(function ($sub) {
+                    $sub->whereNotNull('reorder_level')
+                        ->whereColumn('quantity', '<=', 'reorder_level');
+                })->orWhere(function ($sub) use ($defaultReorderLevel) {
+                    $sub->whereNull('reorder_level')
+                        ->where('quantity', '<=', $defaultReorderLevel);
+                });
+            });
+    }
+
     protected function normalizePayload(array $validated, bool $includeQuantity = true): array
     {
         $payload = [
@@ -380,6 +448,15 @@ class ItemController extends Controller
             'unit_cost' => array_key_exists('unit_cost', $validated) && $validated['unit_cost'] !== null
                 ? (float) $validated['unit_cost']
                 : null,
+            'is_depreciable' => (bool) ($validated['is_depreciable'] ?? false),
+            'depreciation_method' => $this->normalizeNullable($validated['depreciation_method'] ?? null),
+            'useful_life_years' => array_key_exists('useful_life_years', $validated) && $validated['useful_life_years'] !== null
+                ? (int) $validated['useful_life_years']
+                : null,
+            'salvage_value' => array_key_exists('salvage_value', $validated) && $validated['salvage_value'] !== null
+                ? (float) $validated['salvage_value']
+                : null,
+            'depreciation_start_date' => $validated['depreciation_start_date'] ?? null,
             'status' => $validated['status'],
             'location' => $this->normalizeNullable($validated['location'] ?? null),
             'purchase_date' => $validated['purchase_date'] ?? null,
@@ -397,7 +474,62 @@ class ItemController extends Controller
             $payload['quantity'] = (int) ($validated['quantity'] ?? 0);
         }
 
+        $payload = $this->normalizeDepreciationPayload($payload);
+
         return $payload;
+    }
+
+    protected function normalizeDepreciationPayload(array $payload): array
+    {
+        if (! $payload['is_depreciable']) {
+            $payload['depreciation_method'] = self::normalizeDepreciationMethod(null);
+            $payload['useful_life_years'] = null;
+            $payload['salvage_value'] = null;
+            $payload['depreciation_start_date'] = null;
+
+            return $payload;
+        }
+
+        $payload['depreciation_method'] = self::normalizeDepreciationMethod($payload['depreciation_method'] ?? null);
+        $payload['depreciation_start_date'] = $payload['depreciation_start_date'] ?? $payload['purchase_date'] ?? null;
+        $payload['salvage_value'] = $payload['salvage_value'] ?? 0.0;
+
+        if ($payload['depreciation_method'] !== Item::DEPRECIATION_METHOD_STRAIGHT_LINE) {
+            throw ValidationException::withMessages([
+                'depreciation_method' => 'Straight-line depreciation is currently the supported method.',
+            ]);
+        }
+
+        if ($payload['unit_cost'] === null || (float) $payload['unit_cost'] <= 0) {
+            throw ValidationException::withMessages([
+                'unit_cost' => 'Unit Cost is required when depreciation is enabled.',
+            ]);
+        }
+
+        if (empty($payload['useful_life_years']) || (int) $payload['useful_life_years'] <= 0) {
+            throw ValidationException::withMessages([
+                'useful_life_years' => 'Useful Life (Years) is required when depreciation is enabled.',
+            ]);
+        }
+
+        if (empty($payload['depreciation_start_date'])) {
+            throw ValidationException::withMessages([
+                'depreciation_start_date' => 'Depreciation Start Date is required when depreciation is enabled.',
+            ]);
+        }
+
+        if ((float) ($payload['salvage_value'] ?? 0) > (float) $payload['unit_cost']) {
+            throw ValidationException::withMessages([
+                'salvage_value' => 'Salvage Value cannot be greater than Unit Cost.',
+            ]);
+        }
+
+        return $payload;
+    }
+
+    protected static function normalizeDepreciationMethod(?string $method): string
+    {
+        return $method ?: Item::DEPRECIATION_METHOD_STRAIGHT_LINE;
     }
 
     protected function normalizeNullable(?string $value): ?string

@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssetLog;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 
 class ActivityLogController extends Controller
 {
+    private const REPORT_TIMEZONE = 'Pacific/Port_Moresby';
+
     public function index(Request $request)
     {
         $perPage = max(10, min((int) $request->integer('per_page', 20), 100));
@@ -28,11 +31,11 @@ class ActivityLogController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date('date_from'));
+            $query->where('created_at', '>=', $this->startOfReportDay((string) $request->date_from));
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date('date_to'));
+            $query->where('created_at', '<=', $this->endOfReportDay((string) $request->date_to));
         }
 
         if ($request->filled('search')) {
@@ -54,5 +57,19 @@ class ActivityLogController extends Controller
         }
 
         return response()->json($query->paginate($perPage)->withQueryString());
+    }
+
+    protected function startOfReportDay(string $date): CarbonImmutable
+    {
+        return CarbonImmutable::parse($date, self::REPORT_TIMEZONE)
+            ->startOfDay()
+            ->utc();
+    }
+
+    protected function endOfReportDay(string $date): CarbonImmutable
+    {
+        return CarbonImmutable::parse($date, self::REPORT_TIMEZONE)
+            ->endOfDay()
+            ->utc();
     }
 }

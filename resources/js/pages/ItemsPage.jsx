@@ -2,9 +2,17 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import apiClient from '../api/client';
 import { downloadCsv } from '../utils/csv';
+import { fetchFilteredExportRows } from '../utils/exportData';
 import { invalidateApiCache, useApi } from '../hooks/useApi';
 
 const PNG_TIME_ZONE = 'Pacific/Port_Moresby';
+const STOCK_EXPORT_OPTIONS = {
+    current: { label: 'Current Filters CSV', stock: null, filename: 'inventory.csv' },
+    all: { label: 'All stock states CSV', stock: '', filename: 'inventory-all-stock-states.csv' },
+    available: { label: 'Available CSV', stock: 'available', filename: 'inventory-available.csv' },
+    low: { label: 'Low Stock CSV', stock: 'low', filename: 'inventory-low-stock.csv' },
+    out: { label: 'Out of Stock CSV', stock: 'out', filename: 'inventory-out-of-stock.csv' },
+};
 
 function getStockStateBadge(item) {
     const quantity = Number(item?.quantity || 0);
@@ -34,6 +42,11 @@ function defaultForm() {
         quantity: 1,
         reorder_level: 5,
         unit_cost: '',
+        is_depreciable: false,
+        depreciation_method: 'straight_line',
+        useful_life_years: '',
+        salvage_value: '',
+        depreciation_start_date: '',
         asset_tag: '',
         serial_number: '',
         location: '',
@@ -80,8 +93,49 @@ function formatDateTime(value) {
     });
 }
 
+function formatCurrency(value) {
+    const amount = Number(value);
+
+    if (Number.isNaN(amount)) {
+        return '-';
+    }
+
+    return new Intl.NumberFormat('en-PG', {
+        style: 'currency',
+        currency: 'PGK',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+}
+
+function RequiredMark() {
+    return <span className="ml-1 text-red-500">*</span>;
+}
+
+function SectionBlock({ eyebrow, title, description, children, className = '' }) {
+    return (
+        <section className={`rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-5 ${className}`}>
+            <div className="mb-4">
+                {eyebrow ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600">{eyebrow}</p> : null}
+                <h3 className="mt-1 text-lg font-semibold text-slate-950">{title}</h3>
+                {description ? <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p> : null}
+            </div>
+            {children}
+        </section>
+    );
+}
+
 function toDateInputValue(date) {
-    return date.toISOString().slice(0, 10);
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: PNG_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    })
+        .formatToParts(date)
+        .reduce((next, part) => ({ ...next, [part.type]: part.value }), {});
+
+    return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function getPeriodRange(period, customStart = '', customEnd = '') {
@@ -125,6 +179,9 @@ export default function ItemsPage() {
     const [itemReportPeriod, setItemReportPeriod] = useState('all');
     const [itemDateStart, setItemDateStart] = useState('');
     const [itemDateEnd, setItemDateEnd] = useState('');
+    const [exporting, setExporting] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
 
     const filters = useMemo(
         () => ({
@@ -222,6 +279,7 @@ export default function ItemsPage() {
     }, []);
 
     const isSerializedMode = form.tracking_mode === 'serialized';
+    const isDepreciable = Boolean(form.is_depreciable);
     const itemReportDateRange = useMemo(
         () => getPeriodRange(itemReportPeriod, itemDateStart, itemDateEnd),
         [itemReportPeriod, itemDateStart, itemDateEnd]
@@ -277,6 +335,11 @@ export default function ItemsPage() {
                     status: form.status,
                     reorder_level: Number.parseInt(String(form.reorder_level || 0), 10),
                     unit_cost: form.unit_cost === '' ? '' : form.unit_cost,
+                    is_depreciable: isDepreciable,
+                    depreciation_method: isDepreciable ? form.depreciation_method : '',
+                    useful_life_years: isDepreciable && form.useful_life_years !== '' ? Number.parseInt(String(form.useful_life_years), 10) : '',
+                    salvage_value: isDepreciable && form.salvage_value !== '' ? form.salvage_value : '',
+                    depreciation_start_date: isDepreciable ? form.depreciation_start_date || form.purchase_date || '' : '',
                     asset_tag: enteredAssetTag,
                     serial_number: editingId || isSerializedMode ? enteredSerialNumber : '',
                     location: form.location.trim(),
@@ -305,24 +368,25 @@ export default function ItemsPage() {
                 setSubmitting(false);
             }
         },
-        [editingId, form, isSerializedMode, refreshItems, resetForm]
+        [editingId, form, isDepreciable, isSerializedMode, refreshItems, resetForm]
     );
 
     const handleDelete = useCallback(
-        async (id) => {
-            if (!window.confirm('Are you sure you want to delete this inventory item?')) {
-                return;
-            }
-
+        async (item) => {
             try {
                 setNotice('');
                 setFormError('');
-                await apiClient.delete(`/items/${id}`);
+                setDeletingId(item.id);
+                await apiClient.delete(`/items/${item.id}`);
                 setNotice('Inventory item deleted successfully.');
+                setDeleteTarget(null);
                 await refreshItems();
             } catch (err) {
                 console.error(err);
                 setFormError(extractErrorMessage(err));
+            }
+            finally {
+                setDeletingId(null);
             }
         },
         [refreshItems]
@@ -343,6 +407,11 @@ export default function ItemsPage() {
             quantity: item.quantity || 1,
             reorder_level: item.reorder_level ?? 5,
             unit_cost: item.unit_cost || '',
+            is_depreciable: Boolean(item.is_depreciable),
+            depreciation_method: item.depreciation_method || 'straight_line',
+            useful_life_years: item.useful_life_years ?? '',
+            salvage_value: item.salvage_value ?? '',
+            depreciation_start_date: item.depreciation_start_date || '',
             asset_tag: item.asset_tag || '',
             serial_number: item.serial_number || '',
             location: item.location || '',
@@ -381,24 +450,40 @@ export default function ItemsPage() {
         updateQuery({ [key]: value, page: 1 });
     }
 
-    function handleExportCsv() {
-        downloadCsv(
-            'inventory.csv',
-            items.map((item) => ({
-                Name: item.name || '',
-                'Asset Tag': item.asset_tag || '',
-                Brand: item.brand || '',
-                SKU: item.sku || '',
-                Category: item.category?.name || '',
-                Supplier: item.supplier?.name || '',
-                Quantity: item.quantity ?? 0,
-                'Stock State': getStockStateBadge(item).label,
-                'Lifecycle Status': item.status || '',
-                Location: item.location || '',
-                'Purchase Date': item.purchase_date || '',
-                'Date Added (PNG Time)': formatDateTime(item.date_added_at || item.date_added),
-            }))
-        );
+    async function handleExportCsv(exportType = 'current') {
+        try {
+            setExporting(true);
+            setFormError('');
+
+            const exportOption = STOCK_EXPORT_OPTIONS[exportType] || STOCK_EXPORT_OPTIONS.current;
+            const exportFilters = {
+                ...filters,
+                stock: exportOption.stock === null ? filters.stock : exportOption.stock,
+            };
+            const exportRows = await fetchFilteredExportRows('/items', exportFilters);
+
+            downloadCsv(
+                exportOption.filename,
+                exportRows.map((item) => ({
+                    Name: item.name || '',
+                    'Asset Tag': item.asset_tag || '',
+                    Brand: item.brand || '',
+                    SKU: item.sku || '',
+                    Category: item.category?.name || '',
+                    Supplier: item.supplier?.name || '',
+                    Quantity: item.quantity ?? 0,
+                    'Unit Cost': item.unit_cost ?? '',
+                    'Depreciable': item.depreciation_enabled ? 'Yes' : 'No',
+                    'Current Book Value': item.current_book_value_total ?? '',
+                    'Stock State': getStockStateBadge(item).label,
+                    'Date Added (PNG Time)': formatDateTime(item.date_added_at || item.date_added),
+                }))
+            );
+        } catch (err) {
+            setFormError(err?.response?.data?.message || 'Failed to export inventory.');
+        } finally {
+            setExporting(false);
+        }
     }
 
     function handlePdfExport() {
@@ -456,11 +541,13 @@ export default function ItemsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="page-header">
                 <div className="min-w-0">
-                    <h1 className="whitespace-nowrap text-3xl font-bold tracking-normal text-slate-900">Inventory</h1>
-                    <p className="mt-1 max-w-3xl text-sm text-slate-500">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                        Inventory Control
+                    </div>
+                    <h1 className="page-title mt-4 whitespace-nowrap">Inventory</h1>
+                    <p className="page-subtitle">
                         Manage inventory records, stock levels, and item details in one place.
                     </p>
                 </div>
@@ -486,25 +573,32 @@ export default function ItemsPage() {
                     <select
                         value=""
                         onChange={(e) => {
-                            if (e.target.value === 'csv') {
-                                handleExportCsv();
-                            }
-                            if (e.target.value === 'pdf') {
-                                handlePdfExport();
+                            if (e.target.value.startsWith('csv:')) {
+                                void handleExportCsv(e.target.value.replace('csv:', ''));
                             }
                         }}
-                        className="input-shell sm:w-36"
+                        disabled={exporting}
+                        className="input-shell sm:w-56 disabled:opacity-60"
                     >
-                        <option value="">Export...</option>
-                        <option value="csv">CSV</option>
-                        <option value="pdf">PDF</option>
+                        <option value="">{exporting ? 'Exporting...' : 'Export...'}</option>
+                        {Object.entries(STOCK_EXPORT_OPTIONS).map(([key, option]) => (
+                            <option key={key} value={`csv:${key}`}>
+                                {option.label}
+                            </option>
+                        ))}
                     </select>
-                </div>
                 </div>
             </div>
 
             <div className="panel">
-                <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-[1fr_1fr_auto]">
+                <div className="panel-body">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 className="section-title">Filters</h2>
+                            <p className="section-subtitle">Refine inventory by stock state and category.</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
                     <select
                         value={filters.stock}
                         onChange={(e) => handleFilterChange('stock', e.target.value)}
@@ -532,6 +626,7 @@ export default function ItemsPage() {
                     <button type="button" onClick={() => setSearchParams({})} className="btn-secondary">
                         Clear Filters
                     </button>
+                    </div>
                 </div>
             </div>
 
@@ -690,15 +785,31 @@ export default function ItemsPage() {
             {showForm ? (
                 <div className="panel">
                     <div className="panel-body">
-                        <h2 className="mb-4 text-lg font-semibold">
-                            {editingId ? 'Edit Inventory Item' : 'Add New Inventory Item'}
-                        </h2>
+                        <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600">Inventory Form</p>
+                                <h2 className="mt-1 text-2xl font-bold text-slate-950">
+                                    {editingId ? 'Edit Inventory Item' : 'Add New Inventory Item'}
+                                </h2>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Required fields are marked with <RequiredMark /> and depreciation fields only matter when depreciation is enabled.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                Keep item basics, stock details, and financial details complete for clearer reporting.
+                            </div>
+                        </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            {!editingId ? (
+                                <SectionBlock
+                                    eyebrow="Tracking"
+                                    title="Item Tracking Mode"
+                                    description="Choose how this item should be tracked before entering the rest of the record."
+                                >
                                 {!editingId ? (
-                                    <div className="md:col-span-2">
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Tracking Mode</label>
+                                    <div>
+                                        <label className="field-label">Tracking Mode</label>
                                         <select
                                             value={form.tracking_mode}
                                             onChange={(e) => {
@@ -723,9 +834,18 @@ export default function ItemsPage() {
                                         </p>
                                     </div>
                                 ) : null}
+                                </SectionBlock>
+                            ) : null}
+
+                            <SectionBlock
+                                eyebrow="Basics"
+                                title="Item Basics"
+                                description="Core identification details for the asset or stock item."
+                            >
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
+                                    <label className="field-label">Name<RequiredMark /></label>
                                     <input
                                         type="text"
                                         value={form.name}
@@ -736,7 +856,7 @@ export default function ItemsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Brand</label>
+                                    <label className="field-label">Brand</label>
                                     <input
                                         type="text"
                                         value={form.brand}
@@ -746,9 +866,7 @@ export default function ItemsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">
-                                        {isSerializedMode ? 'SKU' : 'SKU / Bulk Item Code'}
-                                    </label>
+                                    <label className="field-label">{isSerializedMode ? 'SKU' : 'SKU / Bulk Item Code'}</label>
                                     <input
                                         type="text"
                                         value={form.sku}
@@ -761,10 +879,27 @@ export default function ItemsPage() {
                                         </p>
                                     ) : null}
                                 </div>
+                                <div>
+                                    <label className="field-label">Description</label>
+                                    <textarea
+                                        value={form.description}
+                                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                        rows="4"
+                                        className="input-shell w-full"
+                                    />
+                                </div>
+                            </div>
+                            </SectionBlock>
 
+                            <SectionBlock
+                                eyebrow="Stock"
+                                title="Stock and Availability"
+                                description="Operational fields that control quantity, reorder behavior, and item state."
+                            >
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                                 {!editingId ? (
                                     <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">Initial Quantity</label>
+                                        <label className="field-label">Initial Quantity<RequiredMark /></label>
                                         <input
                                             type="number"
                                             min="1"
@@ -786,13 +921,13 @@ export default function ItemsPage() {
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                                    <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 xl:col-span-3">
                                         Current quantity: <strong>{form.quantity}</strong>. Quantity changes through assignments and stock updates.
                                     </div>
                                 )}
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Reorder Level</label>
+                                    <label className="field-label">Reorder Level</label>
                                     <input
                                         type="number"
                                         min="0"
@@ -808,7 +943,7 @@ export default function ItemsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Unit Cost</label>
+                                    <label className="field-label">Unit Cost {isDepreciable ? <RequiredMark /> : null}</label>
                                     <input
                                         type="number"
                                         min="0"
@@ -818,9 +953,119 @@ export default function ItemsPage() {
                                         className="input-shell w-full"
                                     />
                                 </div>
-
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
+                                    <label className="field-label">Lifecycle Status<RequiredMark /></label>
+                                    <select
+                                        value={form.status}
+                                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                                        className="input-shell w-full"
+                                    >
+                                        <option value="available">Available</option>
+                                        <option value="maintenance">Maintenance</option>
+                                        <option value="lost">Lost</option>
+                                        <option value="retired">Retired</option>
+                                    </select>
+                                </div>
+                            </div>
+                            </SectionBlock>
+
+                                <SectionBlock
+                                    eyebrow="Financials"
+                                    title="Depreciation"
+                                    description="Use this for fixed assets like laptops, printers, and office equipment that lose value over time."
+                                >
+                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-900">Financial depreciation tracking</p>
+                                                <p className="mt-1 text-xs text-slate-500">Enable this only for fixed assets that lose value over time.</p>
+                                            </div>
+
+                                            <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isDepreciable}
+                                                    onChange={(e) =>
+                                                        setForm({
+                                                            ...form,
+                                                            is_depreciable: e.target.checked,
+                                                            depreciation_method: 'straight_line',
+                                                            useful_life_years: e.target.checked ? form.useful_life_years : '',
+                                                            salvage_value: e.target.checked ? form.salvage_value : '',
+                                                            depreciation_start_date: e.target.checked
+                                                                ? form.depreciation_start_date || form.purchase_date
+                                                                : '',
+                                                        })
+                                                    }
+                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                Track depreciation for this item
+                                            </label>
+                                        </div>
+
+                                        {isDepreciable ? (
+                                            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                                <div>
+                                                    <label className="field-label">Method</label>
+                                                    <select
+                                                        value={form.depreciation_method}
+                                                        onChange={(e) => setForm({ ...form, depreciation_method: e.target.value })}
+                                                        className="input-shell w-full"
+                                                    >
+                                                        <option value="straight_line">Straight Line</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="field-label">Useful Life (Years)<RequiredMark /></label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max="50"
+                                                        value={form.useful_life_years}
+                                                        onChange={(e) => setForm({ ...form, useful_life_years: e.target.value })}
+                                                        className="input-shell w-full"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="field-label">Salvage Value</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={form.salvage_value}
+                                                        onChange={(e) => setForm({ ...form, salvage_value: e.target.value })}
+                                                        className="input-shell w-full"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="field-label">Depreciation Start Date<RequiredMark /></label>
+                                                    <input
+                                                        type="date"
+                                                        value={form.depreciation_start_date}
+                                                        onChange={(e) => setForm({ ...form, depreciation_start_date: e.target.value })}
+                                                        className="input-shell w-full"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="mt-3 text-xs text-slate-500">
+                                                Leave this off for consumables or bulk stock that you only count by quantity.
+                                            </p>
+                                        )}
+                                    </div>
+                                </SectionBlock>
+
+                            <SectionBlock
+                                eyebrow="Classification"
+                                title="Category, Supplier, and Identity"
+                                description="These fields determine where the item belongs and how it will be recognized later."
+                            >
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                <div>
+                                    <label className="field-label">Category<RequiredMark /></label>
                                     <select
                                         value={form.category_id}
                                         onChange={(e) => setForm({ ...form, category_id: e.target.value })}
@@ -837,7 +1082,7 @@ export default function ItemsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Supplier</label>
+                                    <label className="field-label">Supplier<RequiredMark /></label>
                                     <select
                                         value={form.supplier_id}
                                         onChange={(e) => setForm({ ...form, supplier_id: e.target.value })}
@@ -854,21 +1099,7 @@ export default function ItemsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Lifecycle Status</label>
-                                    <select
-                                        value={form.status}
-                                        onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                        className="input-shell w-full"
-                                    >
-                                        <option value="available">Available</option>
-                                        <option value="maintenance">Maintenance</option>
-                                        <option value="lost">Lost</option>
-                                        <option value="retired">Retired</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Asset Tag</label>
+                                    <label className="field-label">Asset Tag</label>
                                     <input
                                         type="text"
                                         value={form.asset_tag}
@@ -883,7 +1114,7 @@ export default function ItemsPage() {
                                 {(editingId || isSerializedMode) ? (
                                     <>
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-slate-700">Serial Number</label>
+                                            <label className="field-label">Serial Number</label>
                                             <input
                                                 type="text"
                                                 value={form.serial_number}
@@ -895,7 +1126,7 @@ export default function ItemsPage() {
                                 ) : null}
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Location</label>
+                                    <label className="field-label">Location</label>
                                     <input
                                         type="text"
                                         value={form.location}
@@ -905,7 +1136,7 @@ export default function ItemsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Purchase Date</label>
+                                    <label className="field-label">Purchase Date</label>
                                     <input
                                         type="date"
                                         value={form.purchase_date}
@@ -913,17 +1144,8 @@ export default function ItemsPage() {
                                         className="input-shell w-full"
                                     />
                                 </div>
-
-                                <div className="md:col-span-2">
-                                    <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                                    <textarea
-                                        value={form.description}
-                                        onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                        rows="3"
-                                        className="input-shell w-full"
-                                    />
-                                </div>
                             </div>
+                            </SectionBlock>
 
                             <div className="flex gap-3">
                                 <button
@@ -955,6 +1177,7 @@ export default function ItemsPage() {
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Category</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Supplier</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Quantity</th>
+                                <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Book Value</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Stock State</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Date Added</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Actions</th>
@@ -983,6 +1206,20 @@ export default function ItemsPage() {
                                             <td className="px-6 py-4 text-slate-700">{item.category?.name || '-'}</td>
                                             <td className="px-6 py-4 text-slate-700">{item.supplier?.name || '-'}</td>
                                             <td className="px-6 py-4 font-semibold text-slate-900">{item.quantity ?? 0}</td>
+                                            <td className="px-6 py-4 text-slate-700">
+                                                {item.depreciation_enabled ? (
+                                                    <div className="space-y-1">
+                                                        <p className="font-semibold text-slate-900">
+                                                            {formatCurrency(item.current_book_value_total)}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500">
+                                                            {item.is_fully_depreciated ? 'Fully depreciated' : `Per unit ${formatCurrency(item.current_book_value_per_unit)}`}
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    '-'
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badge.className}`}>
                                                     {badge.label}
@@ -1002,7 +1239,7 @@ export default function ItemsPage() {
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleDelete(item.id)}
+                                                    onClick={() => setDeleteTarget(item)}
                                                     className="inline-flex rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
                                                 >
                                                     Delete
@@ -1014,7 +1251,7 @@ export default function ItemsPage() {
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan="10" className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan="11" className="px-6 py-10 text-center text-slate-500">
                                         No inventory items found.
                                     </td>
                                 </tr>
@@ -1049,6 +1286,39 @@ export default function ItemsPage() {
                     </div>
                 </div>
             </div>
+
+            {deleteTarget ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+                    <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+                        <h2 className="text-lg font-semibold text-slate-900">Delete inventory item?</h2>
+                        <p className="mt-3 text-sm text-slate-600">
+                            Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
+                        </p>
+                        <p className="mt-2 text-xs text-slate-500">
+                            This will only work if the item has not been used in real assignment or stock activity yet.
+                        </p>
+
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={deletingId === deleteTarget.id}
+                                className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void handleDelete(deleteTarget)}
+                                disabled={deletingId === deleteTarget.id}
+                                className="inline-flex rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {deletingId === deleteTarget.id ? 'Deleting...' : 'Yes, Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
