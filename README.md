@@ -1,133 +1,67 @@
 # Nextgen Assets Management System
 
-Nextgen Assets Management System is a full-stack Laravel and React application for managing office assets, inventory, assignments, stock movements, users, notifications, activity logs, reports, and branding.
+This is a simple web app for managing office assets like computers, printers, and supplies. It tracks inventory, assignments, and notifications. Built with Laravel (backend) and React (frontend).
 
-The project is designed so another developer can clone it, configure a database, seed demo users, run the app locally, and verify it with automated tests.
+## What You Need
 
-## Features
+Before starting, make sure you have these installed on your computer:
 
-- Dashboard with asset, inventory, assignment, and notification summaries
-- Asset and inventory management with stock in, stock out, low stock, and out-of-stock alerts
-- Asset assignment and return workflows
-- Categories, suppliers, departments, users, roles, and profile management
-- In-app notifications with optional email copies
-- Activity logs and audit-friendly asset history
-- Branding/settings management
-- PDF/report support through `barryvdh/laravel-dompdf`
-- Docker setup for quick containerized evaluation
+- **PHP 8.3 or newer** (the programming language for the backend)
+- **Composer** (tool to install PHP packages)
+- **Node.js 20 or newer** (for the frontend)
+- **npm** (comes with Node.js, used to install frontend packages)
+- **MySQL or MariaDB** (database to store data)
+- **Git** (to download the project)
 
-## Tech Stack
+If you're on Windows and using XAMPP, start MySQL first. You don't need Apache because this app runs its own server.
 
-- Backend: Laravel 13, PHP 8.3+
-- Frontend: React 19, Vite, Tailwind CSS
-- Database: MySQL or MariaDB
-- Testing: PHPUnit with SQLite in-memory test database
-- Container option: Docker Compose with MySQL 8
+## Step-by-Step Setup
 
-## Requirements
+Follow these steps to get the app running. Do them in order.
 
-- PHP 8.3 or newer
-- Composer 2 or newer
-- Node.js 20 or newer
-- npm
-- MySQL or MariaDB
-- Git
+### 1. Download the Project
 
-For Windows/XAMPP users, start MySQL before running migrations. Apache is optional because local development uses `php artisan serve`.
-
-## First Time Clone and Run
-
-Use these commands when you fork or clone the project for the first time.
-
-1. Clone the repository:
+Open your terminal (Command Prompt or PowerShell on Windows) and run:
 
 ```bash
 git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
 cd Nextgen_Assets_Management_System
 ```
 
-2. Create a MySQL database:
+This downloads the project and enters its folder.
+
+### 2. Set Up the Database
+
+You need a database to store the app's data.
+
+- Open your MySQL tool (like phpMyAdmin, MySQL Workbench, or command line).
+- Create a new database named `nextgen_assets`.
+
+Example SQL command:
 
 ```sql
 CREATE DATABASE nextgen_assets;
 ```
 
-3. Copy the environment file:
+### 3. Copy the Settings File
 
-```bash
-cp .env.example .env
-```
+The app needs a settings file. Copy the example file:
 
-On Windows PowerShell, use:
+On Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-4. Check your `.env` database settings:
-
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=nextgen_assets
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-5. Install and prepare the project:
-
-```bash
-composer run bootstrap
-```
-
-6. Start Laravel in the first terminal:
-
-```bash
-php artisan serve --host=127.0.0.1 --port=8000
-```
-
-7. Start React/Vite in the second terminal:
-
-```bash
-npm run dev
-```
-
-8. Open the system:
-
-```text
-http://127.0.0.1:8000
-```
-
-Default login:
-
-```text
-admin@nextgen.local
-password
-```
-
-## Quick Start
-
-Clone the repository:
-
-```bash
-git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
-cd Nextgen_Assets_Management_System
-```
-
-Create a MySQL database named:
-
-```text
-nextgen_assets
-```
-
-Copy the environment file and update database credentials if needed:
+On Linux/Mac:
 
 ```bash
 cp .env.example .env
 ```
 
-Default local database settings:
+### 4. Check Database Settings
+
+Open the `.env` file you just copied (use any text editor like Notepad). Make sure these lines match your database:
 
 ```env
 DB_CONNECTION=mysql
@@ -138,41 +72,111 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-Run the bootstrap script:
+- `DB_USERNAME` is usually `root` if you're using XAMPP.
+- `DB_PASSWORD` is often blank (empty) for local setups.
+
+### 5. Install Everything
+
+Run this one command to install all needed software and set up the database:
 
 ```bash
 composer run bootstrap
 ```
 
-The bootstrap script installs PHP and npm dependencies, creates the app key, creates the storage link, runs migrations and seeders, clears Laravel cache, and builds frontend assets.
+This will:
+- Install PHP packages
+- Install frontend packages
+- Set up the database tables and sample data
+- Build the frontend
 
-## Run Locally
+It might take a few minutes. If it times out, run it again or use the manual steps below.
 
-Use two terminals.
+### Manual Setup (If Bootstrap Fails)
 
-Terminal 1:
-
-```bash
-php artisan serve --host=127.0.0.1 --port=8000
-```
-
-Terminal 2:
+If `composer run bootstrap` doesn't work, do these steps one by one:
 
 ```bash
-npm run dev
+composer install
+npm install
+php artisan key:generate
+php artisan storage:link
+php artisan migrate --seed
+php artisan optimize:clear
+npm run build
 ```
 
-Open:
+## Running the App
 
-```text
-http://127.0.0.1:8000
-```
+You have two ways to run the app: for your computer only, or for other devices on your home/office network.
 
-Do not open the Vite URL directly for normal app usage. Vite serves frontend assets; Laravel serves the application.
+### Option 1: Run on Your Computer Only (Local)
+
+This is the simplest way. The app will only work on the same computer where you run it.
+
+1. Start the backend server:
+
+   ```bash
+   php artisan serve --host=127.0.0.1 --port=8000
+   ```
+
+2. Open a new terminal and start the frontend:
+
+   ```bash
+   npm run dev
+   ```
+
+3. Open your web browser and go to:
+
+   ```text
+   http://127.0.0.1:8000
+   ```
+
+   - `127.0.0.1` means "this computer only"
+   - `:8000` is the port number
+
+### Option 2: Run for Other Devices on Your Network (LAN)
+
+This lets you open the app from your phone, tablet, or another computer on the same Wi-Fi.
+
+1. Find your computer's IP address:
+   - On Windows: Open Command Prompt and run `ipconfig`. Look for "IPv4 Address" under your Wi-Fi adapter (something like `192.168.1.100`).
+   - On Mac/Linux: Run `ifconfig` or `ip addr` and look for your network IP.
+
+2. Update the `.env` file with your IP (replace `192.168.1.100` with your actual IP):
+
+   ```env
+   APP_URL=http://192.168.1.100:8000
+   VITE_DEV_SERVER_BIND_HOST=0.0.0.0
+   VITE_DEV_SERVER_HOST=192.168.1.100
+   VITE_DEV_SERVER_PORT=5173
+   ```
+
+3. Start the backend for all devices:
+
+   ```bash
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+
+4. Open a new terminal and start the frontend for network:
+
+   ```bash
+   npm run dev:lan
+   ```
+
+5. Open your web browser and go to:
+
+   ```text
+   http://192.168.1.100:8000
+   ```
+
+   - Replace `192.168.1.100` with your computer's IP.
+   - Now you can open this URL from any device on your network.
+
+**Note:** Keep both terminals running. Close them with Ctrl+C when done.
 
 ## Demo Accounts
 
-After running seeders, use any of these accounts:
+After setup, log in with these accounts:
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -181,22 +185,50 @@ After running seeders, use any of these accounts:
 | ICT Support | `support@nextgen.local` | `password` |
 | Operations Manager | `operations@nextgen.local` | `password` |
 
-## Manual Setup
+## Troubleshooting
 
-Use this if you prefer running each step yourself:
+- **App doesn't load:** Make sure both `php artisan serve` and `npm run dev` are running.
+- **Database errors:** Check your `.env` database settings and ensure MySQL is running.
+- **Blank page:** Clear browser cache or try a different browser.
+- **Can't access from other devices:** Use Option 2 (LAN) and check your firewall settings.
+- **Bootstrap times out:** Run the manual setup steps instead.
+
+## Features
+
+- Dashboard with summaries
+- Manage assets and inventory
+- Assign and return items
+- Track stock movements
+- User and department management
+- Notifications and reports
+- PDF exports
+
+## Tech Stack
+
+- Backend: Laravel 13, PHP 8.3+
+- Frontend: React 19, Vite, Tailwind CSS
+- Database: MySQL or MariaDB
+- Testing: PHPUnit
+
+## Docker Option
+
+For advanced users, you can run everything in Docker:
 
 ```bash
-composer install
-npm install
-cp .env.example .env
-php artisan key:generate
-php artisan storage:link
-php artisan migrate --seed
-php artisan optimize:clear
-npm run build
+docker compose up --build
 ```
 
-Then start Laravel and Vite as shown in the Run Locally section.
+Then open `http://127.0.0.1:8000`.
+
+## Testing
+
+Run tests with:
+
+```bash
+composer verify
+```
+
+This runs unit tests and builds the frontend.
 
 ## Testing and Verification
 
