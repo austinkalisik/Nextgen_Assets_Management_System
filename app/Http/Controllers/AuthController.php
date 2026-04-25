@@ -73,7 +73,7 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 
-    //New Methods Using ReactJS - Session Based Auth
+    // New Methods Using ReactJS - Session Based Auth
     public function apiLogin(Request $request)
     {
         $credentials = $request->validate([
@@ -81,15 +81,15 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        $throttleKey = Str::transliterate(Str::lower($credentials['email']) . '|' . $request->ip());
+        $throttleKey = Str::transliterate(Str::lower($credentials['email']).'|'.$request->ip());
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             return response()->json([
-                'message' => 'Too many login attempts. Please try again in ' . RateLimiter::availableIn($throttleKey) . ' seconds.',
+                'message' => 'Too many login attempts. Please try again in '.RateLimiter::availableIn($throttleKey).' seconds.',
             ], 429);
         }
 
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
             RateLimiter::hit($throttleKey, 60);
 
             return response()->json([
@@ -112,7 +112,7 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return response()->json([
-            'message' => 'Logged out'
+            'message' => 'Logged out',
         ]);
     }
 }

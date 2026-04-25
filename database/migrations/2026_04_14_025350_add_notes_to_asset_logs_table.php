@@ -9,17 +9,17 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-public function up(): void
-{
-    Schema::table('asset_logs', function (Blueprint $table) {
-        $table->text('notes')->nullable()->after('action');
-    });
-}
+    public function up(): void
+    {
+        Schema::table('asset_logs', function (Blueprint $table) {
+            $table->text('notes')->nullable()->after('action');
+        });
+    }
 
-public function down(): void
-{
-    Schema::table('asset_logs', function (Blueprint $table) {
-        $table->dropColumn('notes');
-    });
-}
+    public function down(): void
+    {
+        Schema::table('asset_logs', function (Blueprint $table) {
+            $table->dropColumn('notes');
+        });
+    }
 };

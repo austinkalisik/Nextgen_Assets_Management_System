@@ -61,6 +61,7 @@
         ],
         "verify": [
             "@php artisan config:clear --ansi",
+            "vendor/bin/pint --test",
             "@php artisan test",
             "npm run build"
         ],

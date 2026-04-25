@@ -15,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 class ItemController extends Controller
 {
     protected StockInventoryService $stockInventoryService;
+
     protected SystemNotificationService $notificationService;
 
     public function __construct(
@@ -155,7 +156,7 @@ class ItemController extends Controller
                 $this->stockInventoryService->stockIn(
                     $existing,
                     $initialQuantity,
-                    'ITEM-MERGE-' . $existing->id,
+                    'ITEM-MERGE-'.$existing->id,
                     $payload['supplier_id'],
                     'Stock received while saving a matching asset item.'
                 );
@@ -165,7 +166,7 @@ class ItemController extends Controller
                 AssetLog::log(
                     $existing->id,
                     AssetLog::ACTION_UPDATED,
-                    $existing->name . ' quantity increased by ' . $initialQuantity . ' by ' . (Auth::user()?->name ?? 'System')
+                    $existing->name.' quantity increased by '.$initialQuantity.' by '.(Auth::user()?->name ?? 'System')
                 );
 
                 $this->notifyAdmins(
@@ -200,7 +201,7 @@ class ItemController extends Controller
             $this->stockInventoryService->stockIn(
                 $item,
                 $initialQuantity,
-                'ITEM-OPEN-' . $item->id,
+                'ITEM-OPEN-'.$item->id,
                 $payload['supplier_id'],
                 'Initial stock received during asset creation.'
             );
@@ -210,7 +211,7 @@ class ItemController extends Controller
             AssetLog::log(
                 $item->id,
                 AssetLog::ACTION_CREATED,
-                $item->name . ' created by ' . (Auth::user()?->name ?? 'System')
+                $item->name.' created by '.(Auth::user()?->name ?? 'System')
             );
 
             $this->notifyAdmins(
@@ -261,13 +262,13 @@ class ItemController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'sku' => ['nullable', 'string', 'max:255', 'unique:items,sku,' . $item->id],
+            'sku' => ['nullable', 'string', 'max:255', 'unique:items,sku,'.$item->id],
             'brand' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category_id' => ['required', 'exists:categories,id'],
             'supplier_id' => ['required', 'exists:suppliers,id'],
-            'asset_tag' => ['nullable', 'string', 'max:255', 'unique:items,asset_tag,' . $item->id],
-            'serial_number' => ['nullable', 'string', 'max:255', 'unique:items,serial_number,' . $item->id],
+            'asset_tag' => ['nullable', 'string', 'max:255', 'unique:items,asset_tag,'.$item->id],
+            'serial_number' => ['nullable', 'string', 'max:255', 'unique:items,serial_number,'.$item->id],
             'reorder_level' => ['nullable', 'integer', 'min:0'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'is_depreciable' => ['nullable', 'boolean'],
@@ -300,7 +301,7 @@ class ItemController extends Controller
         AssetLog::log(
             $item->id,
             AssetLog::ACTION_UPDATED,
-            'Asset details updated by ' . (Auth::user()?->name ?? 'System')
+            'Asset details updated by '.(Auth::user()?->name ?? 'System')
         );
 
         $this->notifyAdmins(
@@ -379,7 +380,7 @@ class ItemController extends Controller
     protected function isInitialStockMovement(Item $item, StockMovement $movement): bool
     {
         return $movement->type === StockMovement::TYPE_IN
-            && $movement->reference_no === 'ITEM-OPEN-' . $item->id;
+            && $movement->reference_no === 'ITEM-OPEN-'.$item->id;
     }
 
     protected function findExistingStockItem(array $payload): ?Item
@@ -400,8 +401,8 @@ class ItemController extends Controller
             ->whereRaw('LOWER(TRIM(name)) = ?', [$name])
             ->when(
                 $brand !== null,
-                fn($query) => $query->whereRaw('LOWER(TRIM(brand)) = ?', [$brand]),
-                fn($query) => $query->where(function ($sub) {
+                fn ($query) => $query->whereRaw('LOWER(TRIM(brand)) = ?', [$brand]),
+                fn ($query) => $query->where(function ($sub) {
                     $sub->whereNull('brand')->orWhereRaw("TRIM(brand) = ''");
                 })
             )
@@ -412,7 +413,7 @@ class ItemController extends Controller
     {
         $value = DB::table('settings')->where('key', $key)->value('value');
 
-        if (!is_numeric($value)) {
+        if (! is_numeric($value)) {
             return $default;
         }
 

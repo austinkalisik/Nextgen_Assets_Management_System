@@ -13,6 +13,7 @@ use InvalidArgumentException;
 class InventoryController extends Controller
 {
     protected StockInventoryService $stockInventoryService;
+
     protected SystemNotificationService $notificationService;
 
     public function __construct(
@@ -27,7 +28,7 @@ class InventoryController extends Controller
     {
         $value = DB::table('settings')->where('key', $key)->value('value');
 
-        if (!is_numeric($value)) {
+        if (! is_numeric($value)) {
             return $default;
         }
 
@@ -65,8 +66,8 @@ class InventoryController extends Controller
                     ->orWhere('sku', 'like', "%{$search}%")
                     ->orWhere('asset_tag', 'like', "%{$search}%")
                     ->orWhere('serial_number', 'like', "%{$search}%")
-                    ->orWhereHas('category', fn($sub) => $sub->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('supplier', fn($sub) => $sub->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('category', fn ($sub) => $sub->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('supplier', fn ($sub) => $sub->where('name', 'like', "%{$search}%"));
             });
         }
 

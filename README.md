@@ -185,14 +185,6 @@ After setup, log in with these accounts:
 | ICT Support | `support@nextgen.local` | `password` |
 | Operations Manager | `operations@nextgen.local` | `password` |
 
-## Troubleshooting
-
-- **App doesn't load:** Make sure both `php artisan serve` and `npm run dev` are running.
-- **Database errors:** Check your `.env` database settings and ensure MySQL is running.
-- **Blank page:** Clear browser cache or try a different browser.
-- **Can't access from other devices:** Use Option 2 (LAN) and check your firewall settings.
-- **Bootstrap times out:** Run the manual setup steps instead.
-
 ## Features
 
 - Dashboard with summaries
@@ -202,6 +194,47 @@ After setup, log in with these accounts:
 - User and department management
 - Notifications and reports
 - PDF exports
+- Straight-line depreciation and book value tracking
+- ERD, wireframes, and design notes in the `wireframe/` folder
+
+## CRUD Coverage
+
+The system follows a Laravel API plus React frontend CRUD structure.
+
+| Module | Create | Read | Update | Delete | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Inventory Items | Yes | Yes | Yes | Yes | Includes stock, assignment protection, depreciation, and CSV/PDF reporting |
+| Categories | Yes | Yes | Yes | Yes | Shared CRUD page |
+| Departments | Yes | Yes | Yes | Yes | Shared CRUD page |
+| Suppliers | Yes | Yes | Yes | Yes | Shared CRUD page |
+| Users | Yes | Yes | Yes | Yes | Admin-only user management |
+| Assignments | Yes | Yes | Return workflow | Protected history | Prevents over-assigning available stock |
+| Notifications | System-created | Yes | Read/unread | Yes | Includes filters, unread count, and stats |
+| Settings | Admin-managed | Yes | Yes | Limited | Branding and system behavior settings |
+
+Main CRUD files:
+
+- Backend routes: `routes/api.php`
+- Controllers: `app/Http/Controllers/`
+- Models: `app/Models/`
+- Frontend pages: `resources/js/pages/`
+- Shared CRUD component: `resources/js/components/CRUDPage.jsx`
+
+## Depreciation
+
+Inventory items support straight-line depreciation with:
+
+- `unit_cost`
+- `is_depreciable`
+- `depreciation_method`
+- `useful_life_years`
+- `salvage_value`
+- `depreciation_start_date`
+- calculated annual/monthly depreciation
+- accumulated depreciation
+- current book value per unit and total
+
+Coverage is included in `tests/Feature/ItemDepreciationTest.php`.
 
 ## Tech Stack
 
@@ -209,26 +242,6 @@ After setup, log in with these accounts:
 - Frontend: React 19, Vite, Tailwind CSS
 - Database: MySQL or MariaDB
 - Testing: PHPUnit
-
-## Docker Option
-
-For advanced users, you can run everything in Docker:
-
-```bash
-docker compose up --build
-```
-
-Then open `http://127.0.0.1:8000`.
-
-## Testing
-
-Run tests with:
-
-```bash
-composer verify
-```
-
-This runs unit tests and builds the frontend.
 
 ## Testing and Verification
 
@@ -240,38 +253,36 @@ composer verify
 
 This runs:
 
+- Laravel Pint style check
 - `php artisan test`
 - `npm run build`
 
-You can also run them separately:
+Tests use SQLite in memory, so they do not require your local MySQL database.
+
+You can also run checks separately:
 
 ```bash
+vendor/bin/pint --test
 php artisan test
 npm run build
 ```
 
-Tests use SQLite in memory, so they do not require your local MySQL database.
-
 ## Docker Quick Start
 
-This repo includes Docker support:
-
-- `Dockerfile`
-- `docker-compose.yml`
-- `.env.docker.example`
-- `docker/entrypoint.sh`
-
-Run:
+For advanced users, you can run everything in Docker:
 
 ```bash
 docker compose up --build
 ```
 
-Open:
+Then open `http://127.0.0.1:8000`.
 
-```text
-http://127.0.0.1:8000
-```
+Docker files included:
+
+- `Dockerfile`
+- `docker-compose.yml`
+- `.env.docker.example`
+- `docker/entrypoint.sh`
 
 Docker notes:
 
@@ -319,6 +330,13 @@ Ctrl + Shift + P -> Tasks: Run Task
 
 ## Troubleshooting
 
+If the app does not load, make sure both Laravel and Vite are running:
+
+```bash
+php artisan serve --host=127.0.0.1 --port=8000
+npm run dev
+```
+
 If login fails, confirm MySQL is running and the database exists:
 
 ```bash
@@ -326,11 +344,10 @@ php artisan migrate --seed
 php artisan optimize:clear
 ```
 
-If assets do not refresh during development, keep both Laravel and Vite running:
+If the frontend is blank or old assets appear, clear the browser cache and rebuild:
 
 ```bash
-php artisan serve --host=127.0.0.1 --port=8000
-npm run dev
+npm run build
 ```
 
 If storage files or profile photos do not load:
@@ -374,6 +391,8 @@ Before production deployment:
 ## Project References
 
 - `wireframe/ERD - Nextgen Assets Management System.txt`
+- `wireframe/erd-current.txt`
+- `graph.png`
 - `wireframe/Schema Alignment Notes.txt`
 - `wireframe/Detailed ASCII Wireframes.txt`
 - `wireframe/Detailed Design Spec.txt`

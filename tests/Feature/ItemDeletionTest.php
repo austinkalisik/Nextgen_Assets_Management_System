@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Department;
-use App\Models\Item;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -44,7 +43,7 @@ class ItemDeletionTest extends TestCase
 
         $this->assertNotNull($itemId);
 
-        $deleteResponse = $this->actingAs($user)->deleteJson('/api/items/' . $itemId);
+        $deleteResponse = $this->actingAs($user)->deleteJson('/api/items/'.$itemId);
 
         $deleteResponse->assertOk()
             ->assertJsonPath('message', 'Item deleted successfully');
@@ -94,7 +93,7 @@ class ItemDeletionTest extends TestCase
             'quantity' => 1,
         ])->assertCreated();
 
-        $deleteResponse = $this->actingAs($user)->deleteJson('/api/items/' . $itemId);
+        $deleteResponse = $this->actingAs($user)->deleteJson('/api/items/'.$itemId);
 
         $deleteResponse->assertStatus(422)
             ->assertJsonPath('message', 'Cannot delete an item that is currently issued out. Mark active assignments as returned first.');

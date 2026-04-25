@@ -19,6 +19,7 @@ class AssignmentController extends Controller
     private const REPORT_TIMEZONE = 'Pacific/Port_Moresby';
 
     protected StockInventoryService $stockInventoryService;
+
     protected SystemNotificationService $notificationService;
 
     public function __construct(
@@ -84,7 +85,7 @@ class AssignmentController extends Controller
                     }
                 });
             })
-            ->when(!$request->filled('search') && $this->hasReportAssignmentFilter($request), function ($query) use ($filteredItemIds) {
+            ->when(! $request->filled('search') && $this->hasReportAssignmentFilter($request), function ($query) use ($filteredItemIds) {
                 $query->whereIn('id', $filteredItemIds);
             });
 
@@ -189,7 +190,7 @@ class AssignmentController extends Controller
             $item = Item::query()->lockForUpdate()->findOrFail($validated['item_id']);
             $department = Department::query()->lockForUpdate()->find($validated['department_id']);
 
-            if (!$department) {
+            if (! $department) {
                 throw ValidationException::withMessages([
                     'department_id' => 'Selected department is invalid.',
                 ]);
@@ -209,7 +210,7 @@ class AssignmentController extends Controller
                 ]);
             }
 
-            if (method_exists($item, 'isAssignable') && !$item->isAssignable()) {
+            if (method_exists($item, 'isAssignable') && ! $item->isAssignable()) {
                 throw ValidationException::withMessages([
                     'item_id' => 'This item is not currently assignable.',
                 ]);
@@ -228,8 +229,8 @@ class AssignmentController extends Controller
                 $this->stockInventoryService->stockOut(
                     $item,
                     $validated['quantity'],
-                    'ASN-' . $assignment->id,
-                    'Assigned to ' . $assignment->receiver_name
+                    'ASN-'.$assignment->id,
+                    'Assigned to '.$assignment->receiver_name
                 );
             } catch (InvalidArgumentException $e) {
                 $item->refresh();
@@ -256,7 +257,7 @@ class AssignmentController extends Controller
                 $assignment->id
             );
 
-            if (!empty($assignment->user_id)) {
+            if (! empty($assignment->user_id)) {
                 $this->notifyUser(
                     (int) $assignment->user_id,
                     'assignment_created',
@@ -308,9 +309,9 @@ class AssignmentController extends Controller
             $this->stockInventoryService->stockIn(
                 $item,
                 (int) $assignment->quantity,
-                'RET-' . $assignment->id,
+                'RET-'.$assignment->id,
                 null,
-                'Returned from ' . ($assignment->receiver_name ?: 'receiver')
+                'Returned from '.($assignment->receiver_name ?: 'receiver')
             );
 
             AssetLog::log(

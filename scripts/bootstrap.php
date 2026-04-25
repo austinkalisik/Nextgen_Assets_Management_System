@@ -48,5 +48,5 @@ function run(string $command): void
 
 function out(string $message): void
 {
-    fwrite(STDOUT, $message . PHP_EOL);
+    fwrite(STDOUT, $message.PHP_EOL);
 }

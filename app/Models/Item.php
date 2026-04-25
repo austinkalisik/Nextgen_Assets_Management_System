@@ -10,11 +10,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Item extends Model
 {
     public const DEPRECIATION_METHOD_NONE = 'none';
+
     public const DEPRECIATION_METHOD_STRAIGHT_LINE = 'straight_line';
 
     public const STATUS_AVAILABLE = 'available';
+
     public const STATUS_MAINTENANCE = 'maintenance';
+
     public const STATUS_LOST = 'lost';
+
     public const STATUS_RETIRED = 'retired';
 
     protected $fillable = [
@@ -261,7 +265,7 @@ class Item extends Model
     {
         return (int) $this->stockMovements()
             ->get()
-            ->sum(fn(StockMovement $movement) => $movement->signed_quantity);
+            ->sum(fn (StockMovement $movement) => $movement->signed_quantity);
     }
 
     public function syncAutomatedStatus(): void
@@ -272,6 +276,7 @@ class Item extends Model
 
         if (in_array($this->status, [self::STATUS_MAINTENANCE, self::STATUS_RETIRED, self::STATUS_LOST], true)) {
             $this->save();
+
             return;
         }
 

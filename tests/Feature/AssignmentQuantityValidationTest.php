@@ -192,7 +192,7 @@ class AssignmentQuantityValidationTest extends TestCase
 
         return Item::create([
             'name' => 'ANDROID',
-            'sku' => 'SKU-' . fake()->unique()->numberBetween(1000, 9999),
+            'sku' => 'SKU-'.fake()->unique()->numberBetween(1000, 9999),
             'brand' => 'Lenovo',
             'category_id' => $category->id,
             'supplier_id' => $supplier->id,

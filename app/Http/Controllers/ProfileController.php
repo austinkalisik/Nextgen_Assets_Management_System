@@ -23,7 +23,7 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -34,20 +34,20 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'current_password' => ['nullable', 'string'],
             'password' => ['nullable', 'confirmed', Password::min(6)],
             'profile_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        if (!empty($validated['password'])) {
-            if (empty($validated['current_password']) || !Hash::check($validated['current_password'], $user->password)) {
+        if (! empty($validated['password'])) {
+            if (empty($validated['current_password']) || ! Hash::check($validated['current_password'], $user->password)) {
                 return response()->json(['message' => 'Current password is incorrect.'], 422);
             }
 
@@ -72,7 +72,7 @@ class ProfileController extends Controller
 
         $user->update($validated);
 
-        if (!$request->expectsJson() && !$request->is('api/*')) {
+        if (! $request->expectsJson() && ! $request->is('api/*')) {
             return redirect()->route('profile.edit')->with('status', 'profile-updated');
         }
 
@@ -104,7 +104,7 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -124,7 +124,7 @@ class ProfileController extends Controller
 
     public function showPhoto(User $user)
     {
-        if (!$user->profile_photo || !Storage::disk('public')->exists($user->profile_photo)) {
+        if (! $user->profile_photo || ! Storage::disk('public')->exists($user->profile_photo)) {
             abort(404);
         }
 

@@ -6,9 +6,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-$app = require __DIR__ . '/../bootstrap/app.php';
+$app = require __DIR__.'/../bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
 
 $settings = DB::table('settings')->pluck('value', 'key');
@@ -35,8 +35,8 @@ if (! is_dir($reportDirectory)) {
     mkdir($reportDirectory, 0777, true);
 }
 
-$pdfPath = $reportDirectory . DIRECTORY_SEPARATOR . 'nextgen-asset-management-system-demo-report.pdf';
-$htmlPath = $reportDirectory . DIRECTORY_SEPARATOR . 'nextgen-asset-management-system-demo-report.html';
+$pdfPath = $reportDirectory.DIRECTORY_SEPARATOR.'nextgen-asset-management-system-demo-report.pdf';
+$htmlPath = $reportDirectory.DIRECTORY_SEPARATOR.'nextgen-asset-management-system-demo-report.html';
 
 file_put_contents($htmlPath, $html);
 
@@ -44,5 +44,5 @@ Pdf::loadHTML($html)
     ->setPaper('a4')
     ->save($pdfPath);
 
-echo "HTML: {$htmlPath}" . PHP_EOL;
-echo "PDF: {$pdfPath}" . PHP_EOL;
+echo "HTML: {$htmlPath}".PHP_EOL;
+echo "PDF: {$pdfPath}".PHP_EOL;

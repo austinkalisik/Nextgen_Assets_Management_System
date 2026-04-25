@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\SystemNotificationMail;
 use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\SystemNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -139,7 +141,7 @@ class SystemNotificationServiceTest extends TestCase
             10
         );
 
-        Mail::assertSent(\App\Mail\SystemNotificationMail::class, function ($mail) use ($otherAdmin) {
+        Mail::assertSent(SystemNotificationMail::class, function ($mail) use ($otherAdmin) {
             return $mail->hasTo($otherAdmin->email)
                 && $mail->title === 'Asset Updated';
         });
@@ -234,7 +236,7 @@ class SystemNotificationServiceTest extends TestCase
 
     protected function enableSetting(string $key, string $value): void
     {
-        \Illuminate\Support\Facades\DB::table('settings')->insert([
+        DB::table('settings')->insert([
             'key' => $key,
             'value' => $value,
             'created_at' => now(),

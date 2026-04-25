@@ -97,7 +97,7 @@ class StockInventoryService
 
             if ($quantity < 0 && abs($quantity) > (int) $lockedItem->quantity) {
                 throw new InvalidArgumentException(
-                    "Adjustment exceeds available stock. Available: {$lockedItem->quantity}, Requested reduction: " . abs($quantity) . '.'
+                    "Adjustment exceeds available stock. Available: {$lockedItem->quantity}, Requested reduction: ".abs($quantity).'.'
                 );
             }
 

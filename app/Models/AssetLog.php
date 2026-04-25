@@ -9,11 +9,17 @@ use Illuminate\Support\Facades\Auth;
 class AssetLog extends Model
 {
     public const ACTION_CREATED = 'created';
+
     public const ACTION_UPDATED = 'updated';
+
     public const ACTION_DELETED = 'deleted';
+
     public const ACTION_ASSIGNED = 'assigned';
+
     public const ACTION_RETURNED = 'returned';
+
     public const ACTION_STOCK_IN = 'stock_in';
+
     public const ACTION_STOCK_OUT = 'stock_out';
 
     protected $fillable = [
@@ -22,6 +28,7 @@ class AssetLog extends Model
         'action',
         'notes',
     ];
+
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -31,7 +38,7 @@ class AssetLog extends Model
     {
         $userId = Auth::id() ?? User::query()->value('id');
 
-        if (!$userId) {
+        if (! $userId) {
             return;
         }
 

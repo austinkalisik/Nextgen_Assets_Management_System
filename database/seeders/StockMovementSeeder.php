@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Item;
-use App\Models\Supplier;
 use App\Models\StockMovement;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -13,7 +13,7 @@ class StockMovementSeeder extends Seeder
     public function run(): void
     {
         $admin = User::where('role', 'admin')->first();
-        if (!$admin) {
+        if (! $admin) {
             $admin = User::first();
         }
 

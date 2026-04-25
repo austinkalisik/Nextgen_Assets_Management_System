@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StockMovement extends Model
 {
     public const TYPE_IN = 'IN';
+
     public const TYPE_OUT = 'OUT';
+
     public const TYPE_ADJUSTMENT = 'ADJUSTMENT';
+
     public const TYPE_RETURN = 'RETURN';
+
     public const TYPE_TRANSFER = 'TRANSFER';
 
     public const TYPES = [

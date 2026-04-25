@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Supplier;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -123,5 +122,4 @@ class ItemDepreciationTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['salvage_value']);
     }
-
 }

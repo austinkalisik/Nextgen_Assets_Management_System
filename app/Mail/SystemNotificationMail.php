@@ -15,8 +15,7 @@ class SystemNotificationMail extends Mailable
         public string $title,
         public string $messageBody,
         public ?string $actionUrl = null
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {

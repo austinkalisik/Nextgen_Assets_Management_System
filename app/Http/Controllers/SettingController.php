@@ -28,7 +28,7 @@ class SettingController extends Controller
         foreach ($defaults as $key => $value) {
             $exists = DB::table('settings')->where('key', $key)->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 DB::table('settings')->insert([
                     'key' => $key,
                     'value' => $value,
@@ -140,7 +140,7 @@ class SettingController extends Controller
 
         $logo = $this->getSettingValue('system_logo');
 
-        if (!$logo || !Storage::disk('public')->exists($logo)) {
+        if (! $logo || ! Storage::disk('public')->exists($logo)) {
             abort(404);
         }
 

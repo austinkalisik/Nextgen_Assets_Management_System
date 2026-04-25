@@ -12,7 +12,7 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -34,7 +34,7 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -62,7 +62,7 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -75,7 +75,7 @@ class NotificationController extends Controller
     {
         $notification = $this->findUserNotification($id);
 
-        if (!$notification->read_at) {
+        if (! $notification->read_at) {
             $notification->update([
                 'read_at' => now(),
             ]);
@@ -105,7 +105,7 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -134,7 +134,7 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -152,7 +152,7 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
 
@@ -216,7 +216,7 @@ class NotificationController extends Controller
 
     protected function resolveNotificationUrl(SystemNotification $notification): string
     {
-        if (!empty($notification->url)) {
+        if (! empty($notification->url)) {
             return $notification->url;
         }
 

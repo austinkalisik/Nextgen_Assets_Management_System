@@ -93,7 +93,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'role' => ['required', 'in:admin,manager,asset_officer,staff'],
             'password' => ['nullable', 'confirmed', Password::min(6)],
         ]);
@@ -149,7 +149,7 @@ class UserController extends Controller
         Auth::login($user);
 
         return response()->json([
-            'message' => 'Now impersonating ' . $user->name,
+            'message' => 'Now impersonating '.$user->name,
         ]);
     }
 

@@ -81,8 +81,8 @@ class SystemNotificationService
             'message' => $message,
             'url' => $url,
             'source_type' => $sourceType,
-                'source_id' => $sourceId,
-                'data' => $data,
+            'source_id' => $sourceId,
+            'data' => $data,
         ]);
 
         $user = User::find($userId);
@@ -177,7 +177,7 @@ class SystemNotificationService
             return $url;
         }
 
-        return rtrim((string) config('app.url'), '/') . '/' . ltrim($url, '/');
+        return rtrim((string) config('app.url'), '/').'/'.ltrim($url, '/');
     }
 
     protected function isSettingEnabled(string $key, bool $default = false): bool

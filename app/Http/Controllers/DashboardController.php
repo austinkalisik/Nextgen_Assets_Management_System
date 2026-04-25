@@ -14,7 +14,7 @@ class DashboardController extends Controller
     {
         $value = DB::table('settings')->where('key', $key)->value('value');
 
-        if (!is_numeric($value)) {
+        if (! is_numeric($value)) {
             return $default;
         }
 
