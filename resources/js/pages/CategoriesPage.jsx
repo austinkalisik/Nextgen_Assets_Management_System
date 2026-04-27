@@ -9,6 +9,7 @@ function defaultForm() {
     return {
         name: '',
         description: '',
+        default_useful_life_years: '',
     };
 }
 
@@ -150,6 +151,7 @@ export default function CategoriesPage() {
         setForm({
             name: category.name || '',
             description: category.description || '',
+            default_useful_life_years: category.default_useful_life_years ?? '',
         });
         setEditingId(category.id);
         setShowForm(true);
@@ -168,6 +170,10 @@ export default function CategoriesPage() {
             const payload = {
                 name: form.name.trim(),
                 description: form.description.trim(),
+                default_useful_life_years:
+                    form.default_useful_life_years === ''
+                        ? ''
+                        : Number.parseInt(String(form.default_useful_life_years), 10),
             };
 
             if (editingId) {
@@ -226,6 +232,7 @@ export default function CategoriesPage() {
                 exportRows.map((category) => ({
                     'Category Name': category.name || '',
                     Description: category.description || '',
+                    'Default Useful Life (Years)': category.default_useful_life_years ?? '',
                     'Linked Items': category.items_count ?? 0,
                 }))
             );
@@ -314,7 +321,7 @@ export default function CategoriesPage() {
                             <p className="section-subtitle">Use short category names that officers will understand during asset entry.</p>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-[360px_1fr]">
+                        <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-[280px_220px_1fr]">
                             <div>
                                 <label className="field-label">Category Name</label>
                                 <input
@@ -327,6 +334,18 @@ export default function CategoriesPage() {
                                 />
                             </div>
                             <div>
+                                <label className="field-label">Default Useful Life</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="50"
+                                    value={form.default_useful_life_years}
+                                    onChange={(event) => setForm((prev) => ({ ...prev, default_useful_life_years: event.target.value }))}
+                                    className="input-shell w-full"
+                                    placeholder="Years"
+                                />
+                            </div>
+                            <div>
                                 <label className="field-label">Description</label>
                                 <textarea
                                     rows={3}
@@ -336,7 +355,7 @@ export default function CategoriesPage() {
                                     placeholder="Explain what belongs in this category"
                                 />
                             </div>
-                            <div className="flex flex-col gap-2 sm:flex-row lg:col-span-2">
+                            <div className="flex flex-col gap-2 sm:flex-row lg:col-span-3">
                                 <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">
                                     {saving ? 'Saving...' : editingId ? 'Update Category' : 'Create Category'}
                                 </button>
@@ -364,6 +383,11 @@ export default function CategoriesPage() {
                                         <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
                                             {category.items_count ?? 0} linked item(s)
                                         </span>
+                                        {category.default_useful_life_years ? (
+                                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                                {category.default_useful_life_years} year useful life
+                                            </span>
+                                        ) : null}
                                     </div>
                                     <div className="mt-4">
                                         <CategoryActions category={category} onEdit={handleEdit} onDelete={handleDelete} deletingId={deletingId} />
@@ -386,6 +410,7 @@ export default function CategoriesPage() {
                             <tr>
                                 <th className="px-6 py-4 text-left font-semibold">Category</th>
                                 <th className="px-6 py-4 text-left font-semibold">Description</th>
+                                <th className="px-6 py-4 text-left font-semibold">Useful Life</th>
                                 <th className="px-6 py-4 text-left font-semibold">Linked Items</th>
                                 <th className="px-6 py-4 text-left font-semibold">Actions</th>
                             </tr>
@@ -403,6 +428,9 @@ export default function CategoriesPage() {
                                             </div>
                                         </td>
                                         <td className="max-w-xl px-6 py-4 text-slate-700">{category.description || '-'}</td>
+                                        <td className="px-6 py-4 text-slate-700">
+                                            {category.default_useful_life_years ? `${category.default_useful_life_years} years` : '-'}
+                                        </td>
                                         <td className="px-6 py-4">
                                             <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
                                                 {category.items_count ?? 0}
@@ -415,7 +443,7 @@ export default function CategoriesPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="4" className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
                                         No categories found.
                                     </td>
                                 </tr>

@@ -20,10 +20,49 @@ const DEFAULT_SETTINGS = {
     system_logo_url: '',
 };
 
+const SETTINGS_CACHE_KEY = 'nextgen.settings.v1';
+const SETTINGS_CACHE_TTL = 10 * 60 * 1000;
+
+function readCachedSettings() {
+    try {
+        const cached = window.sessionStorage.getItem(SETTINGS_CACHE_KEY);
+
+        if (!cached) {
+            return null;
+        }
+
+        const parsed = JSON.parse(cached);
+
+        if (!parsed?.settings || Date.now() - parsed.timestamp > SETTINGS_CACHE_TTL) {
+            window.sessionStorage.removeItem(SETTINGS_CACHE_KEY);
+            return null;
+        }
+
+        return parsed.settings;
+    } catch {
+        return null;
+    }
+}
+
+function writeCachedSettings(settings) {
+    try {
+        window.sessionStorage.setItem(
+            SETTINGS_CACHE_KEY,
+            JSON.stringify({
+                settings,
+                timestamp: Date.now(),
+            })
+        );
+    } catch {
+        // Storage can be unavailable in private browser modes.
+    }
+}
+
 export function SettingsProvider({ children }) {
     const { isAuthenticated } = useAuth();
-    const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-    const [loading, setLoading] = useState(true);
+    const cachedSettings = readCachedSettings();
+    const [settings, setSettings] = useState(cachedSettings || DEFAULT_SETTINGS);
+    const [loading, setLoading] = useState(!cachedSettings);
 
     const refreshSettings = useCallback(async () => {
         if (!isAuthenticated) {
@@ -50,6 +89,7 @@ export function SettingsProvider({ children }) {
                 mapped.system_logo_url = '';
             }
 
+            writeCachedSettings(mapped);
             setSettings(mapped);
         } catch (error) {
             console.error('Failed to load settings', error);

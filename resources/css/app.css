@@ -24,7 +24,7 @@ body {
 }
 
 .card {
-    @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm;
+    @apply p-5 bg-white border shadow-sm rounded-xl border-slate-200;
 }
 
 .card-hover {
@@ -36,7 +36,7 @@ body {
 }
 
 .badge {
-    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+    @apply inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full;
 }
 
 .badge-success {
@@ -48,7 +48,7 @@ body {
 }
 
 .badge-danger {
-    @apply bg-red-100 text-red-700;
+    @apply text-red-700 bg-red-100;
 }
 
 .panel {
@@ -56,7 +56,7 @@ body {
 }
 
 .panel-header {
-    @apply border-b border-slate-200/70 px-6 py-5;
+    @apply px-6 py-5 border-b border-slate-200/70;
 }
 
 .panel-body {
@@ -64,7 +64,7 @@ body {
 }
 
 .input-shell {
-    @apply rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100;
+    @apply px-4 py-3 text-sm font-medium transition border outline-none rounded-2xl border-slate-200 bg-white/95 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100;
 }
 
 .btn-primary {
@@ -104,7 +104,7 @@ body {
 }
 
 .page-subtitle {
-    @apply mt-1 max-w-3xl text-sm leading-6 text-slate-500;
+    @apply max-w-3xl mt-1 text-sm leading-6 text-slate-500;
 }
 
 .section-title {
@@ -116,7 +116,7 @@ body {
 }
 
 .field-label {
-    @apply mb-2 block text-sm font-semibold text-slate-700;
+    @apply block mb-2 text-sm font-semibold text-slate-700;
 }
 
 .desktop-table {

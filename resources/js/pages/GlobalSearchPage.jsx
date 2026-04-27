@@ -13,7 +13,7 @@ const BASE_SEARCH_SECTIONS = [
         mapItem: (item) => ({
             title: item.name || 'Inventory item',
             detail: [item.asset_tag, item.sku, item.category?.name, item.supplier?.name].filter(Boolean).join(' | '),
-            meta: `Quantity: ${item.quantity ?? 0}`,
+            meta: `Quantity: ${item.quantity ?? 0} ${item.unit_of_measurement || 'unit'}`,
         }),
     },
     {

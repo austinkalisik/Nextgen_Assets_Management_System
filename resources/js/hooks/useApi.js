@@ -120,6 +120,19 @@ export function invalidateApiCache(prefix = '') {
     }
 }
 
+export function clearApiSessionCache() {
+    requestCache.clear();
+    inFlightRequests.clear();
+
+    try {
+        Object.keys(window.sessionStorage)
+            .filter((key) => key.startsWith(CACHE_PREFIX))
+            .forEach((key) => window.sessionStorage.removeItem(key));
+    } catch {
+        return;
+    }
+}
+
 export function useApi(endpoint, options = {}, config = {}) {
     const ttl = config.ttl ?? DEFAULT_TTL;
     const enabled = config.enabled ?? true;

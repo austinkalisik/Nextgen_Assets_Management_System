@@ -197,6 +197,7 @@ export default function InventoryPage() {
                                 <th className="px-6 py-4 text-left font-semibold">Category</th>
                                 <th className="px-6 py-4 text-left font-semibold">Supplier</th>
                                 <th className="px-6 py-4 text-left font-semibold">Quantity</th>
+                                <th className="px-6 py-4 text-left font-semibold">Unit</th>
                                 <th className="px-6 py-4 text-left font-semibold">Stock Status</th>
                                 <th className="px-6 py-4 text-left font-semibold">Actions</th>
                             </tr>
@@ -228,7 +229,8 @@ export default function InventoryPage() {
                                             <td className="px-6 py-4 text-slate-700">{item.sku || item.asset_tag || '-'}</td>
                                             <td className="px-6 py-4 text-slate-700">{item.category?.name || '-'}</td>
                                             <td className="px-6 py-4 text-slate-700">{item.supplier?.name || '-'}</td>
-                                            <td className="px-6 py-4 text-slate-700">{quantity}</td>
+                                            <td className="px-6 py-4 text-slate-700">{quantity} {item.unit_of_measurement || 'unit'}</td>
+                                            <td className="px-6 py-4 text-slate-700">{item.unit_of_measurement || 'unit'}</td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
                                                     {badgeText}
@@ -244,7 +246,7 @@ export default function InventoryPage() {
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan="8" className="px-6 py-10 text-center text-slate-500">
                                         No inventory items found.
                                     </td>
                                 </tr>

@@ -18,7 +18,8 @@ class CategoryController extends Controller
 
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('default_useful_life_years', 'like', "%{$search}%");
             });
         }
 
@@ -30,6 +31,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:categories,name'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'default_useful_life_years' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         $category = Category::create($validated);
@@ -47,6 +49,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:categories,name,'.$category->id],
             'description' => ['nullable', 'string', 'max:1000'],
+            'default_useful_life_years' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         $category->update($validated);

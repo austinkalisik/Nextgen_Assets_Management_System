@@ -31,7 +31,7 @@ class ItemController extends Controller
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
         $defaultReorderLevel = $this->getIntSetting('low_stock_threshold', 5);
 
-        $query = Item::with(['category', 'supplier'])->latest();
+        $query = $this->financialItemQuery()->latest();
 
         if ($request->filled('search')) {
             $search = trim((string) $request->search);
@@ -82,6 +82,7 @@ class ItemController extends Controller
             'asset_tag' => ['nullable', 'string', 'max:255'],
             'serial_number' => ['nullable', 'string', 'max:255'],
             'quantity' => ['required', 'integer', 'min:1'],
+            'unit_of_measurement' => ['nullable', 'string', 'max:50'],
             'reorder_level' => ['nullable', 'integer', 'min:0'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'is_depreciable' => ['nullable', 'boolean'],
@@ -252,8 +253,41 @@ class ItemController extends Controller
             'supplier',
             'assignments.assignedDepartment',
         ]);
+        $item->loadSum('activeAssignments as active_assigned_quantity', 'quantity');
 
         return response()->json($item);
+    }
+
+    public function depreciationReport(Request $request)
+    {
+        $query = $this->financialItemQuery()
+            ->where('is_depreciable', true)
+            ->orderBy('name');
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('asset_tag', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhereHas('category', function ($sub) use ($search) {
+                        $sub->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        return response()->json([
+            'data' => $query->get(),
+        ]);
     }
 
     public function update(Request $request, Item $item)
@@ -269,6 +303,7 @@ class ItemController extends Controller
             'supplier_id' => ['required', 'exists:suppliers,id'],
             'asset_tag' => ['nullable', 'string', 'max:255', 'unique:items,asset_tag,'.$item->id],
             'serial_number' => ['nullable', 'string', 'max:255', 'unique:items,serial_number,'.$item->id],
+            'unit_of_measurement' => ['nullable', 'string', 'max:50'],
             'reorder_level' => ['nullable', 'integer', 'min:0'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'is_depreciable' => ['nullable', 'boolean'],
@@ -297,6 +332,7 @@ class ItemController extends Controller
         }
 
         $item->refresh()->load(['category', 'supplier']);
+        $item->loadSum('activeAssignments as active_assigned_quantity', 'quantity');
 
         AssetLog::log(
             $item->id,
@@ -325,6 +361,74 @@ class ItemController extends Controller
         }
 
         return response()->json($item);
+    }
+
+    public function retire(Request $request, Item $item)
+    {
+        $validated = $request->validate([
+            'disposal_value' => ['nullable', 'numeric', 'min:0'],
+            'disposal_reason' => ['required', 'string', 'max:1000'],
+            'retired_at' => ['nullable', 'date'],
+        ]);
+
+        if ($item->activeAssignments()->exists()) {
+            return response()->json([
+                'message' => 'Return all active assignments before retiring or disposing this asset.',
+            ], 422);
+        }
+
+        if ($item->isRetired()) {
+            return response()->json([
+                'message' => 'This asset is already retired.',
+            ], 422);
+        }
+
+        $quantityToRetire = max(0, (int) $item->quantity);
+        $reason = trim((string) $validated['disposal_reason']);
+
+        DB::transaction(function () use ($item, $validated, $quantityToRetire, $reason) {
+            if ($quantityToRetire > 0) {
+                $this->stockInventoryService->stockAdjustment(
+                    $item,
+                    -$quantityToRetire,
+                    'RETIRE-'.$item->id,
+                    'Asset retired/disposed: '.$reason
+                );
+            }
+
+            $item->refresh();
+            $item->update([
+                'status' => Item::STATUS_RETIRED,
+                'retired_at' => $validated['retired_at'] ?? now(),
+                'disposal_value' => array_key_exists('disposal_value', $validated) && $validated['disposal_value'] !== null
+                    ? (float) $validated['disposal_value']
+                    : null,
+                'disposal_reason' => $reason,
+            ]);
+        });
+
+        AssetLog::log(
+            $item->id,
+            AssetLog::ACTION_RETIRED,
+            "Asset retired/disposed. Quantity retired: {$quantityToRetire}. Reason: {$reason}"
+        );
+
+        $this->notifyAdmins(
+            'asset_retired',
+            'Asset Retired',
+            "Asset '{$item->name}' was retired/disposed.",
+            '/inventory',
+            'item',
+            $item->id
+        );
+
+        $item = $item->fresh(['category', 'supplier']);
+        $item->loadSum('activeAssignments as active_assigned_quantity', 'quantity');
+
+        return response()->json([
+            'message' => 'Asset retired/disposed successfully.',
+            'item' => $item,
+        ]);
     }
 
     public function destroy(Item $item)
@@ -446,6 +550,7 @@ class ItemController extends Controller
             'supplier_id' => $validated['supplier_id'],
             'asset_tag' => $this->normalizeNullable($validated['asset_tag'] ?? null),
             'serial_number' => $this->normalizeNullable($validated['serial_number'] ?? null),
+            'unit_of_measurement' => trim((string) ($validated['unit_of_measurement'] ?? 'unit')) ?: 'unit',
             'unit_cost' => array_key_exists('unit_cost', $validated) && $validated['unit_cost'] !== null
                 ? (float) $validated['unit_cost']
                 : null,
@@ -480,10 +585,16 @@ class ItemController extends Controller
         return $payload;
     }
 
+    protected function financialItemQuery()
+    {
+        return Item::with(['category', 'supplier'])
+            ->withSum('activeAssignments as active_assigned_quantity', 'quantity');
+    }
+
     protected function normalizeDepreciationPayload(array $payload): array
     {
         if (! $payload['is_depreciable']) {
-            $payload['depreciation_method'] = self::normalizeDepreciationMethod(null);
+            $payload['depreciation_method'] = Item::DEPRECIATION_METHOD_NONE;
             $payload['useful_life_years'] = null;
             $payload['salvage_value'] = null;
             $payload['depreciation_start_date'] = null;

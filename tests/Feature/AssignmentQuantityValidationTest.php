@@ -32,7 +32,7 @@ class AssignmentQuantityValidationTest extends TestCase
         $response
             ->assertStatus(422)
             ->assertJsonValidationErrors(['quantity'])
-            ->assertJsonPath('errors.quantity.0', 'Only 1 unit(s) are available for assignment.');
+            ->assertJsonPath('errors.quantity.0', 'Only 1 unit available for assignment.');
 
         $this->assertSame(1, $item->fresh()->quantity);
         $this->assertDatabaseCount('assignments', 0);
@@ -140,7 +140,7 @@ class AssignmentQuantityValidationTest extends TestCase
         $response
             ->assertStatus(422)
             ->assertJsonValidationErrors(['quantity'])
-            ->assertJsonPath('errors.quantity.0', 'Only 1 unit(s) are available for assignment.');
+            ->assertJsonPath('errors.quantity.0', 'Only 1 unit available for assignment.');
 
         $this->assertSame(1, $item->fresh()->quantity);
         $this->assertDatabaseCount('assignments', 0);
@@ -164,7 +164,7 @@ class AssignmentQuantityValidationTest extends TestCase
             ->postJson('/api/assignments', $payload)
             ->assertStatus(422)
             ->assertJsonValidationErrors(['quantity'])
-            ->assertJsonPath('errors.quantity.0', 'Only 0 unit(s) are available for assignment.');
+            ->assertJsonPath('errors.quantity.0', 'Only 0 unit available for assignment.');
 
         $this->assertSame(0, $item->fresh()->quantity);
         $this->assertSame(1, Assignment::count());

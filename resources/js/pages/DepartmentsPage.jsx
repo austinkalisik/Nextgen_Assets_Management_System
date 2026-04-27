@@ -20,12 +20,14 @@ export default function DepartmentsPage() {
         {
             name: 'assignments_count',
             label: 'Total Assignments',
+            form: false,
             required: false,
             render: (value) => renderCount(value),
         },
         {
             name: 'active_assignments_count',
             label: 'Active Assignments',
+            form: false,
             required: false,
             render: (value) => renderCount(value),
         },

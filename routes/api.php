@@ -10,6 +10,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReceiverController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
@@ -35,6 +36,7 @@ Route::middleware('web')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
 
         Route::get('/items', [ItemController::class, 'index']);
+        Route::get('/items/depreciation-report', [ItemController::class, 'depreciationReport']);
         Route::get('/items/{item}', [ItemController::class, 'show']);
 
         Route::get('/assignments', [AssignmentController::class, 'index']);
@@ -67,6 +69,7 @@ Route::middleware('web')->group(function () {
             Route::post('/items', [ItemController::class, 'store']);
             Route::put('/items/{item}', [ItemController::class, 'update']);
             Route::delete('/items/{item}', [ItemController::class, 'destroy']);
+            Route::post('/items/{item}/retire', [ItemController::class, 'retire']);
 
             Route::post('/assignments', [AssignmentController::class, 'store']);
             Route::put('/assignments/{assignment}/return', [AssignmentController::class, 'returnItem']);
@@ -81,6 +84,7 @@ Route::middleware('web')->group(function () {
 
             Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
             Route::apiResource('departments', DepartmentController::class)->except(['index', 'show']);
+            Route::apiResource('receivers', ReceiverController::class)->except(['index', 'show']);
             Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
         });
 
@@ -88,6 +92,8 @@ Route::middleware('web')->group(function () {
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
         Route::get('/departments', [DepartmentController::class, 'index']);
         Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+        Route::get('/receivers', [ReceiverController::class, 'index']);
+        Route::get('/receivers/{receiver}', [ReceiverController::class, 'show']);
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
 

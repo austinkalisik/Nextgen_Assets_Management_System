@@ -14,7 +14,6 @@ const TABS = [
     { id: 'stock', label: 'Stock Check', description: 'Available vs issued', status: '' },
     { id: 'history', label: 'Full History', description: 'Audit trail', status: '' },
 ];
-
 const PERIOD_OPTIONS = [
     { id: 'all', label: 'All time' },
     { id: 'today', label: 'Today' },
@@ -26,6 +25,7 @@ const PERIOD_OPTIONS = [
 function defaultForm() {
     return {
         item_id: '',
+        receiver_id: '',
         receiver_name: '',
         department_id: '',
         quantity: '1',
@@ -115,7 +115,7 @@ function extractErrorMessage(error) {
         }
     }
 
-    return response?.message || error?.message || 'Action failed. Please try again.';
+    return response?.message || error?.message || 'Action Failed. Please try again.';
 }
 
 function statusBadge(returnedAt) {
@@ -191,7 +191,7 @@ function AssignmentCard({ assignment, onOpen, onReturn }) {
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
                     <p className="text-xs text-slate-500">Quantity</p>
-                    <p className="font-semibold text-slate-900">{assignment.quantity || 0}</p>
+                    <p className="font-semibold text-slate-900">{assignment.quantity || 0} {assignment.item?.unit_of_measurement || 'unit'}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
                     <p className="text-xs text-slate-500">Department</p>
@@ -249,7 +249,7 @@ function AssignmentDetail({ assignment, onClose, onReturn }) {
                 </div>
                 <div className="rounded-lg bg-white px-4 py-3">
                     <p className="text-xs text-slate-500">Quantity</p>
-                    <p className="font-semibold text-slate-950">{assignment.quantity || 0}</p>
+                    <p className="font-semibold text-slate-950">{assignment.quantity || 0} {assignment.item?.unit_of_measurement || 'unit'}</p>
                 </div>
                 <div className="rounded-lg bg-white px-4 py-3">
                     <p className="text-xs text-slate-500">Status</p>
@@ -307,7 +307,7 @@ export default function AssignmentsPage() {
     const [searchInput, setSearchInput] = useState(filters.search);
     const [form, setForm] = useState(defaultForm());
     const [itemsList, setItemsList] = useState([]);
-    const [departmentsList, setDepartmentsList] = useState([]);
+    const [receiversList, setReceiversList] = useState([]);
     const [report, setReport] = useState({ items: [], receivers: [], history: [] });
     const [reportLoading, setReportLoading] = useState(false);
     const [selectedReceiver, setSelectedReceiver] = useState('');
@@ -325,18 +325,12 @@ export default function AssignmentsPage() {
 
     useEffect(() => {
         void fetchItemsOptions();
-        void fetchDepartmentsOptions();
+        void fetchReceiversOptions();
     }, []);
 
     useEffect(() => {
         void fetchAssignmentReport();
     }, [filters.search, reportDateRange.date_start, reportDateRange.date_end]);
-
-    useEffect(() => {
-        if (departmentsList.length === 1 && !form.department_id) {
-            setForm((prev) => ({ ...prev, department_id: String(departmentsList[0].id) }));
-        }
-    }, [departmentsList, form.department_id]);
 
     const assignableItems = useMemo(
         () => [...itemsList].filter(isItemAssignable).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
@@ -358,7 +352,7 @@ export default function AssignmentsPage() {
         : selectedItem && requestedQuantity <= 0
           ? 'Quantity must be greater than 0.'
           : selectedItem && requestedQuantity > maxQuantity
-            ? `Only ${maxQuantity} unit(s) are available for assignment.`
+            ? `Only ${maxQuantity} ${selectedItem.unit_of_measurement || 'unit'} available for assignment.`
             : '';
 
     const canSubmit =
@@ -374,6 +368,50 @@ export default function AssignmentsPage() {
         () => report.receivers.find((receiver) => receiver.receiver === selectedReceiver) || report.receivers[0] || null,
         [report.receivers, selectedReceiver]
     );
+
+    const receiverDepartmentOptions = useMemo(
+        () =>
+            receiversList
+                .filter((receiver) => receiver.department)
+                .map((receiver) => ({
+                    id: receiver.id,
+                    receiver: receiver.name,
+                    department_id: String(receiver.department_id),
+                    department_name: receiver.department.name,
+                    display_label: receiver.display_label || `${receiver.name} - ${receiver.department.name}`,
+                }))
+                .sort((a, b) => a.display_label.localeCompare(b.display_label)),
+        [receiversList]
+    );
+
+    const receiverDepartmentLookup = useMemo(() => {
+        const lookup = new Map();
+
+        receiverDepartmentOptions.forEach((option) => {
+            if (option.id) {
+                lookup.set(String(option.id), option);
+            }
+
+            lookup.set(option.receiver.toLowerCase(), option);
+            lookup.set(option.display_label.toLowerCase(), option);
+        });
+
+        return lookup;
+    }, [receiverDepartmentOptions]);
+
+    const selectedDepartmentOption = useMemo(
+        () =>
+            receiverDepartmentOptions.find(
+                (option) =>
+                    String(option.id || '') === String(form.receiver_id || '') ||
+                    (
+                        option.receiver.toLowerCase() === form.receiver_name.trim().toLowerCase() &&
+                        String(option.department_id) === String(form.department_id)
+                    )
+            ) || null,
+        [receiverDepartmentOptions, form.receiver_id, form.receiver_name, form.department_id]
+    );
+
 
     const reportTotals = useMemo(
         () => ({
@@ -442,12 +480,12 @@ export default function AssignmentsPage() {
         }
     }
 
-    async function fetchDepartmentsOptions() {
+    async function fetchReceiversOptions() {
         try {
-            const response = await apiClient.get('/departments', { params: { per_page: 100 } });
-            setDepartmentsList(response.data.data || response.data || []);
+            const response = await apiClient.get('/receivers', { params: { per_page: 100, active_only: 1 } });
+            setReceiversList(response.data.data || response.data || []);
         } catch (err) {
-            console.error('Failed to load departments for assignment', err);
+            console.error('Failed to load receivers for assignment', err);
         }
     }
 
@@ -493,14 +531,58 @@ export default function AssignmentsPage() {
         updateQuery({ page: 1 });
     }
 
-    function changeCustomDate(key, value) {
-        if (key === 'start') {
-            setCustomDateStart(value);
-        } else {
-            setCustomDateEnd(value);
+    function normalizeDateInput(value) {
+    if (!value) {
+        return '';
+    }
+
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+        return '';
+    }
+
+    const [, year, month, day] = match;
+    const numericYear = Number(year);
+
+    if (numericYear < 1900 || numericYear > 9999) {
+        return '';
+    }
+
+    return `${year}-${month}-${day}`;
+}
+
+function changeCustomDate(key, value) {
+    const safeValue = normalizeDateInput(value);
+
+    if (key === 'start') {
+        setCustomDateStart(safeValue);
+    } else {
+        setCustomDateEnd(safeValue);
+    }
+
+    updateQuery({ page: 1 });
+}
+
+    function handleReceiverChange(value) {
+        const selectedValue = String(value || '').trim();
+        const knownReceiver = receiverDepartmentLookup.get(selectedValue) || receiverDepartmentLookup.get(selectedValue.toLowerCase());
+
+        if (!selectedValue) {
+            setForm((prev) => ({
+                ...prev,
+                receiver_id: '',
+                receiver_name: '',
+                department_id: '',
+            }));
+            return;
         }
 
-        updateQuery({ page: 1 });
+        setForm((prev) => ({
+            ...prev,
+            receiver_id: knownReceiver?.id ? String(knownReceiver.id) : '',
+            receiver_name: knownReceiver?.receiver || '',
+            department_id: knownReceiver?.department_id || '',
+        }));
     }
 
     async function refreshAssignmentsPage() {
@@ -509,7 +591,7 @@ export default function AssignmentsPage() {
         try {
             invalidateApiCache('/assignments');
             invalidateApiCache('/items');
-            await Promise.all([refetch(), fetchItemsOptions(), fetchDepartmentsOptions(), fetchAssignmentReport()]);
+            await Promise.all([refetch(), fetchItemsOptions(), fetchReceiversOptions(), fetchAssignmentReport()]);
         } finally {
             setRefreshing(false);
         }
@@ -530,6 +612,7 @@ export default function AssignmentsPage() {
 
             await apiClient.post('/assignments', {
                 item_id: Number(form.item_id),
+                receiver_id: form.receiver_id ? Number(form.receiver_id) : null,
                 receiver_name: form.receiver_name.trim(),
                 department_id: Number(form.department_id),
                 quantity: Number.parseInt(String(form.quantity), 10),
@@ -577,9 +660,9 @@ export default function AssignmentsPage() {
                 SKU: item.sku || '',
                 'Date / Time (PNG Time)': formatDateTime(item.last_assigned_at),
                 Department: item.department || '',
-                'Qty Assigned': item.quantity_assigned,
-                'Qty Returned': item.quantity_returned,
-                'Qty Remaining': item.quantity_remaining,
+                'Qty Assigned': `${item.quantity_assigned} ${item.unit_of_measurement || 'unit'}`,
+                'Qty Returned': `${item.quantity_returned} ${item.unit_of_measurement || 'unit'}`,
+                'Qty Remaining': `${item.quantity_remaining} ${item.unit_of_measurement || 'unit'}`,
             }))
         );
     }
@@ -591,9 +674,9 @@ export default function AssignmentsPage() {
                 Item: item.name,
                 'Asset Tag': item.asset_tag || '',
                 SKU: item.sku || '',
-                Available: item.available_quantity,
-                Assigned: item.active_assigned_quantity,
-                'Total Managed': item.managed_quantity,
+                Available: `${item.available_quantity} ${item.unit_of_measurement || 'unit'}`,
+                Assigned: `${item.active_assigned_quantity} ${item.unit_of_measurement || 'unit'}`,
+                'Total Managed': `${item.managed_quantity} ${item.unit_of_measurement || 'unit'}`,
                 State: item.stock_state,
             }))
         );
@@ -608,7 +691,7 @@ export default function AssignmentsPage() {
                 SKU: entry.sku || '',
                 Receiver: entry.receiver,
                 'Date / Time (PNG Time)': formatDateTime(entry.assigned_at),
-                Quantity: entry.quantity,
+                Quantity: `${entry.quantity} ${entry.unit_of_measurement || 'unit'}`,
                 Status: entry.status,
                 Department: entry.department || '',
             }))
@@ -732,20 +815,24 @@ export default function AssignmentsPage() {
                                     <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                         From
                                         <input
-                                            type="date"
-                                            value={customDateStart}
-                                            onChange={(event) => changeCustomDate('start', event.target.value)}
-                                            className="input-shell mt-1 w-full normal-case tracking-normal"
-                                        />
+                                               type="date"
+                                               value={customDateStart}
+                                               min="1900-01-01"
+                                               max="9999-12-31"
+                                             onChange={(event) => changeCustomDate('start', event.target.value)}
+                                                className="input-shell mt-1 w-full normal-case tracking-normal"
+                                                  />
                                     </label>
                                     <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                         To
                                         <input
                                             type="date"
-                                            value={customDateEnd}
+                                             value={customDateEnd}
+                                            min="1900-01-01"
+                                             max="9999-12-31"
                                             onChange={(event) => changeCustomDate('end', event.target.value)}
-                                            className="input-shell mt-1 w-full normal-case tracking-normal"
-                                        />
+                                           className="input-shell mt-1 w-full normal-case tracking-normal"
+                                              />
                                     </label>
                                 </div>
                             ) : null}
@@ -794,7 +881,7 @@ export default function AssignmentsPage() {
                                                 </td>
                                                 <td className="px-6 py-4 font-medium text-slate-800">{assignment.receiver_name || assignment.user?.name || '-'}</td>
                                                 <td className="px-6 py-4 text-slate-700">{assignment.assigned_department?.name || '-'}</td>
-                                                <td className="px-6 py-4 text-slate-700">{assignment.quantity || 0}</td>
+                                                <td className="px-6 py-4 text-slate-700">{assignment.quantity || 0} {assignment.item?.unit_of_measurement || 'unit'}</td>
                                                 <td className="px-6 py-4 text-slate-700">{formatDateTime(assignment.assigned_at)}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadge(assignment.returned_at)}`}>
@@ -851,7 +938,7 @@ export default function AssignmentsPage() {
                                     <option value="">Choose an available item</option>
                                     {assignableItems.map((item) => (
                                         <option key={item.id} value={item.id}>
-                                            {item.name} | {item.asset_tag || item.sku || 'No tag'} | Available: {item.quantity}
+                                            {item.name} | {item.asset_tag || item.sku || 'No tag'} | Available: {item.quantity} {item.unit_of_measurement || 'unit'}
                                         </option>
                                     ))}
                                 </select>
@@ -862,15 +949,15 @@ export default function AssignmentsPage() {
                                 <div className="grid gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 sm:grid-cols-4">
                                     <div>
                                         <p className="text-xs font-semibold uppercase text-blue-500">Available Now</p>
-                                        <p className="text-xl font-bold">{selectedItem.quantity}</p>
+                                        <p className="text-xl font-bold">{selectedItem.quantity} {selectedItem.unit_of_measurement || 'unit'}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold uppercase text-blue-500">Giving Out</p>
-                                        <p className="text-xl font-bold">{Number.isInteger(requestedQuantity) && requestedQuantity > 0 ? requestedQuantity : 0}</p>
+                                        <p className="text-xl font-bold">{Number.isInteger(requestedQuantity) && requestedQuantity > 0 ? requestedQuantity : 0} {selectedItem.unit_of_measurement || 'unit'}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold uppercase text-blue-500">Left After Save</p>
-                                        <p className="text-xl font-bold">{remainingQuantity}</p>
+                                        <p className="text-xl font-bold">{remainingQuantity} {selectedItem.unit_of_measurement || 'unit'}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold uppercase text-blue-500">Identifier</p>
@@ -879,49 +966,46 @@ export default function AssignmentsPage() {
                                 </div>
                             ) : null}
 
-                            <div className="grid gap-4 lg:grid-cols-3">
+                            <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
                                 <div>
-                                    <label className="field-label">Person Receiving</label>
-                                    <input
-                                        type="text"
-                                        value={form.receiver_name}
-                                        onChange={(event) => setForm((prev) => ({ ...prev, receiver_name: event.target.value }))}
-                                        className="input-shell w-full"
-                                        placeholder="Staff name"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="field-label">Department</label>
+                                    <label className="field-label">Person Receiving / Department</label>
                                     <select
-                                        value={form.department_id}
-                                        onChange={(event) => setForm((prev) => ({ ...prev, department_id: event.target.value }))}
+                                        value={form.receiver_id || ''}
+                                        onChange={(event) => handleReceiverChange(event.target.value)}
                                         className="input-shell w-full"
                                         required
                                     >
-                                        <option value="">Select department</option>
-                                        {departmentsList.map((department) => (
-                                            <option key={department.id} value={department.id}>
-                                                {department.name}
+                                        <option value="">Choose person - department</option>
+                                        {receiverDepartmentOptions.map((option) => (
+                                            <option key={`${option.id || option.receiver}-${option.department_id}`} value={String(option.id || '')}>
+                                                {option.display_label}
                                             </option>
                                         ))}
                                     </select>
+
+                                    {selectedDepartmentOption ? (
+                                        <p className="mt-2 text-xs text-slate-500">
+                                            Department connected: {selectedDepartmentOption.department_name}
+                                        </p>
+                                    ) : null}
                                 </div>
+
                                 <div>
                                     <label className="field-label">Quantity to Give</label>
                                     <input
                                         type="number"
                                         min="1"
-                                        max={maxQuantity || 1}
+                                        max={selectedItem ? maxQuantity : undefined}
+                                        step="1"
                                         value={form.quantity}
                                         onChange={(event) => setForm((prev) => ({ ...prev, quantity: event.target.value }))}
                                         className="input-shell w-full"
+                                        disabled={!selectedItem}
                                         required
                                     />
                                     {quantityErrorMessage ? <p className="mt-2 text-xs text-red-600">{quantityErrorMessage}</p> : null}
                                 </div>
                             </div>
-
                             <div className="flex flex-col gap-2 sm:flex-row">
                                 <button type="submit" disabled={!canSubmit} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
                                     {submitting ? 'Saving...' : 'Save Assignment'}
@@ -1016,9 +1100,9 @@ export default function AssignmentsPage() {
                                                     <p className="text-xs text-slate-500">{item.asset_tag || item.sku || '-'}</p>
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-700">{item.department || '-'}</td>
-                                                <td className="px-4 py-3 text-slate-700">{item.quantity_assigned}</td>
-                                                <td className="px-4 py-3 text-slate-700">{item.quantity_returned}</td>
-                                                <td className="px-4 py-3 font-semibold text-slate-950">{item.quantity_remaining}</td>
+                                                <td className="px-4 py-3 text-slate-700">{item.quantity_assigned} {item.unit_of_measurement || 'unit'}</td>
+                                                <td className="px-4 py-3 text-slate-700">{item.quantity_returned} {item.unit_of_measurement || 'unit'}</td>
+                                                <td className="px-4 py-3 font-semibold text-slate-950">{item.quantity_remaining} {item.unit_of_measurement || 'unit'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1077,9 +1161,9 @@ export default function AssignmentsPage() {
                                                 <p className="font-semibold text-slate-950">{item.name}</p>
                                                 <p className="text-xs text-slate-500">{item.asset_tag || item.sku || '-'}</p>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-700">{item.available_quantity}</td>
-                                            <td className="px-4 py-3 text-slate-700">{item.active_assigned_quantity}</td>
-                                            <td className="px-4 py-3 text-slate-700">{item.managed_quantity}</td>
+                                            <td className="px-4 py-3 text-slate-700">{item.available_quantity} {item.unit_of_measurement || 'unit'}</td>
+                                            <td className="px-4 py-3 text-slate-700">{item.active_assigned_quantity} {item.unit_of_measurement || 'unit'}</td>
+                                            <td className="px-4 py-3 text-slate-700">{item.managed_quantity} {item.unit_of_measurement || 'unit'}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${stockBadge(item.stock_state)}`}>
                                                     {item.stock_state}
@@ -1130,7 +1214,7 @@ export default function AssignmentsPage() {
                                             </td>
                                             <td className="px-4 py-3 text-slate-700">{entry.receiver}</td>
                                             <td className="px-4 py-3 text-slate-700">{formatDateTime(entry.assigned_at)}</td>
-                                            <td className="px-4 py-3 text-slate-700">{entry.quantity}</td>
+                                            <td className="px-4 py-3 text-slate-700">{entry.quantity} {entry.unit_of_measurement || 'unit'}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${entry.status === 'Returned' ? statusBadge(true) : statusBadge(false)}`}>
                                                     {entry.status}

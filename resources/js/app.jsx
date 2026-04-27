@@ -1,27 +1,63 @@
 import '../css/app.css';
 import './bootstrap';
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Layout from './components/Layout';
 
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const ItemsPage = lazy(() => import('./pages/ItemsPage'));
-const AssignmentsPage = lazy(() => import('./pages/AssignmentsPage'));
-const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
-const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage'));
-const SuppliersPage = lazy(() => import('./pages/SuppliersPage'));
-const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
-const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const UsersPage = lazy(() => import('./pages/UsersPage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const GlobalSearchPage = lazy(() => import('./pages/GlobalSearchPage'));
+const routeImports = {
+    '/login': () => import('./pages/LoginPage'),
+    '/dashboard': () => import('./pages/DashboardPage'),
+    '/inventory': () => import('./pages/ItemsPage'),
+    '/assignments': () => import('./pages/AssignmentsPage'),
+    '/categories': () => import('./pages/CategoriesPage'),
+    '/departments': () => import('./pages/DepartmentsPage'),
+    '/receivers': () => import('./pages/ReceiversPage'),
+    '/suppliers': () => import('./pages/SuppliersPage'),
+    '/notifications': () => import('./pages/NotificationsPage'),
+    '/activity-logs': () => import('./pages/ActivityLogsPage'),
+    '/profile': () => import('./pages/ProfilePage'),
+    '/users': () => import('./pages/UsersPage'),
+    '/settings': () => import('./pages/SettingsPage'),
+    '/search': () => import('./pages/GlobalSearchPage'),
+};
+
+const preloadCache = new Map();
+
+function preloadRoute(pathname) {
+    const importer = routeImports[pathname];
+
+    if (!importer) {
+        return null;
+    }
+
+    if (!preloadCache.has(pathname)) {
+        preloadCache.set(pathname, importer());
+    }
+
+    return preloadCache.get(pathname);
+}
+
+window.__nextgenPreloadRoute = preloadRoute;
+
+const LoginPage = lazy(routeImports['/login']);
+const DashboardPage = lazy(routeImports['/dashboard']);
+const ItemsPage = lazy(routeImports['/inventory']);
+const AssignmentsPage = lazy(routeImports['/assignments']);
+const CategoriesPage = lazy(routeImports['/categories']);
+const DepartmentsPage = lazy(routeImports['/departments']);
+const ReceiversPage = lazy(routeImports['/receivers']);
+const SuppliersPage = lazy(routeImports['/suppliers']);
+const NotificationsPage = lazy(routeImports['/notifications']);
+const ActivityLogsPage = lazy(routeImports['/activity-logs']);
+const ProfilePage = lazy(routeImports['/profile']);
+const UsersPage = lazy(routeImports['/users']);
+const SettingsPage = lazy(routeImports['/settings']);
+const GlobalSearchPage = lazy(routeImports['/search']);
 
 function LoadingScreen() {
     return (
@@ -60,7 +96,43 @@ function GuestRoute({ children }) {
     return <Suspense fallback={<LoadingScreen />}>{children}</Suspense>;
 }
 
-function ProtectedRoute({ children }) {
+function RoutePreloader() {
+    const location = useLocation();
+    const { isAuthenticated } = useAuth();
+
+    useEffect(() => {
+        preloadRoute(location.pathname);
+    }, [location.pathname]);
+
+    useEffect(() => {
+        if (!isAuthenticated) {
+            preloadRoute('/login');
+            return undefined;
+        }
+
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+        if (connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType)) {
+            preloadRoute('/dashboard');
+            return undefined;
+        }
+
+        const protectedRoutes = Object.keys(routeImports).filter((path) => path !== '/login' && path !== location.pathname);
+        const warmRoutes = () => protectedRoutes.forEach((path) => preloadRoute(path));
+
+        if ('requestIdleCallback' in window) {
+            const idleId = window.requestIdleCallback(warmRoutes, { timeout: 3000 });
+            return () => window.cancelIdleCallback(idleId);
+        }
+
+        const timeoutId = window.setTimeout(warmRoutes, 1200);
+        return () => window.clearTimeout(timeoutId);
+    }, [isAuthenticated, location.pathname]);
+
+    return null;
+}
+
+function ProtectedLayout() {
     const { loading, isAuthenticated } = useAuth();
 
     if (loading) {
@@ -74,7 +146,9 @@ function ProtectedRoute({ children }) {
     return (
         <SettingsProvider>
             <Layout>
-                <Suspense fallback={<PageLoader />}>{children}</Suspense>
+                <Suspense fallback={<PageLoader />}>
+                    <Outlet />
+                </Suspense>
             </Layout>
         </SettingsProvider>
     );
@@ -94,115 +168,23 @@ function AppRoutes() {
                 }
             />
 
-            <Route
-                path="/dashboard"
-                element={
-                    <ProtectedRoute>
-                        <DashboardPage />
-                    </ProtectedRoute>
-                }
-            />
-
             <Route path="/items" element={<Navigate to="/inventory" replace />} />
 
-            <Route
-                path="/inventory"
-                element={
-                    <ProtectedRoute>
-                        <ItemsPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/assignments"
-                element={
-                    <ProtectedRoute>
-                        <AssignmentsPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/categories"
-                element={
-                    <ProtectedRoute>
-                        <CategoriesPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/departments"
-                element={
-                    <ProtectedRoute>
-                        <DepartmentsPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/suppliers"
-                element={
-                    <ProtectedRoute>
-                        <SuppliersPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/notifications"
-                element={
-                    <ProtectedRoute>
-                        <NotificationsPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/activity-logs"
-                element={
-                    <ProtectedRoute>
-                        <ActivityLogsPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/profile"
-                element={
-                    <ProtectedRoute>
-                        <ProfilePage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/users"
-                element={
-                    <ProtectedRoute>
-                        <UsersPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/search"
-                element={
-                    <ProtectedRoute>
-                        <GlobalSearchPage />
-                    </ProtectedRoute>
-                }
-            />
-
-            <Route
-                path="/settings"
-                element={
-                    <ProtectedRoute>
-                        <SettingsPage />
-                    </ProtectedRoute>
-                }
-            />
+            <Route element={<ProtectedLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/inventory" element={<ItemsPage />} />
+                <Route path="/assignments" element={<AssignmentsPage />} />
+                <Route path="/categories" element={<CategoriesPage />} />
+                <Route path="/departments" element={<DepartmentsPage />} />
+                <Route path="/receivers" element={<ReceiversPage />} />
+                <Route path="/suppliers" element={<SuppliersPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/activity-logs" element={<ActivityLogsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/users" element={<UsersPage />} />
+                <Route path="/search" element={<GlobalSearchPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+            </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
@@ -213,6 +195,7 @@ function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
+                <RoutePreloader />
                 <AppRoutes />
             </AuthProvider>
         </BrowserRouter>

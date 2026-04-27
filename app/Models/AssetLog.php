@@ -22,6 +22,8 @@ class AssetLog extends Model
 
     public const ACTION_STOCK_OUT = 'stock_out';
 
+    public const ACTION_RETIRED = 'retired';
+
     protected $fillable = [
         'item_id',
         'user_id',

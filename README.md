@@ -1,69 +1,115 @@
 # Nextgen Assets Management System
 
-This is a simple web app for managing office assets like computers, printers, and supplies. It tracks inventory, assignments, and notifications. Built with Laravel (backend) and React (frontend).
+Nextgen Assets Management System is a Laravel + React web application for managing company assets, inventory quantities, staff handovers, returns, stock movements, departments, receivers, users, notifications, and asset lifecycle records.
 
-## What You Need
+The system is designed for office and IT teams that need to know:
 
-Before starting, make sure you have these installed on your computer:
+- what assets the company owns
+- how many items are available
+- who is holding issued assets
+- which department each receiver belongs to
+- when stock came in or went out
+- which items are low stock, in maintenance, lost, or retired
+- what happened in the system through logs and notifications
 
-- **PHP 8.3 or newer** (the programming language for the backend)
-- **Composer** (tool to install PHP packages)
-- **Node.js 20 or newer** (for the frontend)
-- **npm** (comes with Node.js, used to install frontend packages)
-- **MySQL or MariaDB** (database to store data)
-- **Git** (to download the project)
+## Technology Used
 
-If you're on Windows and using XAMPP, start MySQL first. You don't need Apache because this app runs its own server.
+- Backend: Laravel 13
+- Frontend: React 19, Vite, Tailwind CSS
+- Database: MySQL or MariaDB
+- Local server: Laravel Artisan
+- Recommended local stack on Windows: VS Code + XAMPP
 
-## Step-by-Step Setup
+## What You Need Installed
 
-Follow these steps to get the app running. Do them in order.
+Install these before running the project:
 
-### 1. Download the Project
+1. XAMPP with PHP 8.3 or newer and MySQL/MariaDB
+2. Composer
+3. Node.js 20 or newer
+4. Git
+5. Visual Studio Code
 
-Open your terminal (Command Prompt or PowerShell on Windows) and run:
+After installing XAMPP, make sure PHP is available in your terminal.
 
-```bash
+In PowerShell, check:
+
+```powershell
+php -v
+composer -V
+node -v
+npm -v
+git --version
+```
+
+If `php` is not recognized, add your XAMPP PHP folder to your Windows PATH, usually:
+
+```text
+C:\xampp\php
+```
+
+Then close and reopen VS Code.
+
+## First Time Setup
+
+Open VS Code, then open a new terminal:
+
+```text
+Terminal > New Terminal
+```
+
+Clone the project:
+
+```powershell
 git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
 cd Nextgen_Assets_Management_System
 ```
 
-This downloads the project and enters its folder.
+Open the project in VS Code:
 
-### 2. Set Up the Database
+```powershell
+code .
+```
 
-You need a database to store the app's data.
+## Create The Database In XAMPP
 
-- Open your MySQL tool (like phpMyAdmin, MySQL Workbench, or command line).
-- Create a new database named `nextgen_assets`.
+1. Open XAMPP Control Panel.
+2. Start `MySQL`.
+3. Open phpMyAdmin:
 
-Example SQL command:
+```text
+http://127.0.0.1/phpmyadmin
+```
+
+4. Click `New`.
+5. Create a database named:
+
+```text
+nextgen_assets
+```
+
+You can also run this SQL:
 
 ```sql
 CREATE DATABASE nextgen_assets;
 ```
 
-### 3. Copy the Settings File
+## Create The Environment File
 
-The app needs a settings file. Copy the example file:
-
-On Windows PowerShell:
+In VS Code terminal:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-On Linux/Mac:
-
-```bash
-cp .env.example .env
-```
-
-### 4. Check Database Settings
-
-Open the `.env` file you just copied (use any text editor like Notepad). Make sure these lines match your database:
+Open `.env` and confirm these values:
 
 ```env
+APP_NAME="Nextgen Assets Management System"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
+
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -72,30 +118,13 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-- `DB_USERNAME` is usually `root` if you're using XAMPP.
-- `DB_PASSWORD` is often blank (empty) for local setups.
+For most XAMPP installs, the database username is `root` and the password is blank.
 
-### 5. Install Everything
+## Install Project Files
 
-Run this one command to install all needed software and set up the database:
+Run these commands one by one:
 
-```bash
-composer run bootstrap
-```
-
-This will:
-- Install PHP packages
-- Install frontend packages
-- Set up the database tables and sample data
-- Build the frontend
-
-It might take a few minutes. If it times out, run it again or use the manual steps below.
-
-### Manual Setup (If Bootstrap Fails)
-
-If `composer run bootstrap` doesn't work, do these steps one by one:
-
-```bash
+```powershell
 composer install
 npm install
 php artisan key:generate
@@ -105,194 +134,59 @@ php artisan optimize:clear
 npm run build
 ```
 
-## Running the App
+If all commands finish without errors, the project is ready.
 
-You have two ways to run the app: for your computer only, or for other devices on your home/office network.
+## Daily Start Commands
 
-### Option 1: Run on Your Computer Only (Local)
+Every day, start XAMPP MySQL first.
 
-This is the simplest way. The app will only work on the same computer where you run it.
+Then open the project in VS Code and use two terminals.
 
-1. Start the backend server:
+Terminal 1:
 
-   ```bash
-   php artisan serve --host=127.0.0.1 --port=8000
-   ```
-
-2. Open a new terminal and start the frontend:
-
-   ```bash
-   npm run dev
-   ```
-
-3. Open your web browser and go to:
-
-   ```text
-   http://127.0.0.1:8000
-   ```
-
-   - `127.0.0.1` means "this computer only"
-   - `:8000` is the port number
-
-### Option 2: Run for Other Devices on Your Network (LAN)
-
-This lets you open the app from your phone, tablet, or another computer on the same Wi-Fi.
-
-1. Find your computer's IP address:
-   - On Windows: Open Command Prompt and run `ipconfig`. Look for "IPv4 Address" under your Wi-Fi adapter (something like `192.168.1.100`).
-   - On Mac/Linux: Run `ifconfig` or `ip addr` and look for your network IP.
-
-2. Update the `.env` file with your IP (replace `192.168.1.100` with your actual IP):
-
-   ```env
-   APP_URL=http://192.168.1.100:8000
-   VITE_DEV_SERVER_BIND_HOST=0.0.0.0
-   VITE_DEV_SERVER_HOST=192.168.1.100
-   VITE_DEV_SERVER_PORT=5173
-   ```
-
-3. Start the backend for all devices:
-
-   ```bash
-   php artisan serve --host=0.0.0.0 --port=8000
-   ```
-
-4. Open a new terminal and start the frontend for network:
-
-   ```bash
-   npm run dev:lan
-   ```
-
-5. Open your web browser and go to:
-
-   ```text
-   http://192.168.1.100:8000
-   ```
-
-   - Replace `192.168.1.100` with your computer's IP.
-   - Now you can open this URL from any device on your network.
-
-**Note:** Keep both terminals running. Close them with Ctrl+C when done.
-
-## Demo Accounts
-
-After setup, log in with these accounts:
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@nextgen.local` | `password` |
-| Asset Officer | `assets@nextgen.local` | `password` |
-| ICT Support | `support@nextgen.local` | `password` |
-| Operations Manager | `operations@nextgen.local` | `password` |
-
-## Features
-
-- Dashboard with summaries
-- Manage assets and inventory
-- Assign and return items
-- Track stock movements
-- User and department management
-- Notifications and reports
-- PDF exports
-- Straight-line depreciation and book value tracking
-- ERD, wireframes, and design notes in the `wireframe/` folder
-
-## CRUD Coverage
-
-The system follows a Laravel API plus React frontend CRUD structure.
-
-| Module | Create | Read | Update | Delete | Notes |
-| --- | --- | --- | --- | --- | --- |
-| Inventory Items | Yes | Yes | Yes | Yes | Includes stock, assignment protection, depreciation, and CSV/PDF reporting |
-| Categories | Yes | Yes | Yes | Yes | Shared CRUD page |
-| Departments | Yes | Yes | Yes | Yes | Shared CRUD page |
-| Suppliers | Yes | Yes | Yes | Yes | Shared CRUD page |
-| Users | Yes | Yes | Yes | Yes | Admin-only user management |
-| Assignments | Yes | Yes | Return workflow | Protected history | Prevents over-assigning available stock |
-| Notifications | System-created | Yes | Read/unread | Yes | Includes filters, unread count, and stats |
-| Settings | Admin-managed | Yes | Yes | Limited | Branding and system behavior settings |
-
-Main CRUD files:
-
-- Backend routes: `routes/api.php`
-- Controllers: `app/Http/Controllers/`
-- Models: `app/Models/`
-- Frontend pages: `resources/js/pages/`
-- Shared CRUD component: `resources/js/components/CRUDPage.jsx`
-
-## Depreciation
-
-Inventory items support straight-line depreciation with:
-
-- `unit_cost`
-- `is_depreciable`
-- `depreciation_method`
-- `useful_life_years`
-- `salvage_value`
-- `depreciation_start_date`
-- calculated annual/monthly depreciation
-- accumulated depreciation
-- current book value per unit and total
-
-Coverage is included in `tests/Feature/ItemDepreciationTest.php`.
-
-## Tech Stack
-
-- Backend: Laravel 13, PHP 8.3+
-- Frontend: React 19, Vite, Tailwind CSS
-- Database: MySQL or MariaDB
-- Testing: PHPUnit
-
-## Testing and Verification
-
-Run the full project verification:
-
-```bash
-composer verify
+```powershell
+php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-This runs:
+Terminal 2:
 
-- Laravel Pint style check
-- `php artisan test`
-- `npm run build`
-
-Tests use SQLite in memory, so they do not require your local MySQL database.
-
-You can also run checks separately:
-
-```bash
-vendor/bin/pint --test
-php artisan test
-npm run build
+```powershell
+npm run dev
 ```
 
-## Docker Quick Start
+Open the system:
 
-For advanced users, you can run everything in Docker:
-
-```bash
-docker compose up --build
+```text
+http://127.0.0.1:8000
 ```
 
-Then open `http://127.0.0.1:8000`.
+Keep both terminals open while using the system.
 
-Docker files included:
+Stop the system with:
 
-- `Dockerfile`
-- `docker-compose.yml`
-- `.env.docker.example`
-- `docker/entrypoint.sh`
+```text
+Ctrl + C
+```
 
-Docker notes:
+## Start On Office LAN
 
-- The app container runs migrations and seeders on startup.
-- MySQL runs inside Docker and is exposed to the host on port `3307`.
-- Docker uses `.env.docker.example` by default.
+Use this when another computer or phone on the same network needs to open the system.
 
-## Office LAN Development
+Find your desktop IP address:
 
-For access from other devices on the same network, update `.env` with your machine IP:
+```powershell
+ipconfig
+```
+
+Look for `IPv4 Address`.
+
+For this project setup, the desktop IP is:
+
+```text
+192.168.31.34
+```
+
+Update `.env`:
 
 ```env
 APP_URL=http://192.168.31.34:8000
@@ -303,96 +197,415 @@ VITE_DEV_SERVER_PORT=5173
 
 Then run:
 
-```bash
+Terminal 1:
+
+```powershell
 npm run serve:lan
+```
+
+Terminal 2:
+
+```powershell
 npm run dev:lan
 ```
 
-Open the `APP_URL` value in your browser. Allow Windows Firewall inbound TCP ports `8000` and `5173` if needed.
-
-## VS Code Tasks
-
-The repo includes ready-made tasks in `.vscode/tasks.json`.
-
-Useful tasks:
-
-- `NextGen: Bootstrap Project`
-- `NextGen: Start App Local`
-- `NextGen: Start App LAN`
-- `NextGen: Verify Project`
-- `NextGen: Clear Laravel Cache`
-
-Run them from:
+Open:
 
 ```text
-Ctrl + Shift + P -> Tasks: Run Task
+http://192.168.31.34:8000
 ```
 
-## Troubleshooting
+If another device cannot open it, allow Windows Firewall access for ports:
 
-If the app does not load, make sure both Laravel and Vite are running:
-
-```bash
-php artisan serve --host=127.0.0.1 --port=8000
-npm run dev
+```text
+8000
+5173
 ```
 
-If login fails, confirm MySQL is running and the database exists:
+## Pull Latest Changes
 
-```bash
+If the project is already cloned and you only want the latest version:
+
+```powershell
+git pull origin main
+composer install
+npm install
 php artisan migrate --seed
 php artisan optimize:clear
-```
-
-If the frontend is blank or old assets appear, clear the browser cache and rebuild:
-
-```bash
 npm run build
 ```
 
-If storage files or profile photos do not load:
+Then start the app using the daily start commands.
 
-```bash
-php artisan storage:link --force
+## Login Accounts
+
+After running migrations and seeders, use the seeded accounts.
+
+Common demo password:
+
+```text
+password
 ```
 
-If cached config points to old URLs or database credentials:
+If login details change, check `database/seeders/UserSeeder.php`.
 
-```bash
+## Main System Modules
+
+Dashboard:
+
+- shows total assets, available items, assigned quantity, maintenance count, low stock count, overdue count, recent assignments, and recent items
+
+Inventory:
+
+- shows available quantity, assigned quantity, managed quantity, unit cost, stock state, supplier, category, and UOM
+
+Items:
+
+- create and manage asset records
+- set category, supplier, quantity, unit of measurement, unit cost, status, location, depreciation, and retirement details
+
+Assignments:
+
+- give assets to receivers
+- return assets
+- review active assignments
+- review returned assignments
+- report by receiver
+- check available vs assigned stock
+
+Receivers:
+
+- manage people who can receive assets
+- each receiver belongs to a department
+- assignment dropdown uses receiver and department together
+
+Departments:
+
+- manage organizational departments
+
+Suppliers:
+
+- manage asset suppliers
+
+Categories:
+
+- group items such as laptops, printers, accessories, networking, or consumables
+
+Notifications:
+
+- system alerts for asset updates, assignments, returns, low stock, maintenance, and other events
+
+Activity Logs:
+
+- audit trail of important actions
+
+Settings:
+
+- system branding and behavior settings
+
+Users:
+
+- manage login accounts and roles
+
+## Important Business Logic
+
+Available quantity is stored on the item:
+
+```text
+items.quantity = available quantity in store
+```
+
+Assigned quantity is calculated from active assignments:
+
+```text
+active assignments = assignments where returned_at is empty
+```
+
+Managed quantity is calculated as:
+
+```text
+managed quantity = available quantity + active assigned quantity
+```
+
+Example:
+
+```text
+Dell Latitude 5440
+Available: 5 unit
+Assigned: 3 unit
+Managed: 8 unit
+```
+
+This means 5 units are still in store, 3 units are issued to staff, and the company still manages 8 units in total.
+
+## Receiver And Department Logic
+
+Receivers are separate from departments.
+
+Example:
+
+```text
+Receiver: tech support
+Department: IT Support
+Assignment dropdown: tech support - IT Support
+```
+
+To add, edit, or delete receivers:
+
+```text
+Administration > Receivers
+```
+
+The assignment form only shows active receivers.
+
+## Unit Of Measurement
+
+UOM explains what the quantity means.
+
+Examples:
+
+```text
+unit
+box
+pack
+roll
+meter
+ream
+liter
+```
+
+For laptops, printers, radios, and switches, use:
+
+```text
+unit
+```
+
+UOM does not change calculations. It only labels the quantity.
+
+## Stock And Assignment Flow
+
+When an item is created:
+
+1. Item record is created.
+2. Opening stock movement is created.
+3. Available quantity is set.
+
+When stock is added:
+
+1. Stock IN movement is created.
+2. Available quantity increases.
+
+When stock is removed:
+
+1. Stock OUT movement is created.
+2. Available quantity decreases.
+
+When an item is assigned:
+
+1. Assignment is created.
+2. Stock OUT movement is created.
+3. Available quantity decreases.
+4. Activity log is created.
+5. Notification may be created.
+
+When an item is returned:
+
+1. Assignment gets a return date.
+2. Stock IN movement is created.
+3. Available quantity increases.
+4. Activity log is created.
+5. Notification may be created.
+
+## Asset Statuses
+
+Items can have these statuses:
+
+```text
+available
+maintenance
+lost
+retired
+```
+
+Only available items with quantity above zero can be assigned.
+
+Maintenance, lost, and retired items cannot be assigned.
+
+## Depreciation
+
+The system supports straight-line depreciation for assets.
+
+Required depreciation fields:
+
+- unit cost
+- useful life in years
+- salvage value
+- depreciation start date
+
+Non-depreciable items use:
+
+```text
+depreciation_method = none
+```
+
+## Run Tests
+
+To verify the system:
+
+```powershell
+php artisan test
+npm run build
+```
+
+Full verification:
+
+```powershell
+composer verify
+```
+
+## Clear Cache
+
+If the system behaves strangely after changing `.env` or pulling new code:
+
+```powershell
 php artisan optimize:clear
 ```
 
-## Repository Hygiene
+Then refresh the browser with:
 
-Important generated or local-only files are ignored:
+```text
+Ctrl + F5
+```
+
+## Common Problems And Fixes
+
+Problem: `php` is not recognized.
+
+Fix:
+
+- Add `C:\xampp\php` to Windows PATH.
+- Restart VS Code.
+
+Problem: database connection error.
+
+Fix:
+
+- Start MySQL in XAMPP.
+- Confirm database `nextgen_assets` exists.
+- Confirm `.env` database settings are correct.
+
+Problem: tables are missing.
+
+Fix:
+
+```powershell
+php artisan migrate --seed
+```
+
+Problem: login does not work after fresh clone.
+
+Fix:
+
+```powershell
+php artisan migrate:fresh --seed
+```
+
+Warning: this deletes local database data and recreates demo data.
+
+Problem: frontend looks old or blank.
+
+Fix:
+
+```powershell
+npm run build
+php artisan optimize:clear
+```
+
+Then press `Ctrl + F5` in the browser.
+
+Problem: profile photos or uploaded files do not show.
+
+Fix:
+
+```powershell
+php artisan storage:link --force
+```
+
+## Useful VS Code Tasks
+
+The project includes VS Code tasks in:
+
+```text
+.vscode/tasks.json
+```
+
+Open:
+
+```text
+Ctrl + Shift + P
+Tasks: Run Task
+```
+
+Useful tasks:
+
+- NextGen: Bootstrap Project
+- NextGen: Start App Local
+- NextGen: Start App LAN
+- NextGen: Verify Project
+- NextGen: Clear Laravel Cache
+
+## Files That Should Not Be Uploaded
+
+These are ignored by Git:
 
 - `.env`
 - `vendor/`
 - `node_modules/`
 - `public/build/`
 - `public/storage/`
-- Laravel logs and caches
+- Laravel logs and cache files
 
-Commit source files, migrations, seeders, tests, configuration examples, and documentation. Do not commit real production secrets.
+This keeps the GitHub repository clean and safe.
 
-## Production Notes
+## Project Structure
 
-Before production deployment:
+Important folders:
 
-- Set `APP_ENV=production`
-- Set `APP_DEBUG=false`
-- Generate and protect a real `APP_KEY`
-- Use real database credentials
-- Configure mail settings if email notifications are needed
-- Serve through HTTPS
-- Configure queues, backups, logs, and monitoring
-- Review user accounts and seeded demo credentials
+```text
+app/Http/Controllers       Laravel API controllers
+app/Models                 Laravel database models
+app/Services               Business services
+database/migrations        Database table changes
+database/seeders           Demo/setup data
+resources/js/pages         React pages
+resources/js/components    Shared React components
+routes/api.php             API routes
+routes/web.php             Web routes
+tests                      Automated tests
+wireframe                  Planning and design documents
+```
 
-## Project References
+## GitHub Repository
 
-- `wireframe/ERD - Nextgen Assets Management System.txt`
-- `wireframe/erd-current.txt`
-- `graph.png`
-- `wireframe/Schema Alignment Notes.txt`
-- `wireframe/Detailed ASCII Wireframes.txt`
-- `wireframe/Detailed Design Spec.txt`
+Repository:
+
+```text
+https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
+```
+
+Clone:
+
+```powershell
+git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
+```
+
+Pull latest:
+
+```powershell
+git pull origin main
+```
+
+## Final Notes
+
+For normal local testing, only XAMPP MySQL is needed. Do not start Apache unless you need phpMyAdmin. The Laravel backend runs through `php artisan serve`, and the React frontend runs through Vite.
+

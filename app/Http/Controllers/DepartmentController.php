@@ -77,6 +77,12 @@ class DepartmentController extends Controller
             ], 422);
         }
 
+        if ($department->receivers()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete department with linked receivers.',
+            ], 422);
+        }
+
         $department->delete();
 
         return response()->json([

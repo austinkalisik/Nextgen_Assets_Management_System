@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import apiClient from '../api/client';
+import { clearApiSessionCache } from '../hooks/useApi';
 
 const AuthContext = createContext(null);
 const isLoginRoute = window.location.pathname === '/login';
@@ -62,6 +63,7 @@ export function AuthProvider({ children }) {
                     };
                 }
 
+                clearApiSessionCache();
                 setUser(authenticatedUser);
 
                 return {
@@ -91,6 +93,7 @@ export function AuthProvider({ children }) {
         } catch (error) {
             console.error('Logout failed', error);
         } finally {
+            clearApiSessionCache();
             setUser(null);
         }
     }, []);

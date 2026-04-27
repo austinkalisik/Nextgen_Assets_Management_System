@@ -31,6 +31,7 @@ class Item extends Model
         'asset_tag',
         'serial_number',
         'quantity',
+        'unit_of_measurement',
         'reorder_level',
         'unit_cost',
         'is_depreciable',
@@ -39,6 +40,9 @@ class Item extends Model
         'salvage_value',
         'depreciation_start_date',
         'status',
+        'retired_at',
+        'disposal_value',
+        'disposal_reason',
         'location',
         'purchase_date',
     ];
@@ -52,12 +56,16 @@ class Item extends Model
         'useful_life_years' => 'integer',
         'salvage_value' => 'decimal:2',
         'depreciation_start_date' => 'date',
+        'retired_at' => 'datetime',
+        'disposal_value' => 'decimal:2',
     ];
 
     protected $appends = [
         'is_low_stock',
         'is_assignable',
         'depreciation_enabled',
+        'active_assigned_quantity',
+        'managed_quantity',
         'annual_depreciation',
         'monthly_depreciation',
         'accumulated_depreciation_per_unit',
@@ -99,6 +107,16 @@ class Item extends Model
         return round($this->depreciableBasePerUnit() / (int) $this->useful_life_years, 2);
     }
 
+    public function getActiveAssignedQuantityAttribute(): int
+    {
+        return (int) ($this->attributes['active_assigned_quantity'] ?? 0);
+    }
+
+    public function getManagedQuantityAttribute(): int
+    {
+        return max(0, (int) $this->quantity) + max(0, (int) $this->active_assigned_quantity);
+    }
+
     public function getMonthlyDepreciationAttribute(): ?float
     {
         $annual = $this->annual_depreciation;
@@ -138,7 +156,7 @@ class Item extends Model
             return null;
         }
 
-        return round((float) $this->accumulated_depreciation_per_unit * max(0, (int) $this->quantity), 2);
+        return round((float) $this->accumulated_depreciation_per_unit * $this->managed_quantity, 2);
     }
 
     public function getCurrentBookValueTotalAttribute(): ?float
@@ -147,7 +165,7 @@ class Item extends Model
             return null;
         }
 
-        return round((float) $this->current_book_value_per_unit * max(0, (int) $this->quantity), 2);
+        return round((float) $this->current_book_value_per_unit * $this->managed_quantity, 2);
     }
 
     public function getDepreciationEndDateAttribute(): ?string

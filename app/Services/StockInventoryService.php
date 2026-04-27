@@ -194,7 +194,19 @@ class StockInventoryService
             'total_quantity' => (int) Item::sum('quantity'),
             'low_stock_count' => $this->getLowStockItems()->count(),
             'out_of_stock_count' => $this->getOutOfStockItems()->count(),
-            'total_value' => (float) (Item::selectRaw('COALESCE(SUM(quantity * unit_cost), 0) as total')->value('total') ?? 0),
+            'total_value' => (float) (Item::query()
+                ->leftJoinSub(
+                    DB::table('assignments')
+                        ->selectRaw('item_id, COALESCE(SUM(quantity), 0) as active_quantity')
+                        ->whereNull('returned_at')
+                        ->groupBy('item_id'),
+                    'active_assignments',
+                    'items.id',
+                    '=',
+                    'active_assignments.item_id'
+                )
+                ->selectRaw('COALESCE(SUM((items.quantity + COALESCE(active_assignments.active_quantity, 0)) * items.unit_cost), 0) as total')
+                ->value('total') ?? 0),
         ];
     }
 

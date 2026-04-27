@@ -10,6 +10,7 @@ class Assignment extends Model
     protected $fillable = [
         'item_id',
         'user_id',
+        'receiver_id',
         'receiver_name',
         'department_id',
         'quantity',
@@ -40,7 +41,7 @@ class Assignment extends Model
 
     public function getReceiverLabelAttribute(): string
     {
-        return $this->receiver_name ?: ($this->user?->name ?? '-');
+        return $this->receiver_name ?: ($this->receiver?->name ?? ($this->user?->name ?? '-'));
     }
 
     public function item(): BelongsTo
@@ -51,6 +52,11 @@ class Assignment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function receiver(): BelongsTo
+    {
+        return $this->belongsTo(Receiver::class);
     }
 
     public function assignedDepartment(): BelongsTo

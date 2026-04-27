@@ -309,6 +309,7 @@ export default function DashboardPage() {
                                         <th className="px-6 py-4 text-left font-semibold">Asset</th>
                                         <th className="px-6 py-4 text-left font-semibold">Receiver</th>
                                         <th className="px-6 py-4 text-left font-semibold">Department</th>
+                                        <th className="px-6 py-4 text-left font-semibold">Qty</th>
                                         <th className="px-6 py-4 text-left font-semibold">Date</th>
                                         <th className="px-6 py-4 text-left font-semibold">Status</th>
                                     </tr>
@@ -323,6 +324,7 @@ export default function DashboardPage() {
                                                     {assignment.receiver_name || assignment.user?.name || '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-700">{assignment.assigned_department?.name || '-'}</td>
+                                                <td className="px-6 py-4 text-slate-700">{assignment.quantity || 0} {assignment.item?.unit_of_measurement || 'unit'}</td>
                                                 <td className="px-6 py-4 text-slate-700">{formatDate(assignment.assigned_at)}</td>
                                                 <td className="px-6 py-4">
                                                     <span
@@ -339,7 +341,7 @@ export default function DashboardPage() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
+                                            <td colSpan="6" className="px-6 py-10 text-center text-slate-500">
                                                 No recent assignments
                                             </td>
                                         </tr>

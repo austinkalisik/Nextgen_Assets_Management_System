@@ -168,6 +168,7 @@ const ICONS = {
     suppliers: TruckIcon,
     categories: TagIcon,
     departments: BuildingIcon,
+    receivers: UserIcon,
     users: UserIcon,
     settings: SettingsIcon,
     profile: UserIcon,
@@ -270,11 +271,15 @@ function routeMatches(pathname, item) {
 function SidebarItem({ item, pathname, onNavigate, unreadCount }) {
     const Icon = getIcon(item.icon);
     const isActive = routeMatches(pathname, item);
+    const preloadTarget = () => window.__nextgenPreloadRoute?.(item.to);
 
     return (
         <NavLink
             to={item.to}
             onClick={onNavigate}
+            onFocus={preloadTarget}
+            onMouseEnter={preloadTarget}
+            onTouchStart={preloadTarget}
             className={[
                 'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive
@@ -571,7 +576,7 @@ export default function Layout({ children }) {
 
     return (
         <div className="flex min-h-screen bg-transparent">
-            <aside className="sticky top-0 hidden h-screen w-[300px] shrink-0 border-r border-slate-200/40 lg:flex">
+       <aside className="sticky top-0 z-40 hidden h-screen w-[300px] shrink-0 border-r border-slate-200/40 lg:flex">
                 <SidebarContent
                     pathname={location.pathname}
                     systemName={systemName}
@@ -625,7 +630,7 @@ export default function Layout({ children }) {
                     </div>
                 ) : null}
 
-                <header className="sticky top-0 z-30 border-b border-white/70 bg-white/72 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+               <header className="sticky top-0 z-20 border-b border-white/70 bg-white/72 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
                     <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-3">

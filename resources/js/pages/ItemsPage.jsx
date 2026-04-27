@@ -12,9 +12,22 @@ const STOCK_EXPORT_OPTIONS = {
     available: { label: 'Available CSV', stock: 'available', filename: 'inventory-available.csv' },
     low: { label: 'Low Stock CSV', stock: 'low', filename: 'inventory-low-stock.csv' },
     out: { label: 'Out of Stock CSV', stock: 'out', filename: 'inventory-out-of-stock.csv' },
+    depreciation: { label: 'Depreciation Report CSV', stock: null, filename: 'inventory-depreciation-report.csv', depreciation: true },
 };
 
 function getStockStateBadge(item) {
+    if (item?.status === 'retired') {
+        return { label: 'Retired', className: 'bg-slate-200 text-slate-700' };
+    }
+
+    if (item?.status === 'maintenance') {
+        return { label: 'Maintenance', className: 'bg-blue-100 text-blue-700' };
+    }
+
+    if (item?.status === 'lost') {
+        return { label: 'Lost', className: 'bg-red-100 text-red-700' };
+    }
+
     const quantity = Number(item?.quantity || 0);
     const reorderLevel = Number(item?.reorder_level ?? 5);
 
@@ -40,6 +53,7 @@ function defaultForm() {
         supplier_id: '',
         status: 'available',
         quantity: 1,
+        unit_of_measurement: 'unit',
         reorder_level: 5,
         unit_cost: '',
         is_depreciable: false,
@@ -94,6 +108,10 @@ function formatDateTime(value) {
 }
 
 function formatCurrency(value) {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+
     const amount = Number(value);
 
     if (Number.isNaN(amount)) {
@@ -182,6 +200,13 @@ export default function ItemsPage() {
     const [exporting, setExporting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const [retireTarget, setRetireTarget] = useState(null);
+    const [retiringId, setRetiringId] = useState(null);
+    const [retireForm, setRetireForm] = useState({
+        disposal_value: '',
+        disposal_reason: '',
+        retired_at: '',
+    });
 
     const filters = useMemo(
         () => ({
@@ -288,6 +313,10 @@ export default function ItemsPage() {
         () => itemReport.items.find((item) => Number(item.id) === Number(selectedItem?.id)) || null,
         [itemReport.items, selectedItem]
     );
+    const selectedCategory = useMemo(
+        () => categories.find((category) => Number(category.id) === Number(form.category_id)) || null,
+        [categories, form.category_id]
+    );
 
     useEffect(() => {
         if (!editingId && isSerializedMode && Number(form.quantity) !== 1) {
@@ -297,6 +326,17 @@ export default function ItemsPage() {
             }));
         }
     }, [editingId, isSerializedMode, form.quantity]);
+
+    useEffect(() => {
+        if (!isDepreciable || !selectedCategory?.default_useful_life_years || form.useful_life_years) {
+            return;
+        }
+
+        setForm((prev) => ({
+            ...prev,
+            useful_life_years: selectedCategory.default_useful_life_years,
+        }));
+    }, [form.useful_life_years, isDepreciable, selectedCategory]);
 
     const handleSubmit = useCallback(
         async (event) => {
@@ -333,6 +373,7 @@ export default function ItemsPage() {
                     category_id: form.category_id,
                     supplier_id: form.supplier_id,
                     status: form.status,
+                    unit_of_measurement: form.unit_of_measurement.trim() || 'unit',
                     reorder_level: Number.parseInt(String(form.reorder_level || 0), 10),
                     unit_cost: form.unit_cost === '' ? '' : form.unit_cost,
                     is_depreciable: isDepreciable,
@@ -392,6 +433,45 @@ export default function ItemsPage() {
         [refreshItems]
     );
 
+    function openRetireDialog(item) {
+        setFormError('');
+        setNotice('');
+        setRetireTarget(item);
+        setRetireForm({
+            disposal_value: item.current_book_value_total ?? item.current_book_value_per_unit ?? '',
+            disposal_reason: '',
+            retired_at: toDateInputValue(new Date()),
+        });
+    }
+
+    async function handleRetireSubmit(event) {
+        event.preventDefault();
+
+        if (!retireTarget) {
+            return;
+        }
+
+        try {
+            setRetiringId(retireTarget.id);
+            setFormError('');
+
+            const response = await apiClient.post(`/items/${retireTarget.id}/retire`, {
+                disposal_value: retireForm.disposal_value === '' ? null : retireForm.disposal_value,
+                disposal_reason: retireForm.disposal_reason.trim(),
+                retired_at: retireForm.retired_at || null,
+            });
+
+            setNotice(response?.data?.message || 'Asset retired/disposed successfully.');
+            setRetireTarget(null);
+            setRetireForm({ disposal_value: '', disposal_reason: '', retired_at: '' });
+            await refreshItems();
+        } catch (err) {
+            setFormError(extractErrorMessage(err));
+        } finally {
+            setRetiringId(null);
+        }
+    }
+
     const handleEdit = useCallback((item) => {
         setNotice('');
         setFormError('');
@@ -405,6 +485,7 @@ export default function ItemsPage() {
             supplier_id: item.supplier_id || '',
             status: item.status || 'available',
             quantity: item.quantity || 1,
+            unit_of_measurement: item.unit_of_measurement || 'unit',
             reorder_level: item.reorder_level ?? 5,
             unit_cost: item.unit_cost || '',
             is_depreciable: Boolean(item.is_depreciable),
@@ -460,7 +541,9 @@ export default function ItemsPage() {
                 ...filters,
                 stock: exportOption.stock === null ? filters.stock : exportOption.stock,
             };
-            const exportRows = await fetchFilteredExportRows('/items', exportFilters);
+            const exportRows = exportOption.depreciation
+                ? (await apiClient.get('/items/depreciation-report', { params: exportFilters })).data.data || []
+                : await fetchFilteredExportRows('/items', exportFilters);
 
             downloadCsv(
                 exportOption.filename,
@@ -471,10 +554,24 @@ export default function ItemsPage() {
                     SKU: item.sku || '',
                     Category: item.category?.name || '',
                     Supplier: item.supplier?.name || '',
-                    Quantity: item.quantity ?? 0,
-                    'Unit Cost': item.unit_cost ?? '',
+                    'Available Quantity': item.quantity ?? 0,
+                    'Unit of Measurement': item.unit_of_measurement || 'unit',
+                    'Assigned Quantity': item.active_assigned_quantity ?? 0,
+                    'Managed Quantity': item.managed_quantity ?? item.quantity ?? 0,
+                    'Unit Cost (PGK)': item.unit_cost ?? '',
                     'Depreciable': item.depreciation_enabled ? 'Yes' : 'No',
-                    'Current Book Value': item.current_book_value_total ?? '',
+                    'Useful Life (Years)': item.useful_life_years ?? '',
+                    'Salvage Value (PGK)': item.salvage_value ?? '',
+                    'Annual Depreciation (PGK)': item.annual_depreciation ?? '',
+                    'Monthly Depreciation (PGK)': item.monthly_depreciation ?? '',
+                    'Accumulated Depreciation / Unit (PGK)': item.accumulated_depreciation_per_unit ?? '',
+                    'Book Value / Unit (PGK)': item.current_book_value_per_unit ?? '',
+                    'Book Value Total (PGK)': item.current_book_value_total ?? '',
+                    'Depreciation End Date': item.depreciation_end_date ?? '',
+                    'Fully Depreciated': item.is_fully_depreciated ? 'Yes' : 'No',
+                    'Retired At': formatDateTime(item.retired_at),
+                    'Disposal Value (PGK)': item.disposal_value ?? '',
+                    'Disposal Reason': item.disposal_reason ?? '',
                     'Stock State': getStockStateBadge(item).label,
                     'Date Added (PNG Time)': formatDateTime(item.date_added_at || item.date_added),
                 }))
@@ -747,6 +844,38 @@ export default function ItemsPage() {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                            <div className="metric-card">
+                                <p className="text-xs font-semibold uppercase text-slate-500">Unit Cost</p>
+                                <p className="mt-1 text-lg font-bold text-slate-900">{formatCurrency(selectedItem.unit_cost)}</p>
+                            </div>
+                            <div className="metric-card">
+                                <p className="text-xs font-semibold uppercase text-slate-500">Monthly Depreciation</p>
+                                <p className="mt-1 text-lg font-bold text-slate-900">{formatCurrency(selectedItem.monthly_depreciation)}</p>
+                            </div>
+                            <div className="metric-card">
+                                <p className="text-xs font-semibold uppercase text-slate-500">Book Value / Unit</p>
+                                <p className="mt-1 text-lg font-bold text-slate-900">{formatCurrency(selectedItem.current_book_value_per_unit)}</p>
+                            </div>
+                            <div className="metric-card">
+                                <p className="text-xs font-semibold uppercase text-slate-500">Book Value Total</p>
+                                <p className="mt-1 text-lg font-bold text-slate-900">{formatCurrency(selectedItem.current_book_value_total)}</p>
+                            </div>
+                        </div>
+
+                        {selectedItem.depreciation_enabled ? (
+                            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                Straight-line depreciation runs from {formatDate(selectedItem.depreciation_start_date)} to{' '}
+                                {formatDate(selectedItem.depreciation_end_date)}. Accumulated depreciation is{' '}
+                                {formatCurrency(selectedItem.accumulated_depreciation_total)} across{' '}
+                                {selectedItem.managed_quantity ?? selectedItem.quantity ?? 0} managed {selectedItem.unit_of_measurement || 'unit'}.
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                Depreciation is not enabled for this item.
+                            </div>
+                        )}
+
                         <div className="overflow-x-auto">
                             <table className="min-w-full overflow-hidden rounded-xl text-sm">
                                 <thead className="table-head">
@@ -922,9 +1051,24 @@ export default function ItemsPage() {
                                     </div>
                                 ) : (
                                     <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 xl:col-span-3">
-                                        Current quantity: <strong>{form.quantity}</strong>. Quantity changes through assignments and stock updates.
+                                        Current quantity: <strong>{form.quantity} {form.unit_of_measurement || 'unit'}</strong>. Quantity changes through assignments and stock updates.
                                     </div>
                                 )}
+
+                                <div>
+                                    <label className="field-label">Unit of Measurement<RequiredMark /></label>
+                                    <input
+                                        type="text"
+                                        value={form.unit_of_measurement}
+                                        onChange={(e) => setForm({ ...form, unit_of_measurement: e.target.value })}
+                                        className="input-shell w-full"
+                                        placeholder="unit, box, roll, set"
+                                        required
+                                    />
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        Shows beside quantities across inventory, dashboard, assignments, and reports.
+                                    </p>
+                                </div>
 
                                 <div>
                                     <label className="field-label">Reorder Level</label>
@@ -990,7 +1134,9 @@ export default function ItemsPage() {
                                                             ...form,
                                                             is_depreciable: e.target.checked,
                                                             depreciation_method: 'straight_line',
-                                                            useful_life_years: e.target.checked ? form.useful_life_years : '',
+                                                            useful_life_years: e.target.checked
+                                                                ? form.useful_life_years || selectedCategory?.default_useful_life_years || ''
+                                                                : '',
                                                             salvage_value: e.target.checked ? form.salvage_value : '',
                                                             depreciation_start_date: e.target.checked
                                                                 ? form.depreciation_start_date || form.purchase_date
@@ -1068,7 +1214,18 @@ export default function ItemsPage() {
                                     <label className="field-label">Category<RequiredMark /></label>
                                     <select
                                         value={form.category_id}
-                                        onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                                        onChange={(e) => {
+                                            const category = categories.find((item) => Number(item.id) === Number(e.target.value));
+
+                                            setForm({
+                                                ...form,
+                                                category_id: e.target.value,
+                                                useful_life_years:
+                                                    isDepreciable && !form.useful_life_years && category?.default_useful_life_years
+                                                        ? category.default_useful_life_years
+                                                        : form.useful_life_years,
+                                            });
+                                        }}
                                         className="input-shell w-full"
                                         required
                                     >
@@ -1167,7 +1324,7 @@ export default function ItemsPage() {
 
             <div className="table-shell">
                 <div className="overflow-x-auto">
-                    <table className="min-w-[1280px] w-full text-sm">
+                    <table className="min-w-[1480px] w-full text-sm">
                         <thead className="table-head">
                             <tr>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Name</th>
@@ -1176,8 +1333,10 @@ export default function ItemsPage() {
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Brand</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Category</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Supplier</th>
-                                <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Quantity</th>
-                                <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Book Value</th>
+                                <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Available</th>
+                                <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Assigned</th>
+                                <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Managed</th>
+                                <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Unit Cost</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Stock State</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Date Added</th>
                                 <th className="px-6 py-4 text-left font-semibold whitespace-nowrap">Actions</th>
@@ -1205,20 +1364,11 @@ export default function ItemsPage() {
                                             <td className="px-6 py-4 text-slate-700">{item.brand || '-'}</td>
                                             <td className="px-6 py-4 text-slate-700">{item.category?.name || '-'}</td>
                                             <td className="px-6 py-4 text-slate-700">{item.supplier?.name || '-'}</td>
-                                            <td className="px-6 py-4 font-semibold text-slate-900">{item.quantity ?? 0}</td>
-                                            <td className="px-6 py-4 text-slate-700">
-                                                {item.depreciation_enabled ? (
-                                                    <div className="space-y-1">
-                                                        <p className="font-semibold text-slate-900">
-                                                            {formatCurrency(item.current_book_value_total)}
-                                                        </p>
-                                                        <p className="text-xs text-slate-500">
-                                                            {item.is_fully_depreciated ? 'Fully depreciated' : `Per unit ${formatCurrency(item.current_book_value_per_unit)}`}
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    '-'
-                                                )}
+                                            <td className="px-6 py-4 font-semibold text-slate-900">{item.quantity ?? 0} {item.unit_of_measurement || 'unit'}</td>
+                                            <td className="px-6 py-4 font-semibold text-blue-700">{item.active_assigned_quantity ?? 0} {item.unit_of_measurement || 'unit'}</td>
+                                            <td className="px-6 py-4 font-semibold text-slate-900">{item.managed_quantity ?? item.quantity ?? 0} {item.unit_of_measurement || 'unit'}</td>
+                                            <td className="px-6 py-4 font-semibold text-slate-900">
+                                                {formatCurrency(item.unit_cost)}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badge.className}`}>
@@ -1244,6 +1394,14 @@ export default function ItemsPage() {
                                                 >
                                                     Delete
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openRetireDialog(item)}
+                                                    disabled={item.status === 'retired'}
+                                                    className="inline-flex rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    Retire
+                                                </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1251,7 +1409,7 @@ export default function ItemsPage() {
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan="11" className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan="13" className="px-6 py-10 text-center text-slate-500">
                                         No inventory items found.
                                     </td>
                                 </tr>
@@ -1286,6 +1444,73 @@ export default function ItemsPage() {
                     </div>
                 </div>
             </div>
+
+            {retireTarget ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+                    <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+                        <h2 className="text-lg font-semibold text-slate-900">Retire or dispose asset</h2>
+                        <p className="mt-3 text-sm text-slate-600">
+                            This records an audited disposal for <strong>{retireTarget.name}</strong>, reduces available quantity to zero,
+                            and keeps the asset in history as retired.
+                        </p>
+
+                        <form onSubmit={handleRetireSubmit} className="mt-5 space-y-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="field-label">Retirement Date</label>
+                                    <input
+                                        type="date"
+                                        value={retireForm.retired_at}
+                                        onChange={(event) => setRetireForm((prev) => ({ ...prev, retired_at: event.target.value }))}
+                                        className="input-shell w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="field-label">Disposal Value (PGK)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={retireForm.disposal_value}
+                                        onChange={(event) => setRetireForm((prev) => ({ ...prev, disposal_value: event.target.value }))}
+                                        className="input-shell w-full"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="field-label">Reason<RequiredMark /></label>
+                                <textarea
+                                    rows={3}
+                                    value={retireForm.disposal_reason}
+                                    onChange={(event) => setRetireForm((prev) => ({ ...prev, disposal_reason: event.target.value }))}
+                                    className="input-shell w-full"
+                                    placeholder="Example: damaged beyond repair, sold, replaced, obsolete"
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setRetireTarget(null)}
+                                    disabled={retiringId === retireTarget.id}
+                                    className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={retiringId === retireTarget.id}
+                                    className="inline-flex rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {retiringId === retireTarget.id ? 'Retiring...' : 'Confirm Retirement'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            ) : null}
 
             {deleteTarget ? (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">

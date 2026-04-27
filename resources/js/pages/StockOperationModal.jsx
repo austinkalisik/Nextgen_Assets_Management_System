@@ -174,7 +174,7 @@ export default function StockOperationModal({ isOpen, onClose, item, onSuccess }
                         <div>
                             <p className="text-xs font-medium text-slate-500">Current Qty</p>
                             <p className={`mt-1 text-sm font-semibold ${isLowStock ? 'text-red-600' : 'text-slate-900'}`}>
-                                {currentQuantity} {isLowStock ? <span className="text-xs">⚠️ Low Stock</span> : null}
+                                {currentQuantity} {item.unit_of_measurement || 'unit'} {isLowStock ? <span className="text-xs">Low Stock</span> : null}
                             </p>
                         </div>
 
@@ -187,7 +187,14 @@ export default function StockOperationModal({ isOpen, onClose, item, onSuccess }
 
                         <div>
                             <p className="text-xs font-medium text-slate-500">Unit Cost</p>
-                            <p className="mt-1 text-sm font-semibold text-slate-900">${item.unit_cost || '0.00'}</p>
+                            <p className="mt-1 text-sm font-semibold text-slate-900">
+                                {new Intl.NumberFormat('en-PG', {
+                                    style: 'currency',
+                                    currency: 'PGK',
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                }).format(Number(item.unit_cost || 0))}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -224,7 +231,7 @@ export default function StockOperationModal({ isOpen, onClose, item, onSuccess }
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700">Quantity *</label>
+                        <label className="block text-sm font-medium text-slate-700">Quantity ({item.unit_of_measurement || 'unit'}) *</label>
                         <input
                             type="number"
                             name="quantity"

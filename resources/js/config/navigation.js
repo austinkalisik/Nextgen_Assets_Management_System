@@ -44,6 +44,12 @@ export const navigationSections = [
                 icon: 'departments',
             },
             {
+                label: 'Receivers',
+                to: '/receivers',
+                match: ['/receivers'],
+                icon: 'receivers',
+            },
+            {
                 label: 'Users',
                 to: '/users',
                 match: ['/users'],

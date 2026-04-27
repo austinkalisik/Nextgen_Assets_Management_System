@@ -22,6 +22,11 @@ class Department extends Model
         return $this->hasMany(Assignment::class);
     }
 
+    public function receivers(): HasMany
+    {
+        return $this->hasMany(Receiver::class);
+    }
+
     public function activeAssignments(): HasMany
     {
         return $this->hasMany(Assignment::class)->whereNull('returned_at');

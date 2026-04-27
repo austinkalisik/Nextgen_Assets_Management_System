@@ -21,6 +21,10 @@ function getDefaultForm(fields) {
     const initialForm = {};
 
     fields.forEach((field) => {
+        if (field.form === false) {
+            return;
+        }
+
         if (field.type === 'checkbox') {
             initialForm[field.name] = field.defaultValue ?? false;
             return;
@@ -166,6 +170,10 @@ export function CRUDPage({
         const payload = {};
 
         fields.forEach((field) => {
+            if (field.form === false) {
+                return;
+            }
+
             const rawValue = source[field.name];
 
             if (field.type === 'checkbox') {
@@ -329,7 +337,7 @@ export function CRUDPage({
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                {fields.map((field) => {
+                                {fields.filter((field) => field.form !== false).map((field) => {
                                     const isFullWidth = field.fullWidth === true;
                                     const value = form[field.name] ?? '';
 
@@ -369,6 +377,25 @@ export function CRUDPage({
                                                         {Boolean(value) ? 'Enabled' : 'Disabled'}
                                                     </span>
                                                 </label>
+                                            ) : field.type === 'select' ? (
+                                                <select
+                                                    value={value}
+                                                    onChange={(event) =>
+                                                        setForm((prev) => ({
+                                                            ...prev,
+                                                            [field.name]: event.target.value,
+                                                        }))
+                                                    }
+                                                    className="input-shell w-full"
+                                                    required={field.required}
+                                                >
+                                                    <option value="">{field.placeholder || `Select ${field.label.toLowerCase()}`}</option>
+                                                    {(field.options || []).map((option) => (
+                                                        <option key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             ) : (
                                                 <input
                                                     type={field.type || 'text'}
@@ -422,7 +449,7 @@ export function CRUDPage({
                                     <tr key={item.id} className="table-row">
                                         {fields.map((field) => (
                                             <td key={field.name} className="px-6 py-4 text-slate-700">
-                                                {formatValue(item[field.name])}
+                                                {field.render ? field.render(item[field.name], item) : formatValue(item[field.name])}
                                             </td>
                                         ))}
                                         <td className="space-x-3 px-6 py-4">
@@ -486,4 +513,3 @@ export function CRUDPage({
 }
 
 export default CRUDPage;
-
