@@ -26,6 +26,12 @@ export const navigationSections = [
                 match: ['/suppliers'],
                 icon: 'suppliers',
             },
+            {
+                label: 'User Guide',
+                to: '/user-guide',
+                match: ['/user-guide'],
+                icon: 'userguide',
+            },
         ],
     },
     {

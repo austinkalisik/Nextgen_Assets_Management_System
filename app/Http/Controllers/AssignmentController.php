@@ -113,13 +113,18 @@ class AssignmentController extends Controller
             ->values();
 
         $receivers = $history
-            ->groupBy(fn (Assignment $assignment) => $this->receiverLabel($assignment))
-            ->map(function ($rows, string $receiver) {
+            ->groupBy(fn (Assignment $assignment) => $this->receiverReportKey($assignment))
+            ->map(function ($rows, string $key) {
+                $first = $rows->first();
+                $receiver = $this->receiverLabel($first);
+                $department = $first->assignedDepartment?->name;
                 $activeRows = $rows->whereNull('returned_at');
                 $returnedRows = $rows->whereNotNull('returned_at');
 
                 return [
+                    'key' => $key,
                     'receiver' => $receiver,
+                    'department' => $department,
                     'active_quantity' => (int) $activeRows->sum('quantity'),
                     'returned_quantity' => (int) $returnedRows->sum('quantity'),
                     'total_quantity' => (int) $rows->sum('quantity'),
@@ -152,7 +157,10 @@ class AssignmentController extends Controller
                         ->values(),
                 ];
             })
-            ->sortBy('receiver', SORT_NATURAL | SORT_FLAG_CASE)
+            ->sortBy([
+                ['department', 'asc'],
+                ['receiver', 'asc'],
+            ], SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
 
         return response()->json([
@@ -371,7 +379,7 @@ class AssignmentController extends Controller
 
     protected function availableQuantityMessage(int $availableQuantity, ?string $unitOfMeasurement = null): string
     {
-        return "Only {$availableQuantity} ".($unitOfMeasurement ?: 'unit')." available for assignment.";
+        return "Only {$availableQuantity} ".($unitOfMeasurement ?: 'unit').' available for assignment.';
     }
 
     protected function applyAssignmentFilters($query, Request $request): void
@@ -445,6 +453,11 @@ class AssignmentController extends Controller
     protected function receiverLabel(Assignment $assignment): string
     {
         return $assignment->receiver_name ?: ($assignment->receiver?->name ?? ($assignment->user?->name ?? 'Unknown receiver'));
+    }
+
+    protected function receiverReportKey(Assignment $assignment): string
+    {
+        return ($assignment->department_id ?: 'no-department').'|'.$this->receiverLabel($assignment);
     }
 
     protected function stockState(int $quantity, int $reorderLevel): string

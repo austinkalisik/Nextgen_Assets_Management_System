@@ -65,7 +65,7 @@ Route::middleware('web')->group(function () {
         Route::get('/settings', [SettingController::class, 'index']);
         Route::get('/settings/branding/logo/file', [SettingController::class, 'showLogo']);
 
-        Route::middleware(RoleMiddleware::class.':admin,manager,asset_officer')->group(function () {
+        Route::middleware(RoleMiddleware::class.':admin,manager,asset_officer,procurement_officer')->group(function () {
             Route::post('/items', [ItemController::class, 'store']);
             Route::put('/items/{item}', [ItemController::class, 'update']);
             Route::delete('/items/{item}', [ItemController::class, 'destroy']);

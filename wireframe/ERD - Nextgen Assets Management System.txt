@@ -4,18 +4,16 @@ Entity Relationship Diagram (ERD) Overview
 Primary ERD References
 - Visual ERD: graph.png
 - Generated text ERD snapshot: wireframe/erd-current.txt
-- This document explains the generated ERD in plain language
+- This document explains the generated ERD in plain language and aligns it with the current UI.
 
 Generation Source
-- graph.png was regenerated from the live local project database using:
-- php artisan generate:erd graph.png --format=png --no-interaction
-- Supporting text output was generated with:
-- php artisan generate:erd wireframe/erd-current.txt --text-output --no-interaction
+- graph.png is generated from the local project database/model state.
+- wireframe/erd-current.txt is the raw generated text snapshot.
 
 System Type
-- Laravel + ReactJS CRUD application
-- Laravel handles models, migrations, controllers, validation, authentication, and business rules
-- ReactJS handles the dashboard, CRUD pages, forms, tables, filters, and interactive workflows
+- Laravel + ReactJS CRUD application.
+- Laravel handles models, migrations, controllers, validation, authentication, and business rules.
+- ReactJS handles dashboard pages, CRUD pages, forms, tables, filters, reports, and navigation.
 
 Business Ownership
 - Product: Nextgen Assets Management System
@@ -23,10 +21,9 @@ Business Ownership
 - Website: https://nextgenpng.net/
 
 Important Scope Note
-- The generated ERD is model-based and currently shows 10 modeled entities
-- It does not include every table in the database
-- For example, framework/support tables and the key/value settings table are not shown in graph.png
-- Use graph.png as the generated operational model ERD, not as a complete all-tables database dump
+- The generated ERD is model-based and operational.
+- It is not a complete database dump of every Laravel/framework table.
+- Settings and support tables may not appear in graph.png.
 
 Main Generated ERD Entities
 - Asset
@@ -40,43 +37,54 @@ Main Generated ERD Entities
 - SystemNotification
 - User
 
-Core Functional Meaning
-- User manages and receives assets, creates logs, and receives notifications
-- Item is the main inventory record used by the system
-- Assignment records issued and returned assets
-- StockMovement records quantity changes
-- AssetLog records audit activity
-- Category and Supplier organize inventory
-- Department groups assignments
-- SystemNotification records alerts and system messages
+Current Operational Entities In The UI
+- Item: inventory item or asset record.
+- Department: office/business unit used for reports and receiver grouping.
+- Receiver: person/team receiving assets. This belongs to a department in current app behavior.
+- Assignment: issue/return record for item movement.
+- StockMovement: quantity change history.
+- AssetLog: audit trail.
+- SystemNotification: alerts and workflow messages.
+- User: login account and role holder.
+- Category and Supplier: inventory organization.
 
 Relationship Summary in the Generated ERD
-- Category has many Items
-- Supplier has many Items
-- Item belongs to Category
-- Item belongs to Supplier
-- Item has many Assignments
-- Item has many activeAssignments
-- Item has one activeAssignment
-- Item has many AssetLogs
-- Item has many StockMovements
-- Assignment belongs to Item
-- Assignment belongs to User
-- Assignment belongs to assignedDepartment
-- Department has many Assignments
-- Department has many activeAssignments
-- AssetLog belongs to Item
-- AssetLog belongs to User
-- StockMovement belongs to Item
-- StockMovement belongs to Supplier
-- StockMovement belongs to User
-- User has many Assignments
-- User has many activeAssignments
-- User has many AssetLogs
-- User has many notifications
-- SystemNotification belongs to User
+- Category has many Items.
+- Supplier has many Items.
+- Item belongs to Category.
+- Item belongs to Supplier.
+- Item has many Assignments.
+- Item has many active Assignments.
+- Item has one active Assignment.
+- Item has many AssetLogs.
+- Item has many StockMovements.
+- Assignment belongs to Item.
+- Assignment belongs to User.
+- Assignment belongs to Department through department_id in current app logic.
+- Department has many Assignments.
+- Department has many active Assignments.
+- AssetLog belongs to Item.
+- AssetLog belongs to User.
+- StockMovement belongs to Item.
+- StockMovement belongs to Supplier.
+- StockMovement belongs to User.
+- User has many Assignments.
+- User has many active Assignments.
+- User has many AssetLogs.
+- User has many SystemNotifications.
+- SystemNotification belongs to User.
 
-Important Current Item Fields Shown in the Generated ERD
+Current Department-First Assignment Meaning
+- Departments are the reporting group.
+- Receivers are selected inside their department context.
+- Giving out an asset should be read as:
+  Item -> Department / Person Receiving -> Quantity -> Assignment record.
+- Reports should make it easy to answer:
+  Which department has this item?
+  Which person in that department has it?
+  How many are still issued out?
+
+Important Current Item Fields
 - name
 - brand
 - description
@@ -97,50 +105,42 @@ Important Current Item Fields Shown in the Generated ERD
 - location
 - purchase_date
 
-Depreciation Note
-- The generated ERD now includes the depreciation fields on Item
-- This means graph.png is updated for the depreciation feature
-- These fields support fixed-asset valuation and book-value calculations in the system
+Inventory Tracking Meaning
+- Bulk stock: one item row can hold many units.
+- Serialized asset: one unique asset, normally one unit, identified by serial number and/or asset tag.
+
+Depreciation Meaning
+- Depreciation fields support fixed-asset valuation and book-value calculations.
+- Depreciation Start Date and Purchase Date are date-only fields in YYYY-MM-DD format.
 
 Generated ERD Reality Note
-- Because graph.png is generated from the live local database, it reflects the database as it exists right now
-- That means it may show legacy columns that are still present locally even if current application logic does not rely on them heavily
+- The generated ERD may show legacy local database columns that still exist.
 
-Current Legacy Columns Visible in the Generated ERD
-- Assignment still shows assigned_department_id alongside department_id
-- User still shows profile_photo_path alongside profile_photo
+Legacy Columns Visible in the Generated ERD
+- assignments.assigned_department_id
+- users.profile_photo_path
 
-How To Interpret Those Legacy Columns
-- department_id is the main assignment department field used by the current app flow
-- profile_photo is the main user profile image field used by the current app flow
-- The generated ERD still exposes assigned_department_id and profile_photo_path because they exist in the current local database state
-
-What graph.png Does Not Fully Represent
-- settings key/value configuration table
-- Laravel support tables such as sessions and password_reset_tokens
-- cache/jobs framework tables
-
-So the correct way to describe graph.png is:
-- it is the current generated ERD for the modeled operational entities
-- it is not the full database inventory of every table
+Current App Logic Primarily Uses
+- assignments.department_id
+- users.profile_photo
 
 Operational Data Flow
-1. User logs in
-2. Item records are created and updated
-3. StockMovement records opening stock, stock in, stock out, return, and adjustment
-4. Assignment records who received an item and when
-5. AssetLog records audit actions
-6. SystemNotification records alerts and workflow notifications
-7. Department, Category, and Supplier support organization and filtering
+1. User logs in.
+2. Item records are created and updated.
+3. StockMovement records opening stock, stock in, stock out, return, transfer, and adjustment.
+4. Receiver belongs to Department.
+5. Assignment records item, department/person receiving, quantity, assigned date, and returned date.
+6. AssetLog records audit actions.
+7. SystemNotification records alerts and workflow notifications.
+8. Activity Logs and Assignment reports can export filtered CSV/PDF outputs.
 
 Documentation Alignment Rule
-To keep the documentation consistent:
-- graph.png is the visual generated ERD
-- wireframe/erd-current.txt is the raw generated text snapshot
-- this file explains what graph.png currently represents
-- the wireframe docs should describe the application structure in a way that does not contradict the generated ERD
+- graph.png is the generated visual ERD.
+- wireframe/erd-current.txt is the generated raw snapshot.
+- Wireframe docs describe the live UI behavior.
+- If legacy generated columns appear, explain them as existing local database columns, not the preferred workflow.
 
 Recommended Presentation Wording
-- Nextgen Assets Management System is a Laravel + ReactJS CRUD application
-- Its generated ERD centers on the operational models for users, inventory items, assignments, suppliers, departments, notifications, stock movements, and audit logs
-- The live generated ERD includes depreciation fields on items and reflects the current local database structure
+- Nextgen Assets Management System is a Laravel + ReactJS CRUD application for inventory, stock, assignments, departments, receivers, notifications, users, and audit reports.
+- The current workflow is department-first for receivers and assignment reports.
+- The live ERD includes item depreciation fields and reflects the current local model/database state.

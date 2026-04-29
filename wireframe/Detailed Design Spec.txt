@@ -1,471 +1,291 @@
 Nextgen Assets Management System
-Detailed Design Spec Context
-
-ERD Reference
-- Main visual ERD: graph.png
-- Supporting database explanation: wireframe/ERD - Nextgen Assets Management System.txt
-- Generated ERD snapshot: wireframe/erd-current.txt
+Detailed Design Spec
 
 System Type
-- Laravel + ReactJS CRUD application
-- Laravel provides backend APIs, validation, models, controllers, authentication, and business rules
-- ReactJS provides the frontend interface, page rendering, forms, tables, filters, and client-side navigation
+- Laravel backend API
+- ReactJS frontend
+- Vite build
+- Authenticated single-page admin workspace
+- Current inventory model: Item
+- Current people model: Receiver belongs to Department
 
-System Structure
-- Login and authentication
-- Dashboard and system overview
-- Inventory and stock management
-- Assignments and returns
-- Suppliers, categories, and departments
-- Users and profile management
-- Notifications and activity logs
-- Settings and branding
+Design Goal
+- Make the app clear, professional, and hard to misuse.
+- Use department-first reporting where people or assignments are involved.
+- Keep forms plain and predictable.
+- Keep export buttons close to the filters they obey.
 
-Why This Design Spec Exists
-- to make the interface clearer
-- to make the system look more premium and corporate
-- to keep all CRUD modules visually consistent
-- to align the UI with the real structure of the application
+Navigation Structure
+Operations:
+- Dashboard
+- Inventory
+- Assignments
+- Suppliers
+- User Guide
 
-Current ERD Alignment Notes
-- graph.png now comes from the live generated ERD output
-- The generated diagram is operational-model focused, not a full all-tables schema map
-- Item in the ERD includes depreciation fields and remains the main working inventory entity in the application
-- Some legacy database columns may still appear in the generated ERD, so UI notes should follow current business usage while not contradicting the diagram
+Administration:
+- Categories
+- Departments
+- Receivers
+- Users
+- Notifications
+- Activity Logs
+- Settings
+- Profile
 
-**Global Design Rules**
-- Primary goal: clarity first, premium second.
-- Every page should have one clear main action.
-- Important numbers should be large and high-contrast.
-- Supporting text should be readable but quieter.
-- Avoid repeating the system name in multiple places on the same screen.
-- Use consistent spacing, card radius, shadows, and button styles.
+Global Shell
+- Sidebar owns navigation and signed-in user card.
+- Top bar owns global search, notification bell, user card, and logout.
+- Page headers should show the page purpose and one main action.
+- Avoid repeating the full product name inside every page.
 
-**Navigation Structure**
-Sidebar groups:
-- `Operations`
-  - Dashboard
-  - Inventory
-  - Assignments
-  - Suppliers
-- `Administration`
-  - Categories
-  - Departments
-  - Users
-  - Notifications
-  - Activity Logs
-  - Settings
-  - Profile
-
-Top bar should contain:
-- global search
-- notification bell
-- user card
-- logout
-
-Do not repeat:
-- full system name again inside every page header unless necessary
-
-**1. Login Page Spec**
+1. Login Page
 Purpose:
-- establish trust
-- show ownership by Nextgen Technology
-- keep sign-in simple
+- Let authorized users sign in.
+- Communicate the product is owned by Nextgen Technology.
 
-Visual priority:
-1. sign-in card
-2. brand identity
-3. short value statement
-4. subtle animated background
+Role message:
+- Admin
+- Manager
+- Asset Officer
+- Procurement Officer
+- Auditor
+- Staff
 
-Left panel content:
-- logo
-- product name
-- ownership line
-- headline
-- short explanation
-- 3 supporting cards:
-  - security
-  - shared office use
-  - PNG time
-
-Right panel content:
-- sign-in title
-- email field
-- password field
-- remember email
-- submit button
-- support note
-
-Important UX rules:
-- login form must remain visually calmer than the animated background
-- background motion must be slow and non-distracting
-- button must be the strongest object on the form
-
-**2. Dashboard Spec**
+2. Dashboard
 Purpose:
-- show system health instantly
-- allow fast action
+- Show inventory and assignment health quickly.
 
-Visual priority:
-1. main dashboard heading
-2. quick actions
-3. stat cards
-4. recent assignments
-5. right-side support panels
+Must show:
+- Quick actions: Add New Asset, Assign Asset, Stock Operations
+- Stat cards: total assets, available, assigned, maintenance, low stock, overdue
+- Recent assignments with asset, receiver, department, date, status
+- Quick links to common pages
 
-Header area:
-- badge: `System overview`
-- title: `Admin Dashboard`
-- short summary sentence
-- refresh button
-- secondary text link: `View all assets`
-
-Quick action row:
-- Add New Asset
-- Assign Asset
-- Stock Operations
-
-These should be:
-- bigger than normal buttons
-- visually differentiated
-- easy to tap/click
-
-Stat card row:
-- total assets
-- available
-- assigned
-- maintenance
-- low stock
-- overdue
-
-Rules:
-- label small
-- number large
-- icon visible
-- color tied to meaning
-
-Recent Assignments panel:
-Columns:
-- asset
-- receiver
-- department
-- date
-- status
-
-Right panels:
-- Quick Actions
-- Performance / system message
-- optional future card: low stock spotlight
-
-Do not:
-- overload dashboard with too many charts
-- show unnecessary explanatory paragraphs
-
-**3. Inventory Page Spec**
+3. Inventory
 Purpose:
-- make item management easy and safe
+- Manage items, stock quantity, lifecycle status, depreciation, and identity fields.
 
-Visual priority:
-1. add item action
-2. search and filters
-3. inventory table
-4. item form when opened
-
-Top bar:
-- page title
-- subtitle
-- search
-- add item
-- export
-
-Filter row:
-- stock state
-- category
-- clear filters
+Top controls:
+- Search
+- Add Item
+- Export CSV
+- Stock state filter
+- Category filter
+- Clear filters
 
 Table columns:
-- name
-- asset tag
-- sku
-- brand
-- category
-- supplier
-- quantity
-- book value
-- stock state
-- date added
-- actions
-
-Inventory form sections:
-1. Tracking Mode
-2. Item Basics
-3. Stock Details
-4. Depreciation
-5. Lifecycle / Identity
-6. Notes
-
-Required fields must show `*`:
 - Name
-- Initial Quantity
+- Asset Tag
+- SKU
+- Brand
 - Category
 - Supplier
-- Lifecycle Status
+- Quantity
+- Book Value
+- Stock State
+- Actions
 
-Required only when depreciation enabled:
-- Unit Cost
-- Useful Life
-- Depreciation Start Date
+Inventory form sections:
+- Tracking Mode
+- Item basics
+- Stock availability
+- Depreciation
+- Category, supplier, and identity
+- Notes / description
 
-Delete UX:
-- destructive action must open confirmation modal
-- modal must explain why deletion may fail
-- if item has true history, explain clearly and say `Retire instead`
+Tracking Mode rules:
+- Bulk stock: one inventory row can represent many units.
+- Serialized asset: one unique asset, normally quantity 1, with serial number tracking.
 
-**4. Assignments Page Spec**
+Date rules:
+- Purchase Date uses YYYY-MM-DD input with calendar picker button.
+- Depreciation Start Date uses the same YYYY-MM-DD input with calendar picker button.
+- Do not allow six-digit year entry or browser date reset behavior.
+
+Depreciation rules:
+- Track depreciation only for fixed assets that lose value over time.
+- Required when enabled: useful life and depreciation start date.
+- Unit cost and salvage value feed book-value calculations.
+
+4. Assignments
 Purpose:
-- issue and return assets safely
+- Give out assets, return assets, check people, check stock, and review history.
 
-Visual priority:
-1. new assignment action
-2. active assignment table
-3. assignment history/report
+Main layout:
+- Header with Refresh and Give Out
+- Metrics: Issued Out Now, Returned, People Holding Assets, Total Issued Qty
+- Assignment Work Area with six views:
+  - Issued Out
+  - Give Out
+  - Returned
+  - People
+  - Stock Check
+  - History
 
-Tabs:
+Department-first assignment rule:
+- A receiver must belong to a department.
+- The Give Out form should label the selector as Department / Person Receiving.
+- Receiver options should be grouped by department.
+- Reports should display department next to the person.
+
+Report period:
+- All time
+- Today
+- This month
+- This year
+- Choose dates
+
+Export rules:
+- Export CSV and Export PDF must use the current search, tab, and report-period filters.
+- Choose dates uses the same stable YYYY-MM-DD calendar input pattern used by inventory.
+
+Return UX:
+- Do not use browser confirm for important actions.
+- Use an in-app confirmation modal for Mark Returned.
+
+5. Departments
+Purpose:
+- Group receivers and assignment reports by office/business unit.
+
+Form:
+- Department Name
+- Description
+
+Table:
+- Department Name
+- Description
+- Total Assignments
+- Active Assignments
+- Actions
+
+Delete rule:
+- Do not delete a department with linked receivers or assignments.
+
+6. Receivers
+Purpose:
+- Manage the people or teams who can receive assets.
+
+Rules:
+- Receiver Name is required.
+- Department is required.
+- Email and phone are optional.
+- Active flag controls whether the receiver can be selected.
+
+Table:
+- Receiver Name
+- Department
+- Email
+- Phone
 - Active
-- New Assignment
-- History / Report
+- Assignments
+- Actions
 
-New assignment form:
-- item
-- receiver name
-- department
-- quantity
-- linked user optional
+Assignment connection:
+- Assignment should use receiver + department together, not a loose person name only.
 
-Important rules:
-- show available stock near item selection
-- warn when quantity exceeds availability
-- show overdue records clearly in active tab
-
-History/report section:
-- filters first
-- report results second
-- export button visible
-
-**5. Suppliers Page Spec**
+7. Users
 Purpose:
-- keep supplier data simple and clean
+- Manage login accounts and role permissions.
 
-Top:
-- title
-- search
-- add supplier
-- export if needed
+Roles:
+- Admin: full system access
+- Manager: oversees operations
+- Asset Officer: manages inventory and assignments
+- Procurement Officer: manages supplier and stock intake work
+- Auditor: read-only audit and report access
+- Staff: standard user access
+
+Important UX:
+- Only administrators can manage users.
+- If admin switches user, show impersonation banner and Return to Admin action.
+- Non-admin impersonated view must not expose admin-only management controls.
+
+8. Activity Logs
+Purpose:
+- Audit trail for asset actions, stock operations, and assignment changes.
+
+Controls:
+- Search by action, item, user, or notes
+- Action filter
+- Refresh
+- Export CSV
+- Export PDF
+
+Export rule:
+- Exports must match the current filter/search results.
 
 Table:
-- supplier name
-- email
-- phone
-- address
-- linked items count
-- actions
+- Date
+- Action
+- Item
+- User
+- Notes
 
-Form:
-- name required
-- email optional
-- phone optional
-- address optional
-
-Design rule:
-- keep this page lightweight and uncluttered
-
-**6. Categories Page Spec**
+9. Notifications
 Purpose:
-- organize asset types
+- Show system alerts and workflow messages.
 
-Top:
-- title
-- search
-- add category
+Controls:
+- Status filter
+- Priority filter
+- Type filter
+- Search
+- Mark all read
+- Clear read
 
-Table:
-- category
-- description
-- linked items
-- actions
+Notification list:
+- Priority
+- Title
+- Message
+- Type
+- Time
+- Open action
 
-Rule:
-- delete button should clearly appear disabled if linked items exist
-- tooltip/message should explain why
+10. Suppliers and Categories
+Suppliers:
+- Name, email, phone, address, linked items, actions.
 
-**7. Departments Page Spec**
+Categories:
+- Name, description, linked items, actions.
+
+11. Settings
+Sections:
+- Branding
+- Organization
+- Operations
+- Feature Controls
+
+Controls:
+- System logo
+- Officer profile image
+- System name
+- Tagline
+- Company name
+- Website
+- Support email
+- Low stock threshold
+- Assignment overdue days
+- Items per page
+- Email notifications
+- Maintenance alerts
+- Switch user access
+
+12. Profile
 Purpose:
-- group assignments by office or business unit
-
-Table:
-- department name
-- description
-- total assignments
-- active assignments
-- actions
-
-Design:
-- clean and simple
-- similar structure to categories/suppliers for consistency
-
-**8. Users Page Spec**
-Purpose:
-- manage system accounts safely
-
-Top:
-- title
-- search
-- add user
-
-Table:
-- name
-- email
-- role
-- assignments
-- activity logs
-- actions
-
-Form:
-- name
-- email
-- role
-- password
-- profile image
-
-Special action:
-- `Switch User Access` should be visually separate from edit/delete
-- impersonation should look like a support tool, not a normal everyday action
-
-**9. Notifications Page Spec**
-Purpose:
-- surface important alerts clearly
-
-Top:
-- unread count
-- mark all read
-- clear read
-
-Filters:
-- status
-- priority
-- type
-- search
-
-Notification item structure:
-- title
-- short message
-- priority badge
-- timestamp
-- open action
-
-Design rule:
-- unread notifications should stand out
-- high priority should be obvious but not ugly
-
-10. Activity Logs Page Spec
-Purpose:
-- show traceable history
-
-Top:
-- title
-- search
-- filters
-- refresh
-
-Table:
-- user
-- action
-- target/item
-- notes
-- timestamp
-
-Design rule:
-- readability is more important than decoration here
-
-**11. Settings Page Spec**
-Purpose:
-- let admins control branding and system behavior
-
-Section order:
-1. Branding
-2. Organization
-3. Operations
-4. Feature Controls
-
-Each section should be a separate card.
-
-Branding:
-- system logo
-- profile image
-
-Organization:
-- system name
-- tagline
-- company name
-- website
-- support email
-
-Operations:
-- low stock threshold
-- assignment overdue days
-- items per page
-
-Feature Controls:
-- email notifications
-- maintenance alerts
-- switch user access
-
-Design rule:
-- `Save Changes` should always be easy to find
-- help text should be short and plain
-
-12. Profile Page Spec
-Purpose:
-- allow user self-management
+- Let the current user manage personal account details.
 
 Sections:
-- profile image
-- personal info
-- account details
-- password update
+- Profile image
+- Name and email
+- Account details
+- Password update
 
-Design rule:
-- make this page calmer and more personal than admin pages
-
-Component Priority Rules
-Use these visual priorities:
-- primary action: solid gradient or strong filled button
-- secondary action: white or soft neutral button
-- destructive action: red outline/fill with confirmation modal
-- metrics: large number, small uppercase label
-- cards: rounded, shadowed, consistent spacing
-- tables: clean headers, light hover state, readable rows
-
-Accessibility / Clarity Rules
-- dark text on light surfaces must be high contrast
-- light text on dark hero panels must stay readable
-- supporting text should never be too faint
-- avoid duplicate labels or repeated brand lines
-- form labels must be visible and not rely on placeholders only
-
-What Step 3 Should Be
-Step 3 is the implementation roadmap:
-- which page to redesign first
-- what shared classes/components to improve
-- what to code in what order
-
-Recommended order for implementation:
-1. login
-2. dashboard
-3. inventory
-4. assignments
-5. settings
-6. users
-7. notifications
-8. remaining admin pages
+Design Rules
+- Primary action: filled blue/teal gradient button.
+- Secondary action: neutral outlined button.
+- Destructive action: red and confirmed.
+- Export action: neutral button near the filters it uses.
+- Date fields: visible YYYY-MM-DD text plus calendar picker.
+- Tables: simple headers, readable rows, clear action buttons.
+- Cards: use for repeated records and grouped form/report areas, not nested decoration.

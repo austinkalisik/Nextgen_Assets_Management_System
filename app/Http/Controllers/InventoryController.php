@@ -6,6 +6,8 @@ use App\Models\AssetLog;
 use App\Models\Item;
 use App\Services\StockInventoryService;
 use App\Services\SystemNotificationService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -35,7 +37,7 @@ class InventoryController extends Controller
         return (int) $value;
     }
 
-    protected function lowStockQuery(int $defaultThreshold)
+    protected function lowStockQuery(int $defaultThreshold): Builder
     {
         return Item::query()
             ->where('quantity', '>', 0)
@@ -50,7 +52,7 @@ class InventoryController extends Controller
             });
     }
 
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $lowStockThreshold = $this->getIntSetting('low_stock_threshold', 5);
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
@@ -72,11 +74,13 @@ class InventoryController extends Controller
         }
 
         if ($request->filled('stock')) {
-            if ($request->stock === 'out') {
+            $stock = $request->string('stock')->toString();
+
+            if ($stock === 'out') {
                 $query->where('quantity', 0);
-            } elseif ($request->stock === 'low') {
+            } elseif ($stock === 'low') {
                 $query->whereIn('id', $this->lowStockQuery($lowStockThreshold)->select('id'));
-            } elseif ($request->stock === 'available') {
+            } elseif ($stock === 'available') {
                 $query->where('quantity', '>', 0)
                     ->whereNotIn('id', $this->lowStockQuery($lowStockThreshold)->select('id'));
             }
@@ -96,7 +100,7 @@ class InventoryController extends Controller
         ));
     }
 
-    public function stockIn(Request $request, Item $item)
+    public function stockIn(Request $request, Item $item): JsonResponse
     {
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1'],
@@ -114,7 +118,7 @@ class InventoryController extends Controller
                 $validated['notes'] ?? null
             );
 
-            $updatedItem = $item->fresh()->load(['category', 'supplier']);
+            $updatedItem = $item->refresh()->load(['category', 'supplier']);
 
             AssetLog::log(
                 $item->id,
@@ -134,7 +138,7 @@ class InventoryController extends Controller
         }
     }
 
-    public function stockOut(Request $request, Item $item)
+    public function stockOut(Request $request, Item $item): JsonResponse
     {
         $lowStockThreshold = $this->getIntSetting('low_stock_threshold', 5);
 
@@ -152,7 +156,7 @@ class InventoryController extends Controller
                 $validated['notes'] ?? null
             );
 
-            $updatedItem = $item->fresh()->load(['category', 'supplier']);
+            $updatedItem = $item->refresh()->load(['category', 'supplier']);
 
             AssetLog::log(
                 $item->id,

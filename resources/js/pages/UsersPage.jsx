@@ -9,7 +9,9 @@ const ROLE_OPTIONS = [
     { value: 'admin', label: 'Admin', note: 'Full system access', className: 'bg-red-50 text-red-700 border-red-200' },
     { value: 'manager', label: 'Manager', note: 'Approves and oversees operations', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
     { value: 'asset_officer', label: 'Asset Officer', note: 'Manages inventory and assignments', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    { value: 'staff', label: 'Staff', note: 'Standard user access', className: 'bg-slate-50 text-slate-700 border-slate-200' },
+    { value: 'procurement_officer', label: 'Procurement Officer', note: 'Manages supplier and stock intake work', className: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+    { value: 'auditor', label: 'Auditor', note: 'Read-only audit and report access', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+    { value: 'staff', label: 'Staff', note: 'Read-only standard user access', className: 'bg-slate-50 text-slate-700 border-slate-200' },
 ];
 
 function defaultForm() {
@@ -47,13 +49,16 @@ function RoleBadge({ role }) {
 
 function UserActions({ user, currentUser, canSwitchUser, busyId, onEdit, onDelete, onImpersonate }) {
     const isCurrentUser = Number(currentUser?.id) === Number(user.id);
-    const canImpersonate = canSwitchUser && currentUser?.role === 'admin' && !currentUser?.is_impersonating && !isCurrentUser;
+    const canManageUsers = currentUser?.role === 'admin' && !currentUser?.is_impersonating;
+    const canImpersonate = canSwitchUser && canManageUsers && !isCurrentUser;
 
     return (
         <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => onEdit(user)} className="btn-secondary !px-3 !py-2">
-                Edit
-            </button>
+            {canManageUsers ? (
+                <button type="button" onClick={() => onEdit(user)} className="btn-secondary !px-3 !py-2">
+                    Edit
+                </button>
+            ) : null}
 
             {canImpersonate ? (
                 <button
@@ -66,14 +71,16 @@ function UserActions({ user, currentUser, canSwitchUser, busyId, onEdit, onDelet
                 </button>
             ) : null}
 
-            <button
-                type="button"
-                onClick={() => onDelete(user.id)}
-                disabled={busyId === user.id || isCurrentUser}
-                className="btn-danger !px-3 !py-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                Delete
-            </button>
+            {canManageUsers ? (
+                <button
+                    type="button"
+                    onClick={() => onDelete(user.id)}
+                    disabled={busyId === user.id || isCurrentUser}
+                    className="btn-danger !px-3 !py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Delete
+                </button>
+            ) : null}
         </div>
     );
 }
@@ -83,6 +90,7 @@ export default function UsersPage() {
     const { user: currentUser, impersonate, stopImpersonation, refreshUser } = useAuth();
     const { settings } = useSettings();
     const canSwitchUser = String(settings.allow_user_impersonation ?? '1') === '1';
+    const canManageUsers = currentUser?.role === 'admin' && !currentUser?.is_impersonating;
 
     const filters = useMemo(
         () => ({
@@ -93,7 +101,7 @@ export default function UsersPage() {
         [searchParams]
     );
 
-    const { data, loading, error, refetch } = useApi('/users', { params: filters }, { ttl: 180000 });
+    const { data, loading, error, refetch } = useApi('/users', { params: filters }, { ttl: 180000, enabled: canManageUsers });
     const users = data?.data || [];
     const meta = {
         current_page: data?.current_page || 1,
@@ -102,12 +110,8 @@ export default function UsersPage() {
     };
 
     const roleCounts = useMemo(
-        () =>
-            users.reduce((counts, user) => {
-                counts[user.role] = (counts[user.role] || 0) + 1;
-                return counts;
-            }, {}),
-        [users]
+        () => data?.role_counts || {},
+        [data?.role_counts]
     );
 
     const [success, setSuccess] = useState('');
@@ -259,7 +263,6 @@ export default function UsersPage() {
             setActionError('');
             await impersonate(userId);
             setSuccess('User switched successfully.');
-            await refreshUsers();
         } catch (err) {
             setActionError(err?.response?.data?.message || 'Unable to switch user.');
         } finally {
@@ -282,6 +285,29 @@ export default function UsersPage() {
 
     if (loading && !data) {
         return <div className="text-slate-500">Loading users...</div>;
+    }
+
+    if (!canManageUsers) {
+        return (
+            <div className="space-y-5">
+                <div className="page-header">
+                    <div>
+                        <h1 className="page-title">Users</h1>
+                        <p className="page-subtitle">Only administrator accounts can manage staff accounts and switch-user access.</p>
+                    </div>
+
+                    {currentUser?.is_impersonating ? (
+                        <button type="button" onClick={handleStopImpersonation} className="btn-secondary">
+                            Return to Admin
+                        </button>
+                    ) : null}
+                </div>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    You are signed in as {currentUser?.name || currentUser?.email || 'this user'}. User management is hidden until you return to an administrator account.
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -309,7 +335,7 @@ export default function UsersPage() {
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Users</p>
                     <p className="mt-2 text-2xl font-bold text-slate-950">{meta.total}</p>
                 </div>
-                {ROLE_OPTIONS.slice(0, 3).map((role) => (
+                {ROLE_OPTIONS.map((role) => (
                     <div key={role.value} className="metric-card">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{role.label}</p>
                         <p className="mt-2 text-2xl font-bold text-slate-950">{roleCounts[role.value] || 0}</p>

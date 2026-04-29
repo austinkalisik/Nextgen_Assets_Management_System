@@ -24,7 +24,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyAdmins(
+        $this->notificationService()->notifyAdmins(
             'asset_updated',
             'Asset Updated',
             'Asset radio was updated.',
@@ -59,7 +59,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyUser(
+        $this->notificationService()->notifyUser(
             $actor->id,
             'assignment_created',
             'Asset Assigned To You',
@@ -79,7 +79,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyUser(
+        $this->notificationService()->notifyUser(
             $receiver->id,
             'assignment_created',
             'Asset Assigned To You',
@@ -105,7 +105,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyAdmins(
+        $this->notificationService()->notifyAdmins(
             'inventory_alert',
             'Inventory Alert',
             'Stock is below the required threshold.',
@@ -132,7 +132,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyAdmins(
+        $this->notificationService()->notifyAdmins(
             'asset_updated',
             'Asset Updated',
             'Asset radio was updated.',
@@ -141,7 +141,7 @@ class SystemNotificationServiceTest extends TestCase
             10
         );
 
-        Mail::assertSent(SystemNotificationMail::class, function ($mail) use ($otherAdmin) {
+        Mail::assertSent(SystemNotificationMail::class, function (SystemNotificationMail $mail) use ($otherAdmin) {
             return $mail->hasTo($otherAdmin->email)
                 && $mail->title === 'Asset Updated';
         });
@@ -158,7 +158,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyAdmins(
+        $this->notificationService()->notifyAdmins(
             'asset_updated',
             'Asset Updated',
             'Asset radio was updated.',
@@ -184,7 +184,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyAdmins(
+        $this->notificationService()->notifyAdmins(
             'maintenance_due',
             'Maintenance Alert',
             'Asset radio has been moved to maintenance.',
@@ -208,7 +208,7 @@ class SystemNotificationServiceTest extends TestCase
 
         $this->actingAs($actor);
 
-        app(SystemNotificationService::class)->notifyAdmins(
+        $this->notificationService()->notifyAdmins(
             'maintenance_due',
             'Maintenance Alert',
             'Asset radio has been moved to maintenance.',
@@ -232,6 +232,11 @@ class SystemNotificationServiceTest extends TestCase
             'password' => Hash::make('password'),
             'role' => $role,
         ]);
+    }
+
+    protected function notificationService(): SystemNotificationService
+    {
+        return app(SystemNotificationService::class);
     }
 
     protected function enableSetting(string $key, string $value): void

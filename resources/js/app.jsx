@@ -24,6 +24,7 @@ const routeImports = {
     '/users': () => import('./pages/UsersPage'),
     '/settings': () => import('./pages/SettingsPage'),
     '/search': () => import('./pages/GlobalSearchPage'),
+    '/user-guide': () => import('./pages/UserguidePage'),
 };
 
 const preloadCache = new Map();
@@ -58,6 +59,7 @@ const ProfilePage = lazy(routeImports['/profile']);
 const UsersPage = lazy(routeImports['/users']);
 const SettingsPage = lazy(routeImports['/settings']);
 const GlobalSearchPage = lazy(routeImports['/search']);
+const UserguidePage = lazy(routeImports['/user-guide']);
 
 function LoadingScreen() {
     return (
@@ -184,6 +186,7 @@ function AppRoutes() {
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/search" element={<GlobalSearchPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/user-guide" element={<UserguidePage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

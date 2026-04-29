@@ -303,6 +303,7 @@ class ItemController extends Controller
             'supplier_id' => ['required', 'exists:suppliers,id'],
             'asset_tag' => ['nullable', 'string', 'max:255', 'unique:items,asset_tag,'.$item->id],
             'serial_number' => ['nullable', 'string', 'max:255', 'unique:items,serial_number,'.$item->id],
+            'quantity' => ['nullable', 'integer', 'min:0'],
             'unit_of_measurement' => ['nullable', 'string', 'max:50'],
             'reorder_level' => ['nullable', 'integer', 'min:0'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
@@ -317,14 +318,35 @@ class ItemController extends Controller
         ]);
 
         $payload = $this->normalizePayload($validated, false);
+        $desiredQuantity = array_key_exists('quantity', $validated)
+            ? (int) $validated['quantity']
+            : (int) $item->quantity;
+        $quantityChange = $desiredQuantity - (int) $item->quantity;
 
-        if ($payload['serial_number'] && (int) $item->quantity !== 1) {
+        if ($payload['serial_number'] && $desiredQuantity !== 1) {
             throw ValidationException::withMessages([
-                'serial_number' => 'Serial Number is only allowed when the current quantity is 1.',
+                'serial_number' => 'Serial Number is only allowed when the quantity is 1.',
             ]);
         }
 
-        $item->update($payload);
+        if ($quantityChange < 0 && abs($quantityChange) > (int) $item->quantity) {
+            throw ValidationException::withMessages([
+                'quantity' => "Quantity cannot be reduced below zero. Current quantity is {$item->quantity}.",
+            ]);
+        }
+
+        DB::transaction(function () use ($item, $payload, $quantityChange) {
+            $item->update($payload);
+
+            if ($quantityChange !== 0) {
+                $this->stockInventoryService->stockAdjustment(
+                    $item,
+                    $quantityChange,
+                    'EDIT-'.$item->id,
+                    'Quantity updated from inventory edit form.'
+                );
+            }
+        });
 
         if (method_exists($item, 'syncAutomatedStatus')) {
             $item->refresh();

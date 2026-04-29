@@ -126,7 +126,7 @@ export default function InventoryPage() {
 
     if (error) {
         return (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="px-4 py-3 text-sm text-red-700 border border-red-200 rounded-xl bg-red-50">
                 {error}
             </div>
         );
@@ -192,14 +192,14 @@ export default function InventoryPage() {
                     <table className="min-w-full text-sm">
                         <thead className="table-head">
                             <tr>
-                                <th className="px-6 py-4 text-left font-semibold">Item</th>
-                                <th className="px-6 py-4 text-left font-semibold">SKU</th>
-                                <th className="px-6 py-4 text-left font-semibold">Category</th>
-                                <th className="px-6 py-4 text-left font-semibold">Supplier</th>
-                                <th className="px-6 py-4 text-left font-semibold">Quantity</th>
-                                <th className="px-6 py-4 text-left font-semibold">Unit</th>
-                                <th className="px-6 py-4 text-left font-semibold">Stock Status</th>
-                                <th className="px-6 py-4 text-left font-semibold">Actions</th>
+                                <th className="px-6 py-4 font-semibold text-left">Item</th>
+                                <th className="px-6 py-4 font-semibold text-left">SKU</th>
+                                <th className="px-6 py-4 font-semibold text-left">Category</th>
+                                <th className="px-6 py-4 font-semibold text-left">Supplier</th>
+                                <th className="px-6 py-4 font-semibold text-left">Quantity</th>
+                                <th className="px-6 py-4 font-semibold text-left">Unit</th>
+                                <th className="px-6 py-4 font-semibold text-left">Stock Status</th>
+                                <th className="px-6 py-4 font-semibold text-left">Actions</th>
                             </tr>
                         </thead>
 
@@ -255,7 +255,7 @@ export default function InventoryPage() {
                     </table>
                 </div>
 
-                <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 px-6 py-4 text-sm border-t border-slate-200 text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                     <p>
                         Showing page {meta.current_page} of {meta.last_page} · {meta.total} total
                     </p>

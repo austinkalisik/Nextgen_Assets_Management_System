@@ -1,28 +1,52 @@
 Nextgen Assets Management System
 Schema Alignment Notes
 
-What Was Updated
-- graph.png was regenerated from the live local project database
-- wireframe/erd-current.txt was generated as a text snapshot of the same ERD
-- wireframe notes were updated to match the generated ERD context
+What These Notes Align
+- graph.png: generated visual ERD
+- wireframe/erd-current.txt: generated raw text ERD snapshot
+- wireframe/*.txt: human-readable UI and design wireframes
 
-Key Alignment Rule
-- graph.png matches the current generated model ERD
-- wireframe notes describe the same live generated ERD context
-- some generated columns are legacy database columns that still exist locally
+Current App Logic
+- Item is the main inventory record.
+- Assignment records item issue/return history.
+- Department groups receivers and assignment reporting.
+- Receiver is the operational person/team that receives assets.
+- User is the login account and permission holder.
+- StockMovement records stock in, stock out, return, transfer, and adjustment movements.
+- AssetLog records audit activity.
+- SystemNotification records user-facing system alerts.
 
-Legacy Columns Currently Visible In The Generated ERD
+Department-First Rule
+- Receivers belong to departments.
+- Assignments should be understood as item -> receiver -> department.
+- Assignment reports should show department context before or beside receiver context.
+- Department pages report total assignments and active assignments.
+- Receiver pages report assignment counts per receiver.
+
+Generated ERD Scope
+- graph.png is model-based and operational.
+- It does not include every framework/support table.
+- Settings may exist as a key/value table even if not shown in the model ERD.
+
+Legacy Columns Still Visible In The Generated ERD
 - assignments.assigned_department_id
 - users.profile_photo_path
 
-Current App Logic Still Primarily Uses
+Current App Logic Primarily Uses
 - assignments.department_id
 - users.profile_photo
 
-Generated ERD Scope
-- graph.png shows the current modeled operational entities
-- it does not include every database table such as settings or Laravel support tables
+Documentation Rule
+- Product/demo explanations should describe current app behavior.
+- Exact schema explanations should mention legacy columns only as generated database leftovers.
+- Do not describe the old assignment flow as receiver-name-only.
+- Do not describe Userguide; use User Guide.
 
-Use This When Explaining The System
-- For product/demo explanation: use the business entities and relationships
-- For exact generated diagram explanation: refer to graph.png and wireframe/erd-current.txt
+Current UI Features To Reflect
+- Inventory tracking mode: Bulk stock or Serialized asset.
+- Inventory date inputs: Purchase Date and Depreciation Start Date use YYYY-MM-DD with calendar picker.
+- Assignments views: Issued Out, Give Out, Returned, People, Stock Check, History.
+- Assignments report period: All time, Today, This month, This year, Choose dates.
+- Assignments exports: CSV and PDF based on active filters.
+- Activity Logs exports: CSV and PDF based on active filters.
+- Users roles: Admin, Manager, Asset Officer, Procurement Officer, Auditor, Staff.

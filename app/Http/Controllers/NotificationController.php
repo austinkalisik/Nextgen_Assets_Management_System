@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\SystemNotification;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
-    public function apiIndex(Request $request)
+    public function apiIndex(Request $request): JsonResponse
     {
         $user = Auth::user();
 
@@ -30,7 +33,7 @@ class NotificationController extends Controller
         return response()->json($notifications);
     }
 
-    public function stats(Request $request)
+    public function stats(Request $request): JsonResponse
     {
         $user = Auth::user();
 
@@ -58,7 +61,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function unreadCount()
+    public function unreadCount(): JsonResponse
     {
         $user = Auth::user();
 
@@ -71,7 +74,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function markRead($id)
+    public function markRead(int|string $id): JsonResponse
     {
         $notification = $this->findUserNotification($id);
 
@@ -87,7 +90,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function markUnread($id)
+    public function markUnread(int|string $id): JsonResponse
     {
         $notification = $this->findUserNotification($id);
 
@@ -101,7 +104,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function markAllRead()
+    public function markAllRead(): JsonResponse
     {
         $user = Auth::user();
 
@@ -120,7 +123,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy(int|string $id): JsonResponse
     {
         $notification = $this->findUserNotification($id);
         $notification->delete();
@@ -130,7 +133,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function clearRead()
+    public function clearRead(): JsonResponse
     {
         $user = Auth::user();
 
@@ -148,17 +151,16 @@ class NotificationController extends Controller
         ]);
     }
 
-    protected function findUserNotification($id): SystemNotification
+    protected function findUserNotification(int|string $id): SystemNotification
     {
-        $user = Auth::user();
-
-        if (! $user) {
-            abort(401, 'Unauthenticated');
-        }
+        $user = $this->authenticatedUserOrAbort();
 
         return $user->notifications()->findOrFail($id);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function transformNotification(SystemNotification $notification): array
     {
         return [
@@ -177,9 +179,12 @@ class NotificationController extends Controller
         ];
     }
 
-    protected function filteredQuery(Request $request)
+    /**
+     * @return HasMany<SystemNotification, User>
+     */
+    protected function filteredQuery(Request $request): HasMany
     {
-        $query = Auth::user()->notifications();
+        $query = $this->authenticatedUserOrAbort()->notifications();
 
         if ($request->filled('status')) {
             if ($request->status === 'unread') {
@@ -212,6 +217,17 @@ class NotificationController extends Controller
         }
 
         return $query;
+    }
+
+    protected function authenticatedUserOrAbort(): User
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            abort(401, 'Unauthenticated');
+        }
+
+        return $user;
     }
 
     protected function resolveNotificationUrl(SystemNotification $notification): string

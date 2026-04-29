@@ -1,18 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import apiClient from '../api/client';
 import { downloadCsv } from '../utils/csv';
+import { fetchFilteredExportRows } from '../utils/exportData';
 import { invalidateApiCache, useApi } from '../hooks/useApi';
 
 const PNG_TIME_ZONE = 'Pacific/Port_Moresby';
+const MIN_DATE_INPUT = '1900-01-01';
+const MAX_DATE_INPUT = '9999-12-31';
+const DATE_INPUT_PLACEHOLDER = 'YYYY-MM-DD';
 
 const TABS = [
-    { id: 'active', label: 'Issued Out', description: 'Still with staff', status: 'active' },
-    { id: 'new', label: 'Give Out Asset', description: 'Record a handover', status: '' },
-    { id: 'returned', label: 'Returned', description: 'Back in stock', status: 'returned' },
-    { id: 'receivers', label: 'By Receiver', description: 'Staff statements', status: '' },
+    { id: 'active', label: 'Issued Out', description: 'Items still with people', status: 'active' },
+    { id: 'new', label: 'Give Out', description: 'Assign an item', status: '' },
+    { id: 'returned', label: 'Returned', description: 'Items back in stock', status: 'returned' },
+    { id: 'receivers', label: 'People', description: 'Who has what', status: '' },
     { id: 'stock', label: 'Stock Check', description: 'Available vs issued', status: '' },
-    { id: 'history', label: 'Full History', description: 'Audit trail', status: '' },
+    { id: 'history', label: 'History', description: 'Full audit trail', status: '' },
 ];
 const PERIOD_OPTIONS = [
     { id: 'all', label: 'All time' },
@@ -67,6 +71,35 @@ function toDateInputValue(date) {
     return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+function isValidDateTextInput(value) {
+    if (!value) {
+        return true;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+
+    if (year < 1900 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) {
+        return false;
+    }
+
+    const parsed = new Date(`${value}T00:00:00`);
+
+    return parsed.getFullYear() === year && parsed.getMonth() + 1 === month && parsed.getDate() === day;
+}
+
+function formatDateTextInput(value) {
+    const digits = String(value).replace(/\D/g, '').slice(0, 8);
+    const year = digits.slice(0, 4);
+    const month = digits.slice(4, 6);
+    const day = digits.slice(6, 8);
+
+    return [year, month, day].filter(Boolean).join('-');
+}
+
 function getPeriodRange(period, customStart = '', customEnd = '') {
     const today = new Date();
     const start = new Date(today);
@@ -86,10 +119,36 @@ function getPeriodRange(period, customStart = '', customEnd = '') {
     }
 
     if (period === 'custom') {
-        return { date_start: customStart, date_end: customEnd };
+        return {
+            date_start: isValidDateTextInput(customStart) ? customStart : '',
+            date_end: isValidDateTextInput(customEnd) ? customEnd : '',
+        };
     }
 
     return { date_start: '', date_end: '' };
+}
+
+function exportAssignmentRows(rows) {
+    return rows.map((assignment) => ({
+        Asset: assignment.item?.name || '',
+        'Asset Tag': assignment.item?.asset_tag || '',
+        SKU: assignment.item?.sku || '',
+        'Given To': assignment.receiver_name || assignment.user?.name || '',
+        Department: assignment.assigned_department?.name || '',
+        Quantity: `${assignment.quantity || 0} ${assignment.item?.unit_of_measurement || 'unit'}`,
+        'Date Given': formatDateTime(assignment.assigned_at),
+        Status: assignment.returned_at ? 'Returned' : 'Issued out',
+        'Date Returned': assignment.returned_at ? formatDateTime(assignment.returned_at) : '',
+    }));
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function getPeriodLabel(period, customStart = '', customEnd = '') {
@@ -142,7 +201,7 @@ function Pager({ page, lastPage, total, onPageChange }) {
     }
 
     return (
-        <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 pt-4 text-sm border-t border-slate-100 text-slate-600 sm:flex-row sm:items-center sm:justify-between">
             <span>
                 Page {page} of {lastPage} | {total} record(s)
             </span>
@@ -168,12 +227,72 @@ function Pager({ page, lastPage, total, onPageChange }) {
     );
 }
 
+function DateInput({ id, value, onChange }) {
+    const pickerRef = useRef(null);
+
+    function openPicker() {
+        const picker = pickerRef.current;
+
+        if (!picker) {
+            return;
+        }
+
+        if (typeof picker.showPicker === 'function') {
+            picker.showPicker();
+            return;
+        }
+
+        picker.focus();
+        picker.click();
+    }
+
+    return (
+        <div className="relative">
+            <input
+                id={id}
+                type="text"
+                value={value}
+                onChange={(event) => onChange(formatDateTextInput(event.target.value))}
+                className="w-full tracking-normal normal-case pr-11 input-shell"
+                placeholder={DATE_INPUT_PLACEHOLDER}
+                inputMode="numeric"
+                maxLength={10}
+                pattern="\d{4}-\d{2}-\d{2}"
+            />
+            <input
+                ref={pickerRef}
+                type="date"
+                min={MIN_DATE_INPUT}
+                max={MAX_DATE_INPUT}
+                value={isValidDateTextInput(value) ? value : ''}
+                onChange={(event) => onChange(event.target.value)}
+                className="sr-only"
+                tabIndex={-1}
+                aria-label="Open calendar"
+            />
+            <button
+                type="button"
+                onClick={openPicker}
+                className="absolute inset-y-0 right-0 flex items-center justify-center w-11 text-slate-500 hover:text-blue-600"
+                aria-label="Open calendar"
+            >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+            </button>
+        </div>
+    );
+}
+
 function AssignmentCard({ assignment, onOpen, onReturn }) {
     const receiver = assignment.receiver_name || assignment.user?.name || '-';
     const returned = Boolean(assignment.returned_at);
 
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="p-4 bg-white border shadow-sm rounded-xl border-slate-200">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <h3 className="font-semibold text-slate-950">{assignment.item?.name || '-'}</h3>
@@ -184,32 +303,32 @@ function AssignmentCard({ assignment, onOpen, onReturn }) {
                 </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-lg bg-slate-50 px-3 py-2">
+            <div className="grid grid-cols-2 gap-2 mt-4 text-sm">
+                <div className="px-3 py-2 rounded-lg bg-slate-50">
                     <p className="text-xs text-slate-500">Given To</p>
                     <p className="font-semibold text-slate-900">{receiver}</p>
                 </div>
-                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                <div className="px-3 py-2 rounded-lg bg-slate-50">
                     <p className="text-xs text-slate-500">Quantity</p>
                     <p className="font-semibold text-slate-900">{assignment.quantity || 0} {assignment.item?.unit_of_measurement || 'unit'}</p>
                 </div>
-                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                <div className="px-3 py-2 rounded-lg bg-slate-50">
                     <p className="text-xs text-slate-500">Department</p>
                     <p className="font-semibold text-slate-900">{assignment.assigned_department?.name || '-'}</p>
                 </div>
-                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                <div className="px-3 py-2 rounded-lg bg-slate-50">
                     <p className="text-xs text-slate-500">Date Given</p>
                     <p className="font-semibold text-slate-900">{formatDateTime(assignment.assigned_at)}</p>
                 </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mt-4">
                 <button type="button" onClick={() => onOpen(assignment)} className="btn-secondary !px-3 !py-2">
                     View
                 </button>
                 {!returned ? (
-                    <button type="button" onClick={() => onReturn(assignment.id)} className="btn-primary !px-3 !py-2">
-                        Mark Returned
+                    <button type="button" onClick={() => onReturn(assignment)} className="btn-primary !px-3 !py-2">
+                        Return Asset
                     </button>
                 ) : null}
             </div>
@@ -226,10 +345,10 @@ function AssignmentDetail({ assignment, onClose, onReturn }) {
     const receiver = assignment.receiver_name || assignment.user?.name || '-';
 
     return (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+        <div className="p-4 border border-blue-200 shadow-sm rounded-xl bg-blue-50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Selected Record</p>
+                    <p className="text-xs font-bold tracking-wide text-blue-700 uppercase">Selected Record</p>
                     <h2 className="mt-1 text-xl font-bold text-slate-950">{assignment.item?.name || '-'}</h2>
                     <p className="mt-1 text-sm text-slate-600">Given to {receiver}</p>
                 </div>
@@ -238,29 +357,29 @@ function AssignmentDetail({ assignment, onClose, onReturn }) {
                 </button>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg bg-white px-4 py-3">
+            <div className="grid gap-3 mt-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="px-4 py-3 bg-white rounded-lg">
                     <p className="text-xs text-slate-500">Asset Tag / SKU</p>
                     <p className="font-semibold text-slate-950">{assignment.item?.asset_tag || assignment.item?.sku || '-'}</p>
                 </div>
-                <div className="rounded-lg bg-white px-4 py-3">
+                <div className="px-4 py-3 bg-white rounded-lg">
                     <p className="text-xs text-slate-500">Department</p>
                     <p className="font-semibold text-slate-950">{assignment.assigned_department?.name || '-'}</p>
                 </div>
-                <div className="rounded-lg bg-white px-4 py-3">
+                <div className="px-4 py-3 bg-white rounded-lg">
                     <p className="text-xs text-slate-500">Quantity</p>
                     <p className="font-semibold text-slate-950">{assignment.quantity || 0} {assignment.item?.unit_of_measurement || 'unit'}</p>
                 </div>
-                <div className="rounded-lg bg-white px-4 py-3">
+                <div className="px-4 py-3 bg-white rounded-lg">
                     <p className="text-xs text-slate-500">Status</p>
                     <p className="font-semibold text-slate-950">{returned ? 'Returned' : 'Issued out'}</p>
                 </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mt-4">
                 {!returned ? (
-                    <button type="button" onClick={() => onReturn(assignment.id)} className="btn-primary">
-                        Mark Returned
+                    <button type="button" onClick={() => onReturn(assignment)} className="btn-primary">
+                        Return Asset
                     </button>
                 ) : null}
             </div>
@@ -304,6 +423,7 @@ export default function AssignmentsPage() {
     const [formError, setFormError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [searchInput, setSearchInput] = useState(filters.search);
     const [form, setForm] = useState(defaultForm());
     const [itemsList, setItemsList] = useState([]);
@@ -312,6 +432,8 @@ export default function AssignmentsPage() {
     const [reportLoading, setReportLoading] = useState(false);
     const [selectedReceiver, setSelectedReceiver] = useState('');
     const [selectedAssignment, setSelectedAssignment] = useState(null);
+    const [returnTarget, setReturnTarget] = useState(null);
+    const [returningId, setReturningId] = useState(null);
     const [stockPage, setStockPage] = useState(1);
     const [receiverPage, setReceiverPage] = useState(1);
     const [historyPage, setHistoryPage] = useState(1);
@@ -365,7 +487,7 @@ export default function AssignmentsPage() {
         requestedQuantity <= maxQuantity;
 
     const selectedReceiverDetail = useMemo(
-        () => report.receivers.find((receiver) => receiver.receiver === selectedReceiver) || report.receivers[0] || null,
+        () => report.receivers.find((receiver) => (receiver.key || receiver.receiver) === selectedReceiver) || report.receivers[0] || null,
         [report.receivers, selectedReceiver]
     );
 
@@ -383,6 +505,27 @@ export default function AssignmentsPage() {
                 .sort((a, b) => a.display_label.localeCompare(b.display_label)),
         [receiversList]
     );
+
+    const receiverOptionsByDepartment = useMemo(() => {
+        const groups = new Map();
+
+        receiverDepartmentOptions.forEach((option) => {
+            const department = option.department_name || 'No department';
+
+            if (!groups.has(department)) {
+                groups.set(department, []);
+            }
+
+            groups.get(department).push(option);
+        });
+
+        return Array.from(groups.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([department, options]) => ({
+                department,
+                options: options.sort((a, b) => a.receiver.localeCompare(b.receiver)),
+            }));
+    }, [receiverDepartmentOptions]);
 
     const receiverDepartmentLookup = useMemo(() => {
         const lookup = new Map();
@@ -461,8 +604,8 @@ export default function AssignmentsPage() {
 
             setReport(nextReport);
 
-            if (nextReport.receivers.length > 0 && (!selectedReceiver || !nextReport.receivers.some((receiver) => receiver.receiver === selectedReceiver))) {
-                setSelectedReceiver(nextReport.receivers[0].receiver);
+            if (nextReport.receivers.length > 0 && (!selectedReceiver || !nextReport.receivers.some((receiver) => (receiver.key || receiver.receiver) === selectedReceiver))) {
+                setSelectedReceiver(nextReport.receivers[0].key || nextReport.receivers[0].receiver);
             }
         } catch (err) {
             console.error('Failed to load assignment report', err);
@@ -531,28 +674,8 @@ export default function AssignmentsPage() {
         updateQuery({ page: 1 });
     }
 
-    function normalizeDateInput(value) {
-    if (!value) {
-        return '';
-    }
-
-    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) {
-        return '';
-    }
-
-    const [, year, month, day] = match;
-    const numericYear = Number(year);
-
-    if (numericYear < 1900 || numericYear > 9999) {
-        return '';
-    }
-
-    return `${year}-${month}-${day}`;
-}
-
 function changeCustomDate(key, value) {
-    const safeValue = normalizeDateInput(value);
+    const safeValue = formatDateTextInput(value);
 
     if (key === 'start') {
         setCustomDateStart(safeValue);
@@ -629,20 +752,125 @@ function changeCustomDate(key, value) {
         }
     }
 
-    async function handleReturnAsset(id) {
-        if (!window.confirm('Mark this assignment as returned?')) {
+    function requestReturnAsset(assignment) {
+        setNotice('');
+        setFormError('');
+        setReturnTarget(assignment);
+    }
+
+    async function confirmReturnAsset() {
+        if (!returnTarget) {
             return;
         }
 
         try {
+            setReturningId(returnTarget.id);
             setNotice('');
             setFormError('');
-            await apiClient.put(`/assignments/${id}/return`);
+            await apiClient.put(`/assignments/${returnTarget.id}/return`);
             setNotice('Asset returned successfully.');
             setSelectedAssignment(null);
+            setReturnTarget(null);
             await refreshAssignmentsPage();
         } catch (err) {
             setFormError(extractErrorMessage(err));
+        } finally {
+            setReturningId(null);
+        }
+    }
+
+    async function getFilteredAssignmentsForExport() {
+        return fetchFilteredExportRows('/assignments', filters);
+    }
+
+    async function exportFilteredAssignmentsCsv() {
+        try {
+            setExporting(true);
+            setFormError('');
+
+            const rows = exportAssignmentRows(await getFilteredAssignmentsForExport());
+            downloadCsv('assignments-filtered.csv', rows);
+        } catch (err) {
+            setFormError(extractErrorMessage(err));
+        } finally {
+            setExporting(false);
+        }
+    }
+
+    async function exportFilteredAssignmentsPdf() {
+        try {
+            setExporting(true);
+            setFormError('');
+
+            const rows = exportAssignmentRows(await getFilteredAssignmentsForExport());
+            const currentTab = TABS.find((tab) => tab.id === activeTab)?.label || 'Assignments';
+            const filterSummary = [
+                `View: ${currentTab}`,
+                filters.search ? `Search: ${filters.search}` : 'Search: All',
+                `Period: ${getPeriodLabel(reportPeriod, customDateStart, customDateEnd)}`,
+            ].join(' | ');
+            const rowsHtml = rows.length
+                ? rows.map((row) => `
+                    <tr>
+                        <td>${escapeHtml(row.Asset)}</td>
+                        <td>${escapeHtml(row['Asset Tag'] || row.SKU)}</td>
+                        <td>${escapeHtml(row['Given To'])}</td>
+                        <td>${escapeHtml(row.Department)}</td>
+                        <td>${escapeHtml(row.Quantity)}</td>
+                        <td>${escapeHtml(row['Date Given'])}</td>
+                        <td>${escapeHtml(row.Status)}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="7">No assignments found.</td></tr>';
+
+            const printWindow = window.open('', '_blank');
+
+            if (!printWindow) {
+                setFormError('Allow pop-ups to export the PDF.');
+                return;
+            }
+
+            printWindow.document.write(`
+                <!doctype html>
+                <html>
+                    <head>
+                        <title>Assignments</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; color: #0f172a; margin: 28px; }
+                            h1 { margin: 0 0 6px; font-size: 24px; }
+                            p { margin: 0 0 18px; color: #475569; font-size: 12px; }
+                            table { border-collapse: collapse; width: 100%; font-size: 11px; }
+                            th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; vertical-align: top; }
+                            th { background: #f1f5f9; font-weight: 700; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Assignments</h1>
+                        <p>${escapeHtml(filterSummary)}</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Asset</th>
+                                    <th>Tag / SKU</th>
+                                    <th>Given To</th>
+                                    <th>Department</th>
+                                    <th>Qty</th>
+                                    <th>Date Given</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        } catch (err) {
+            setFormError(extractErrorMessage(err));
+        } finally {
+            setExporting(false);
         }
     }
 
@@ -707,7 +935,7 @@ function changeCustomDate(key, value) {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Assignments</h1>
-                    <p className="page-subtitle">Give assets to staff, confirm returns, and review receiver statements from one workspace.</p>
+                    <p className="page-subtitle">Issue assets, confirm returns, check who holds items, and review assignment history.</p>
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -715,39 +943,46 @@ function changeCustomDate(key, value) {
                         {refreshing ? 'Refreshing...' : 'Refresh'}
                     </button>
                     <button type="button" onClick={() => changeTab('new')} className="btn-primary">
-                        Give Out Asset
+                        Give Out
                     </button>
                 </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Issued Out Now</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-slate-500">Issued Out Now</p>
                     <p className="mt-2 text-2xl font-bold text-emerald-700">{reportTotals.active}</p>
                 </div>
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Returned</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-slate-500">Returned</p>
                     <p className="mt-2 text-2xl font-bold text-slate-950">{reportTotals.returned}</p>
                 </div>
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">People Holding Assets</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-slate-500">People Holding Assets</p>
                     <p className="mt-2 text-2xl font-bold text-blue-700">{report.receivers.length}</p>
                 </div>
                 <div className="metric-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Issued Qty</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-slate-500">Total Issued Qty</p>
                     <p className="mt-2 text-2xl font-bold text-amber-700">{reportTotals.assigned}</p>
                 </div>
             </div>
 
-            {notice ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div> : null}
+            {notice ? <div className="px-4 py-3 text-sm border rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700">{notice}</div> : null}
             {formError || error ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="px-4 py-3 text-sm text-red-700 border border-red-200 rounded-lg bg-red-50">
                     {formError || error}
                 </div>
             ) : null}
 
             <div className="panel">
-                <div className="panel-body space-y-4">
+                <div className="space-y-4 panel-body">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h2 className="section-title">Assignment Work Area</h2>
+                            <p className="section-subtitle">Current view: {TABS.find((tab) => tab.id === activeTab)?.label || 'Issued Out'}</p>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
                         {TABS.map((tab) => (
                             <button
@@ -776,7 +1011,7 @@ function changeCustomDate(key, value) {
                                 value={searchInput}
                                 onChange={(event) => setSearchInput(event.target.value)}
                                 placeholder="Find person, asset, tag, SKU, or department"
-                                className="input-shell w-full sm:w-96"
+                                className="w-full input-shell sm:w-96"
                             />
                             <button type="submit" className="btn-secondary">
                                 Find
@@ -786,9 +1021,9 @@ function changeCustomDate(key, value) {
                             </button>
                         </div>
 
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Report period</p>
+                        <div className="p-3 border rounded-xl border-slate-200 bg-slate-50">
+                            <div className="flex flex-col gap-1 mb-2 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-xs font-bold tracking-wide uppercase text-slate-500">Report period</p>
                                 <p className="text-xs font-semibold text-slate-600">{getPeriodLabel(reportPeriod, customDateStart, customDateEnd)}</p>
                             </div>
 
@@ -811,31 +1046,40 @@ function changeCustomDate(key, value) {
                             </div>
 
                             {reportPeriod === 'custom' ? (
-                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <div className="grid gap-2 mt-3 sm:grid-cols-2">
+                                    <label className="text-xs font-semibold tracking-wide uppercase text-slate-500">
                                         From
-                                        <input
-                                               type="date"
-                                               value={customDateStart}
-                                               min="1900-01-01"
-                                               max="9999-12-31"
-                                             onChange={(event) => changeCustomDate('start', event.target.value)}
-                                                className="input-shell mt-1 w-full normal-case tracking-normal"
-                                                  />
+                                        <div className="mt-1">
+                                            <DateInput id="assignment-date-start" value={customDateStart} onChange={(value) => changeCustomDate('start', value)} />
+                                        </div>
                                     </label>
-                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    <label className="text-xs font-semibold tracking-wide uppercase text-slate-500">
                                         To
-                                        <input
-                                            type="date"
-                                             value={customDateEnd}
-                                            min="1900-01-01"
-                                             max="9999-12-31"
-                                            onChange={(event) => changeCustomDate('end', event.target.value)}
-                                           className="input-shell mt-1 w-full normal-case tracking-normal"
-                                              />
+                                        <div className="mt-1">
+                                            <DateInput id="assignment-date-end" value={customDateEnd} onChange={(value) => changeCustomDate('end', value)} />
+                                        </div>
                                     </label>
                                 </div>
                             ) : null}
+
+                            <div className="grid grid-cols-2 gap-2 mt-3">
+                                <button
+                                    type="button"
+                                    onClick={exportFilteredAssignmentsCsv}
+                                    disabled={exporting}
+                                    className="btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {exporting ? 'Exporting...' : 'Export CSV'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={exportFilteredAssignmentsPdf}
+                                    disabled={exporting}
+                                    className="btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Export PDF
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -843,15 +1087,15 @@ function changeCustomDate(key, value) {
 
             {(activeTab === 'active' || activeTab === 'returned') ? (
                 <section className="space-y-4">
-                    <AssignmentDetail assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} onReturn={handleReturnAsset} />
+                    <AssignmentDetail assignment={selectedAssignment} onClose={() => setSelectedAssignment(null)} onReturn={requestReturnAsset} />
 
                     <div className="mobile-card-list">
                         {assignments.length > 0 ? (
                             assignments.map((assignment) => (
-                                <AssignmentCard key={assignment.id} assignment={assignment} onOpen={setSelectedAssignment} onReturn={handleReturnAsset} />
+                                <AssignmentCard key={assignment.id} assignment={assignment} onOpen={setSelectedAssignment} onReturn={requestReturnAsset} />
                             ))
                         ) : (
-                            <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center text-slate-500 shadow-sm">
+                            <div className="px-6 py-10 text-center bg-white border shadow-sm rounded-xl border-slate-200 text-slate-500">
                                 No assignments found.
                             </div>
                         )}
@@ -862,13 +1106,13 @@ function changeCustomDate(key, value) {
                             <table className="min-w-full text-sm">
                                 <thead className="table-head">
                                     <tr>
-                                        <th className="px-6 py-4 text-left font-semibold">Asset</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Given To</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Department</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Qty</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Date Given</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Status</th>
-                                        <th className="px-6 py-4 text-left font-semibold">Actions</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Asset</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Given To</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Department</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Qty</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Date Given</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Status</th>
+                                        <th className="px-6 py-4 font-semibold text-left">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -894,8 +1138,8 @@ function changeCustomDate(key, value) {
                                                             View
                                                         </button>
                                                         {!assignment.returned_at ? (
-                                                            <button type="button" onClick={() => handleReturnAsset(assignment.id)} className="btn-primary !px-3 !py-2">
-                                                                Mark Returned
+                                                            <button type="button" onClick={() => requestReturnAsset(assignment)} className="btn-primary !px-3 !py-2">
+                                                                Return Asset
                                                             </button>
                                                         ) : null}
                                                     </div>
@@ -932,7 +1176,7 @@ function changeCustomDate(key, value) {
                                 <select
                                     value={form.item_id}
                                     onChange={(event) => setForm((prev) => ({ ...prev, item_id: event.target.value }))}
-                                    className="input-shell w-full"
+                                    className="w-full input-shell"
                                     required
                                 >
                                     <option value="">Choose an available item</option>
@@ -946,21 +1190,21 @@ function changeCustomDate(key, value) {
                             </div>
 
                             {selectedItem ? (
-                                <div className="grid gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 sm:grid-cols-4">
+                                <div className="grid gap-3 p-4 text-sm text-blue-800 border border-blue-200 rounded-xl bg-blue-50 sm:grid-cols-4">
                                     <div>
-                                        <p className="text-xs font-semibold uppercase text-blue-500">Available Now</p>
+                                        <p className="text-xs font-semibold text-blue-500 uppercase">Available Now</p>
                                         <p className="text-xl font-bold">{selectedItem.quantity} {selectedItem.unit_of_measurement || 'unit'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold uppercase text-blue-500">Giving Out</p>
+                                        <p className="text-xs font-semibold text-blue-500 uppercase">Giving Out</p>
                                         <p className="text-xl font-bold">{Number.isInteger(requestedQuantity) && requestedQuantity > 0 ? requestedQuantity : 0} {selectedItem.unit_of_measurement || 'unit'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold uppercase text-blue-500">Left After Save</p>
+                                        <p className="text-xs font-semibold text-blue-500 uppercase">Left After Save</p>
                                         <p className="text-xl font-bold">{remainingQuantity} {selectedItem.unit_of_measurement || 'unit'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold uppercase text-blue-500">Identifier</p>
+                                        <p className="text-xs font-semibold text-blue-500 uppercase">Identifier</p>
                                         <p className="text-xl font-bold">{selectedItem.asset_tag || selectedItem.sku || '-'}</p>
                                     </div>
                                 </div>
@@ -968,18 +1212,22 @@ function changeCustomDate(key, value) {
 
                             <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
                                 <div>
-                                    <label className="field-label">Person Receiving / Department</label>
+                                    <label className="field-label">Department / Person Receiving</label>
                                     <select
                                         value={form.receiver_id || ''}
                                         onChange={(event) => handleReceiverChange(event.target.value)}
-                                        className="input-shell w-full"
+                                        className="w-full input-shell"
                                         required
                                     >
-                                        <option value="">Choose person - department</option>
-                                        {receiverDepartmentOptions.map((option) => (
-                                            <option key={`${option.id || option.receiver}-${option.department_id}`} value={String(option.id || '')}>
-                                                {option.display_label}
-                                            </option>
+                                        <option value="">Choose department, then person</option>
+                                        {receiverOptionsByDepartment.map((group) => (
+                                            <optgroup key={group.department} label={group.department}>
+                                                {group.options.map((option) => (
+                                                    <option key={`${option.id || option.receiver}-${option.department_id}`} value={String(option.id || '')}>
+                                                        {option.receiver}
+                                                    </option>
+                                                ))}
+                                            </optgroup>
                                         ))}
                                     </select>
 
@@ -999,7 +1247,7 @@ function changeCustomDate(key, value) {
                                         step="1"
                                         value={form.quantity}
                                         onChange={(event) => setForm((prev) => ({ ...prev, quantity: event.target.value }))}
-                                        className="input-shell w-full"
+                                        className="w-full input-shell"
                                         disabled={!selectedItem}
                                         required
                                     />
@@ -1023,24 +1271,25 @@ function changeCustomDate(key, value) {
                 <section className="grid gap-5 xl:grid-cols-[360px_1fr]">
                     <div className="panel">
                         <div className="panel-body">
-                            <h2 className="section-title">Receivers</h2>
-                            <p className="section-subtitle">Click a receiver to open their statement.</p>
+                            <h2 className="section-title">Departments and Receivers</h2>
+                            <p className="section-subtitle">Click a receiver under their department to open the statement.</p>
                             <div className="mt-4 space-y-2">
                                 {report.receivers.map((receiver) => (
                                     <button
-                                        key={receiver.receiver}
+                                        key={receiver.key || receiver.receiver}
                                         type="button"
                                         onClick={() => {
-                                            setSelectedReceiver(receiver.receiver);
+                                            setSelectedReceiver(receiver.key || receiver.receiver);
                                             setReceiverPage(1);
                                         }}
                                         className={[
                                             'w-full rounded-lg border px-4 py-3 text-left transition',
-                                            selectedReceiverDetail?.receiver === receiver.receiver
+                                            (selectedReceiverDetail?.key || selectedReceiverDetail?.receiver) === (receiver.key || receiver.receiver)
                                                 ? 'border-blue-500 bg-blue-50'
                                                 : 'border-slate-200 bg-white hover:bg-slate-50',
                                         ].join(' ')}
                                     >
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">{receiver.department || 'No department'}</p>
                                         <p className="font-semibold text-slate-950">{receiver.receiver}</p>
                                         <p className="mt-1 text-xs text-slate-500">
                                             {receiver.active_quantity} active | {receiver.returned_quantity} returned
@@ -1048,18 +1297,21 @@ function changeCustomDate(key, value) {
                                     </button>
                                 ))}
                                 {!reportLoading && report.receivers.length === 0 ? (
-                                    <p className="rounded-lg bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">No receivers found.</p>
+                                    <p className="px-4 py-6 text-sm text-center rounded-lg bg-slate-50 text-slate-500">No receivers found.</p>
                                 ) : null}
                             </div>
                         </div>
                     </div>
 
                     <div className="panel">
-                        <div className="panel-body space-y-4">
+                        <div className="space-y-4 panel-body">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <h2 className="section-title">{selectedReceiverDetail?.receiver || 'Receiver Statement'}</h2>
-                                    <p className="section-subtitle">Assigned, returned, and remaining stock for this receiver.</p>
+                                    <p className="section-subtitle">
+                                        {selectedReceiverDetail?.department ? `${selectedReceiverDetail.department} department | ` : ''}
+                                        Assigned, returned, and remaining stock for this receiver.
+                                    </p>
                                 </div>
                                 <button type="button" onClick={exportReceiverCsv} disabled={!selectedReceiverDetail} className="btn-secondary disabled:opacity-50">
                                     Export CSV
@@ -1085,11 +1337,11 @@ function changeCustomDate(key, value) {
                                 <table className="min-w-full text-sm">
                                     <thead className="table-head">
                                         <tr>
-                                            <th className="px-4 py-3 text-left font-semibold">Item</th>
-                                            <th className="px-4 py-3 text-left font-semibold">Department</th>
-                                            <th className="px-4 py-3 text-left font-semibold">Assigned</th>
-                                            <th className="px-4 py-3 text-left font-semibold">Returned</th>
-                                            <th className="px-4 py-3 text-left font-semibold">Remaining</th>
+                                            <th className="px-4 py-3 font-semibold text-left">Item</th>
+                                            <th className="px-4 py-3 font-semibold text-left">Department</th>
+                                            <th className="px-4 py-3 font-semibold text-left">Assigned</th>
+                                            <th className="px-4 py-3 font-semibold text-left">Returned</th>
+                                            <th className="px-4 py-3 font-semibold text-left">Remaining</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -1117,7 +1369,7 @@ function changeCustomDate(key, value) {
 
             {activeTab === 'stock' ? (
                 <section className="panel">
-                    <div className="panel-body space-y-4">
+                    <div className="space-y-4 panel-body">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <h2 className="section-title">Stock Position</h2>
@@ -1147,11 +1399,11 @@ function changeCustomDate(key, value) {
                             <table className="min-w-full text-sm">
                                 <thead className="table-head">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-semibold">Item</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Available</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Assigned</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Managed</th>
-                                        <th className="px-4 py-3 text-left font-semibold">State</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Item</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Available</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Assigned</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Managed</th>
+                                        <th className="px-4 py-3 font-semibold text-left">State</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -1182,7 +1434,7 @@ function changeCustomDate(key, value) {
 
             {activeTab === 'history' ? (
                 <section className="panel">
-                    <div className="panel-body space-y-4">
+                    <div className="space-y-4 panel-body">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <h2 className="section-title">Assignment History</h2>
@@ -1197,12 +1449,12 @@ function changeCustomDate(key, value) {
                             <table className="min-w-full text-sm">
                                 <thead className="table-head">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-semibold">Item</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Receiver</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Date / Time</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Qty</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Status</th>
-                                        <th className="px-4 py-3 text-left font-semibold">Department</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Item</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Receiver</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Date / Time</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Qty</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Status</th>
+                                        <th className="px-4 py-3 font-semibold text-left">Department</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -1237,6 +1489,59 @@ function changeCustomDate(key, value) {
                         <Pager page={historyPage} lastPage={historyLastPage} total={report.history.length} onPageChange={setHistoryPage} />
                     </div>
                 </section>
+            ) : null}
+
+            {returnTarget ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-950/45">
+                    <div className="w-full max-w-lg p-6 bg-white border shadow-2xl rounded-2xl border-slate-200">
+                        <div className="flex flex-col gap-1">
+                            <p className="text-xs font-bold tracking-wide text-blue-600 uppercase">Confirm Return</p>
+                            <h2 className="text-xl font-bold text-slate-950">Return this asset to stock?</h2>
+                            <p className="text-sm text-slate-500">
+                                This will close the assignment and add the quantity back to available stock.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-3 p-4 mt-5 text-sm border rounded-xl border-slate-200 bg-slate-50 sm:grid-cols-2">
+                            <div>
+                                <p className="text-xs font-semibold uppercase text-slate-500">Asset</p>
+                                <p className="mt-1 font-semibold text-slate-950">{returnTarget.item?.name || '-'}</p>
+                                <p className="text-xs text-slate-500">{returnTarget.item?.asset_tag || returnTarget.item?.sku || 'No tag'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase text-slate-500">Receiver</p>
+                                <p className="mt-1 font-semibold text-slate-950">{returnTarget.receiver_name || returnTarget.user?.name || '-'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase text-slate-500">Quantity</p>
+                                <p className="mt-1 font-semibold text-slate-950">{returnTarget.quantity || 0} {returnTarget.item?.unit_of_measurement || 'unit'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase text-slate-500">Date Given</p>
+                                <p className="mt-1 font-semibold text-slate-950">{formatDateTime(returnTarget.assigned_at)}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col-reverse gap-2 mt-6 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setReturnTarget(null)}
+                                disabled={Boolean(returningId)}
+                                className="btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmReturnAsset}
+                                disabled={Boolean(returningId)}
+                                className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {returningId ? 'Returning...' : 'Confirm Return'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             ) : null}
         </div>
     );

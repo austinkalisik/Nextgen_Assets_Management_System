@@ -1,4 +1,3 @@
-
 Nextgen Assets Management System
 Low-Fidelity Wireframe Context
 
@@ -8,53 +7,42 @@ ERD Reference
 - Generated ERD snapshot: wireframe/erd-current.txt
 
 System Overview
-- This is a Laravel + ReactJS CRUD application
-- It is an asset management and office operations system
-- It is owned by Nextgen Technology
-- It is intended for Nextgen Technology and can also be used by other departments if adopted
+- Laravel backend with ReactJS frontend
+- API-driven CRUD system for inventory, assignments, users, departments, receivers, reports, notifications, and settings
+- Owned by Nextgen Technology
+- Main live inventory entity is Item, not the legacy Asset placeholder
 
-Technology Structure
-- Laravel backend
-- ReactJS frontend
-- API-driven CRUD workflows
-- Database-backed modules for assets, assignments, suppliers, users, and settings
+Current Navigation
+- Operations: Dashboard, Inventory, Assignments, Suppliers, User Guide
+- Administration: Categories, Departments, Receivers, Users, Notifications, Activity Logs, Settings, Profile
 
-Current ERD Alignment Notes
-- graph.png was regenerated from the live project database
-- The generated ERD shows the modeled operational entities used by the app
-- The generated ERD includes Item depreciation fields
-- The generated ERD may include a few legacy local columns that still exist in the database
-
-Main Modules
-- Dashboard
-- Inventory
-- Assignments
-- Suppliers
-- Categories
-- Departments
-- Users
-- Notifications
-- Activity Logs
-- Settings
-- Profile
-
+Current Business Logic
+- Departments are the first grouping for people and assignment reports.
+- Receivers belong to departments.
+- Assigning an item uses a Department / Person Receiving selector so the department context is clear before the asset is given out.
+- Inventory supports Bulk stock and Serialized asset tracking.
+- Purchase Date and Depreciation Start Date use the same YYYY-MM-DD input pattern with calendar picker support.
+- Activity Logs and Assignments exports must follow the active filters.
 
 1. App Shell
 ```text
 +----------------------------------------------------------------------------------+
 | Sidebar                          | Top Bar                                       |
 |----------------------------------|-----------------------------------------------|
-| Logo + System Name               | Search | Notifications | User | Logout       |
+| Logo + System Name               | Search | Bell | User Card | Logout           |
+| nextgenpng.net                   |                                               |
 |                                  |                                               |
 | Operations                       |                                               |
 | - Dashboard                      |                                               |
 | - Inventory                      |                                               |
 | - Assignments                    |                                               |
 | - Suppliers                      |                                               |
+| - User Guide                     |                                               |
 |                                  |                                               |
 | Administration                   |                                               |
 | - Categories                     |                                               |
 | - Departments                    |                                               |
+| - Receivers                      |                                               |
 | - Users                          |                                               |
 | - Notifications                  |                                               |
 | - Activity Logs                  |                                               |
@@ -62,142 +50,108 @@ Main Modules
 | - Profile                        |                                               |
 |                                  |                                               |
 | Signed-in user card              | Main Content Area                             |
+| Sign Out                         |                                               |
 +----------------------------------------------------------------------------------+
 ```
 
-2. Login Page
+2. Inventory
 ```text
 +----------------------------------------------------------------------------------+
-| Left Brand / Motion Area                | Right Login Panel                       |
-|-----------------------------------------|----------------------------------------|
-| Logo                                    | Sign In                                |
-| "Control every asset movement..."       | Email                                  |
-| Short explanation                       | Password                               |
-| Dynamic premium background              | Remember email                         |
-| 3 feature cards                         | Sign In button                         |
-| - Security                              | Contact admin note                     |
-| - Shared Link                           |                                        |
-| - PNG Time                              |                                        |
-+----------------------------------------------------------------------------------+
-```
-
-3. Dashboard
-```text
-+----------------------------------------------------------------------------------+
-| System overview badge                                                            |
-| Admin Dashboard                                                                  |
-| Short summary                                                                    |
-| [Refresh] [View all assets]                                                      |
-|                                                                                  |
-| [Add New Asset] [Assign Asset] [Stock Operations]                                |
-|                                                                                  |
-| [Total Assets] [Available] [Assigned] [Maintenance] [Low Stock] [Overdue]       |
-|                                                                                  |
-| Recent Assignments Table                          | Quick Actions                 |
-|--------------------------------------------------|-------------------------------|
-| Asset | Receiver | Department | Date | Status    | View Assets                   |
-| ...                                              | Manage Users                  |
-| ...                                              | System Settings               |
-|                                                  |                               |
-|                                                  | Performance / System Note     |
-+----------------------------------------------------------------------------------+
-```
-
-4. Inventory Page
-```text
-+----------------------------------------------------------------------------------+
-| Inventory                                                                        |
-| Search | Add Item | Export                                                       |
-| Filter: Stock State | Category | Clear Filters                                   |
-|                                                                                  |
-| Inventory Table                                                                  |
+| Inventory                                                     [Add Item] [Export] |
+| Search inventory | Stock State | Category | Clear Filters                         |
 |----------------------------------------------------------------------------------|
-| Name | Asset Tag | SKU | Brand | Category | Supplier | Qty | Book Value | Act  |
-| ...                                                                              |
-| ...                                                                              |
+| Name | Asset Tag | SKU | Brand | Category | Supplier | Qty | Book Value | Actions |
++----------------------------------------------------------------------------------+
+
+Add/Edit Inventory Item
++----------------------------------------------------------------------------------+
+| Tracking Mode: [Bulk stock v / Serialized asset v]                                |
+| Name* | Brand | SKU                                                              |
+| Initial Quantity* | Reorder Level | Unit Cost                                     |
+| Lifecycle Status*                                                             |
 |----------------------------------------------------------------------------------|
-| Pagination                                                                       |
-+----------------------------------------------------------------------------------+
-
-When Add/Edit opens:
-
-+-------------------------------- Inventory Form ----------------------------------+
-| Tracking Mode                                                                    |
-| Name*            Brand             SKU                                            |
-| Quantity*        Reorder Level     Unit Cost                                      |
-| Category*        Supplier*         Status*                                        |
-| Asset Tag        Serial Number     Location                                       |
-| Purchase Date    Description                                                    |
-|                                                                                  |
-| Depreciation Section                                                             |
-| [ ] Track depreciation                                                           |
-| Method | Useful Life | Salvage Value | Start Date                                |
-|                                                                                  |
-| [Save] [Cancel]                                                                  |
-+----------------------------------------------------------------------------------+
-```
-
-5. Assignments Page
-```text
-+----------------------------------------------------------------------------------+
-| Assignments                                                                      |
-| Search | Refresh | Export | New Assignment                                       |
-|                                                                                  |
-| Tabs: [Active] [New Assignment] [History/Report]                                 |
-|                                                                                  |
-| Active Assignments Table                                                         |
-| Item | Receiver | Department | Qty | Assigned Date | Status | Actions           |
-| ...                                                                              |
-|                                                                                  |
-| New Assignment Form                                                              |
-| Item* | Receiver* | Department* | Quantity* | Linked User(optional)              |
-| [Assign Asset]                                                                   |
-+----------------------------------------------------------------------------------+
-```
-
-6. Settings Page
-```text
-+----------------------------------------------------------------------------------+
-| Settings                                                          [Save Changes] |
-|                                                                                  |
-| [System Logo]            [Officer Profile Image]                                 |
-|                                                                                  |
-| [Organization]           [Operations]                 [Feature Controls]         |
-| System Name              Low Stock Threshold          Email Notifications        |
-| Tagline                  Assignment Overdue Days      Maintenance Alerts         |
-| Company Name             Items Per Page               Switch User Access         |
-| Website                                                                         |
-| Support Email                                                                    |
-+----------------------------------------------------------------------------------+
-```
-
-7. Users Page
-```text
-+----------------------------------------------------------------------------------+
-| Users                                                                            |
-| Search | Add User                                                                |
-|                                                                                  |
-| User Table                                                                       |
-| Name | Email | Role | Assignments | Activity Logs | Actions                     |
-| ...                                                                              |
-|                                                                                  |
-| Add/Edit User Form                                                               |
-| Name* | Email* | Role* | Password | Profile Image                               |
-| [Save] [Cancel]                                                                  |
-+----------------------------------------------------------------------------------+
-```
-
-8. Notifications Page
-```text
-+----------------------------------------------------------------------------------+
-| Notifications                                         [Mark all read] [Clear]    |
-| Filter: Status | Priority | Type | Search                                      |
-|                                                                                  |
-| Notification List                                                                |
-| [Priority] Title                                                                 |
-| Message preview                                                                  |
-| Time | Open                                                                       |
+| Depreciation                                                                      |
+| [x] Track depreciation for this item                                               |
+| Method | Useful Life (Years)* | Salvage Value | Depreciation Start Date*          |
+|                                         YYYY-MM-DD input + calendar button         |
 |----------------------------------------------------------------------------------|
-| ...                                                                              |
+| Category* | Supplier* | Asset Tag                                                |
+| Location  | Purchase Date YYYY-MM-DD input + calendar button                      |
+| Description                                                                      |
+| [Create/Save Inventory Item] [Cancel]                                             |
 +----------------------------------------------------------------------------------+
+```
+
+3. Assignments
+```text
++----------------------------------------------------------------------------------+
+| Assignments                                                [Refresh] [Give Out]   |
+| Issue assets, confirm returns, check who holds items, and review history.          |
+|----------------------------------------------------------------------------------|
+| Metrics: Issued Out Now | Returned | People Holding Assets | Total Issued Qty      |
+|----------------------------------------------------------------------------------|
+| Assignment Work Area                                                               |
+| Current view: Issued Out                                                           |
+| [Issued Out] [Give Out] [Returned] [People] [Stock Check] [History]               |
+| Search person, asset, tag, SKU, or department | Report Period | Export CSV/PDF     |
+|----------------------------------------------------------------------------------|
+| Table changes by selected view                                                     |
++----------------------------------------------------------------------------------+
+
+Give Out Asset
++----------------------------------------------------------------------------------+
+| Item to Give Out*                                                                 |
+| [Choose an available item v]                                                       |
+| Department / Person Receiving*                    Quantity to Give                 |
+| [Department group -> receiver v]                   [1]                             |
+| [Give Out Asset]                                                                 |
++----------------------------------------------------------------------------------+
+```
+
+4. Departments and Receivers
+```text
++----------------------------------------------------------------------------------+
+| Departments                                                                      |
+| Add Department: Name | Description                                                |
+| Table: Department Name | Description | Total Assignments | Active Assignments      |
++----------------------------------------------------------------------------------+
+
++----------------------------------------------------------------------------------+
+| Receivers                                                                        |
+| Add Receiver: Receiver Name* | Department* | Email | Phone | Active               |
+| Table: Receiver Name | Department | Email | Phone | Active | Assignments | Actions |
++----------------------------------------------------------------------------------+
+```
+
+5. Activity Logs
+```text
++----------------------------------------------------------------------------------+
+| Activity Logs                                                                     |
+| Audit trail of asset actions, stock operations, and assignment changes.            |
+|----------------------------------------------------------------------------------|
+| Search by action, item, user, or notes | Action filter | Refresh                  |
+| Export CSV | Export PDF                                                           |
+|----------------------------------------------------------------------------------|
+| Date | Action | Item | User | Notes                                               |
+| Pagination                                                                        |
++----------------------------------------------------------------------------------+
+```
+
+6. Users
+```text
++----------------------------------------------------------------------------------+
+| Users                                                           [Add User]        |
+| Search name, email, or role | Role count cards                                    |
+|----------------------------------------------------------------------------------|
+| User | Role | Assignments | Activity Logs | Actions                              |
+| Roles: Admin, Manager, Asset Officer, Procurement Officer, Auditor, Staff         |
+| Admin-only: edit/delete users and switch-user support                             |
++----------------------------------------------------------------------------------+
+```
+
+7. Notifications, Settings, Profile
+```text
+Notifications: status/priority/type/search filters, mark all read, clear read.
+Settings: branding, organization, operations, feature controls.
+Profile: photo, name/email, account information, password update.
 ```

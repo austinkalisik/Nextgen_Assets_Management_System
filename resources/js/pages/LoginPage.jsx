@@ -205,7 +205,7 @@ export default function LoginPage() {
                         <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
                             <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Security</p>
                             <p className="mt-3 text-2xl font-black">Role Based</p>
-                            <p className="mt-2 text-sm text-slate-300">Admin, manager, asset officer, and staff access.</p>
+                            <p className="mt-2 text-sm text-slate-300">Admin, manager, asset officer, procurement, auditor, and staff access.</p>
                         </div>
                         <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
                             <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Office</p>

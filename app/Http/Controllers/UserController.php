@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -53,7 +54,16 @@ class UserController extends Controller
             });
         }
 
-        return response()->json($query->paginate($perPage)->withQueryString());
+        $roleCounts = (clone $query)
+            ->select('role', DB::raw('count(*) as total'))
+            ->groupBy('role')
+            ->pluck('total', 'role');
+
+        $users = $query->paginate($perPage)->withQueryString();
+
+        return response()->json(array_merge($users->toArray(), [
+            'role_counts' => $roleCounts,
+        ]));
     }
 
     public function store(Request $request)
@@ -63,7 +73,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', 'in:admin,manager,asset_officer,staff'],
+            'role' => ['required', Rule::in(User::ROLE_VALUES)],
             'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
@@ -94,7 +104,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'role' => ['required', 'in:admin,manager,asset_officer,staff'],
+            'role' => ['required', Rule::in(User::ROLE_VALUES)],
             'password' => ['nullable', 'confirmed', Password::min(6)],
         ]);
 

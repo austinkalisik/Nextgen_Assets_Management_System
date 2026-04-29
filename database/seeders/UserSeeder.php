@@ -35,6 +35,18 @@ class UserSeeder extends Seeder
                 'role' => 'manager',
                 'password' => Hash::make('password'),
             ],
+            [
+                'name' => 'Procurement Officer',
+                'email' => 'procurement@nextgen.local',
+                'role' => 'procurement_officer',
+                'password' => Hash::make('password'),
+            ],
+            [
+                'name' => 'Internal Auditor',
+                'email' => 'auditor@nextgen.local',
+                'role' => 'auditor',
+                'password' => Hash::make('password'),
+            ],
         ];
 
         foreach ($users as $user) {

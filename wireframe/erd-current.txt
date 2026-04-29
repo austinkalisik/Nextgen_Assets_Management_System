@@ -56,6 +56,17 @@ dir="both"
 arrowhead="tee"
 arrowtail="crow"
 ]
+appmodelsassignment:receiver_id -> appmodelsreceiver:id [
+label=" "
+xlabel="BelongsTo
+receiver"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
 appmodelsassignment:department_id -> appmodelsdepartment:id [
 label=" "
 xlabel="BelongsTo
@@ -82,6 +93,17 @@ appmodelsdepartment:id -> appmodelsassignment:department_id [
 label=" "
 xlabel="HasMany
 assignments"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsdepartment:id -> appmodelsreceiver:department_id [
+label=" "
+xlabel="HasMany
+receivers"
 color="#FCBF49"
 penwidth="1.8"
 fontname="Helvetica Neue"
@@ -170,6 +192,28 @@ appmodelsitem:id -> appmodelsstockmovement:item_id [
 label=" "
 xlabel="HasMany
 stockMovements"
+color="#FCBF49"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="crow"
+arrowtail="none"
+]
+appmodelsreceiver:department_id -> appmodelsdepartment:id [
+label=" "
+xlabel="BelongsTo
+department"
+color="#F77F00"
+penwidth="1.8"
+fontname="Helvetica Neue"
+dir="both"
+arrowhead="tee"
+arrowtail="crow"
+]
+appmodelsreceiver:id -> appmodelsassignment:receiver_id [
+label=" "
+xlabel="HasMany
+assignments"
 color="#FCBF49"
 penwidth="1.8"
 fontname="Helvetica Neue"
@@ -308,8 +352,8 @@ label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" ce
 <tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="item_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >item_id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (bigint(20) unsigned)</font></td></tr>
+<tr width="100%"><td port="receiver_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >receiver_id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="receiver_name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >receiver_name (varchar(255))</font></td></tr>
-<tr width="100%"><td port="assigned_department_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >assigned_department_id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="department_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >department_id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="quantity" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >quantity (int(10) unsigned)</font></td></tr>
 <tr width="100%"><td port="assigned_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >assigned_at (timestamp)</font></td></tr>
@@ -327,6 +371,7 @@ label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" ce
 <tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >name (varchar(255))</font></td></tr>
 <tr width="100%"><td port="description" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >description (varchar(255))</font></td></tr>
+<tr width="100%"><td port="default_useful_life_years" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >default_useful_life_years (int(10) unsigned)</font></td></tr>
 <tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
 <tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
 </table>>
@@ -360,6 +405,7 @@ label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" ce
 <tr width="100%"><td port="asset_tag" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >asset_tag (varchar(255))</font></td></tr>
 <tr width="100%"><td port="serial_number" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >serial_number (varchar(255))</font></td></tr>
 <tr width="100%"><td port="quantity" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >quantity (int(10) unsigned)</font></td></tr>
+<tr width="100%"><td port="unit_of_measurement" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >unit_of_measurement (varchar(50))</font></td></tr>
 <tr width="100%"><td port="reorder_level" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >reorder_level (int(10) unsigned)</font></td></tr>
 <tr width="100%"><td port="unit_cost" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >unit_cost (decimal(12,2))</font></td></tr>
 <tr width="100%"><td port="is_depreciable" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >is_depreciable (tinyint(1))</font></td></tr>
@@ -367,9 +413,28 @@ label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" ce
 <tr width="100%"><td port="useful_life_years" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >useful_life_years (int(10) unsigned)</font></td></tr>
 <tr width="100%"><td port="salvage_value" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >salvage_value (decimal(12,2))</font></td></tr>
 <tr width="100%"><td port="depreciation_start_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >depreciation_start_date (date)</font></td></tr>
-<tr width="100%"><td port="status" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >status (enum('available','assigned','maintenance','retired'))</font></td></tr>
+<tr width="100%"><td port="status" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >status (enum('available','maintenance','lost','retired'))</font></td></tr>
+<tr width="100%"><td port="retired_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >retired_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="disposal_value" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >disposal_value (decimal(12,2))</font></td></tr>
+<tr width="100%"><td port="disposal_reason" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >disposal_reason (varchar(1000))</font></td></tr>
 <tr width="100%"><td port="location" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >location (varchar(255))</font></td></tr>
 <tr width="100%"><td port="purchase_date" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >purchase_date (date)</font></td></tr>
+<tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
+<tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
+</table>>
+margin="0"
+shape="rectangle"
+fontname="Helvetica Neue"
+]
+"appmodelsreceiver" [
+label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" cellspacing="0" cellpadding="10">
+<tr width="100%"><td width="100%" bgcolor="#d3d3d3"><font color="#333333">Receiver</font></td></tr>
+<tr width="100%"><td port="id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >id (bigint(20) unsigned)</font></td></tr>
+<tr width="100%"><td port="department_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >department_id (bigint(20) unsigned)</font></td></tr>
+<tr width="100%"><td port="name" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >name (varchar(255))</font></td></tr>
+<tr width="100%"><td port="email" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email (varchar(255))</font></td></tr>
+<tr width="100%"><td port="phone" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >phone (varchar(255))</font></td></tr>
+<tr width="100%"><td port="is_active" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >is_active (tinyint(1))</font></td></tr>
 <tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>
 <tr width="100%"><td port="updated_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >updated_at (timestamp)</font></td></tr>
 </table>>
@@ -384,7 +449,7 @@ label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" ce
 <tr width="100%"><td port="item_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >item_id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="type" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >type (enum('IN','OUT','ADJUSTMENT','RETURN','TRANSFER'))</font></td></tr>
 <tr width="100%"><td port="quantity" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >quantity (int(11))</font></td></tr>
-<tr width="100%"><td port="reference_no" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >reference_no (varchar(255))</font></td></tr>
+<tr width="100%"><td port="reference_no" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >reference_no (varchar(100))</font></td></tr>
 <tr width="100%"><td port="supplier_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >supplier_id (bigint(20) unsigned)</font></td></tr>
 <tr width="100%"><td port="notes" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >notes (text)</font></td></tr>
 <tr width="100%"><td port="user_id" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >user_id (bigint(20) unsigned)</font></td></tr>
@@ -440,7 +505,6 @@ label=<<table width="100%" height="100%" border="0" margin="0" cellborder="1" ce
 <tr width="100%"><td port="password" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >password (varchar(255))</font></td></tr>
 <tr width="100%"><td port="role" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >role (varchar(255))</font></td></tr>
 <tr width="100%"><td port="profile_photo" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >profile_photo (varchar(255))</font></td></tr>
-<tr width="100%"><td port="profile_photo_path" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >profile_photo_path (varchar(255))</font></td></tr>
 <tr width="100%"><td port="email_verified_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >email_verified_at (timestamp)</font></td></tr>
 <tr width="100%"><td port="remember_token" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >remember_token (varchar(100))</font></td></tr>
 <tr width="100%"><td port="created_at" align="left" width="100%"  bgcolor="#ffffff"><font color="#333333" >created_at (timestamp)</font></td></tr>

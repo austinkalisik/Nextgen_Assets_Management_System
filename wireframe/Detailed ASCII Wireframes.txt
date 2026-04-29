@@ -1,300 +1,247 @@
 Nextgen Assets Management System
-System Structure Overview
-
-ERD Reference
-- Visual ERD file: graph.png
-- Supporting ERD notes: wireframe/ERD - Nextgen Assets Management System.txt
-- Generated ERD snapshot: wireframe/erd-current.txt
+Detailed ASCII Wireframes
 
 Application Type
-- Laravel + ReactJS CRUD application
-- Backend: Laravel
-- Frontend: ReactJS
-- Routing: React Router on the frontend with Laravel API endpoints on the backend
-- Data layer: MySQL through Laravel models and migrations
-- Build tool: Vite
+- Laravel API backend
+- ReactJS/Vite frontend
+- Single-page protected admin workspace after login
+- Current menu label is User Guide
+- Current assignment flow is department-first through Receivers
 
-Business Ownership
-- Product Name: Nextgen Assets Management System
-- Owned by: Nextgen Technology
-- Website: https://nextgenpng.net/
-- Usage Model: built for Nextgen Technology and can also be offered to other departments that want to use the software
-
-Core System Purpose
-- Track office assets and stock items
-- Manage assignments and returns
-- Monitor low stock and maintenance alerts
-- Manage users, suppliers, categories, departments, and settings
-- Preserve audit history and operational accountability
-
-Architecture Summary
-- Laravel handles authentication, API routes, database access, validation, settings, notifications, and business logic
-- ReactJS handles the user interface, navigation, forms, tables, dashboards, and interactive workflows
-- The application behaves like a single-page admin system backed by Laravel APIs
-
-Current ERD Alignment Notes
-- graph.png was regenerated from the current local database using php artisan generate:erd
-- The generated ERD currently reflects 10 modeled operational entities
-- The generated ERD includes depreciation fields on Item
-- The generated ERD may also show legacy local columns such as assigned_department_id on Assignment and profile_photo_path on User
-- These notes describe the application structure without contradicting the generated ERD
-
-Main CRUD Modules
-- Inventory / Items
-- Assignments
-- Suppliers
-- Categories
-- Departments
-- Users
-- Notifications
-- Activity Logs
-- Settings
-- Profile
-
-Main User Flow
-1. User logs in
-2. Dashboard shows system overview
-3. Inventory stores and updates asset records
-4. Assignments issue assets to receivers or departments
-5. Returns bring stock back
-6. Notifications and logs record important activity
-7. Settings control branding and feature behavior
-
-**1. Detailed ASCII Wireframes**
-
-**A. Login Page**
+A. Login Page
 ```text
 +---------------------------------------------------------------------------------------------------+
-| LEFT VISUAL PANEL                                              | RIGHT AUTH PANEL                |
+| LEFT BRAND PANEL                                            | RIGHT SIGN-IN PANEL                 |
 |---------------------------------------------------------------------------------------------------|
-| [Logo] Nextgen Assets Management System                        | [Lock Icon] Sign In             |
-| Owned by Nextgen Technology                                    | Enter your officer account      |
-|                                                                 |                                 |
-| AUTHORIZED OFFICE PORTAL                                        | Email Address *                 |
-| Control every asset movement with confidence.                   | [___________________________]   |
-|                                                                 |                                 |
-| Short explanation text about inventory, assignments,            | Password *                      |
-| returns, users, and operational alerts.                         | [___________________________]   |
-|                                                                 | [eye icon]                      |
-| Dynamic premium background animation                            |                                 |
-| - subtle orbs                                                   | [ ] Remember email              |
-| - grid lines                                                    | Need access? Contact admin      |
-| - signal beams                                                  |                                 |
-|                                                                 | [ Sign In ]                     |
-| [Security Card] [Office Card] [PNG Time Card]                  |                                 |
-|                                                                 | footer note                     |
-|                                                                 | authorized users only           |
+| [Logo] Nextgen Assets Management System                     | Sign In                             |
+| Owned by Nextgen Technology                                 | Email Address *                     |
+| Authorized office portal                                    | [____________________________]      |
+| Inventory, assignments, reports, and alerts                 | Password *                          |
+| Admin, manager, asset officer, procurement, auditor, staff  | [____________________________]      |
+|                                                            | [ ] Remember email                  |
+|                                                            | [ Sign In ]                         |
 +---------------------------------------------------------------------------------------------------+
 ```
 
-**B. App Shell**
+B. App Shell
 ```text
 +----------------------------------------------------------------------------------------------------------------+
 | SIDEBAR                                   | TOP BAR                                                            |
 |-------------------------------------------|--------------------------------------------------------------------|
-| [Logo]                                    | [Search system records__________________] [Search] [Bell] [User]   |
-| Nextgen Assets Management System          |                                                                    |
-| Owned by Nextgen Technology               |                                                                    |
+| [Logo] Nextgen Assets Management System   | [Search system records__________________] [Search] [Bell] [User]   |
 | nextgenpng.net                            |                                                                    |
 |                                           |                                                                    |
-| OPERATIONS                                |                                                                    |
+| OPERATIONS                                | MAIN CONTENT                                                       |
 | - Dashboard                               |                                                                    |
 | - Inventory                               |                                                                    |
 | - Assignments                             |                                                                    |
 | - Suppliers                               |                                                                    |
+| - User Guide                              |                                                                    |
 |                                           |                                                                    |
 | ADMINISTRATION                            |                                                                    |
 | - Categories                              |                                                                    |
 | - Departments                             |                                                                    |
+| - Receivers                               |                                                                    |
 | - Users                                   |                                                                    |
 | - Notifications                           |                                                                    |
 | - Activity Logs                           |                                                                    |
 | - Settings                                |                                                                    |
 | - Profile                                 |                                                                    |
 |                                           |                                                                    |
-| Signed in as                              | MAIN CONTENT AREA                                                  |
-| System Administrator                      |                                                                    |
-| [ Sign Out ]                              |                                                                    |
+| Signed in as [Current User]               |                                                                    |
+| [Sign Out]                                |                                                                    |
 +----------------------------------------------------------------------------------------------------------------+
 ```
 
-**C. Dashboard**
+C. Dashboard
 ```text
 +----------------------------------------------------------------------------------------------------------------+
-| [System overview badge]                                                                                        |
-| Admin Dashboard                                                                                                |
-| Operational control center for assets, assignments, departments, notifications, and daily movement.           |
-| [Refresh dashboard] [View all assets]                                                                         |
+| Dashboard                                                                                                      |
+| System overview for inventory, assignments, departments, notifications, and movement.                          |
+| [Refresh] [View all assets]                                                                                    |
 |                                                                                                                |
-| [Add New Asset]          [Assign Asset]          [Stock Operations]                                            |
-| Register inventory       Assign to receiver      Manage stock in/out/adjustments                               |
+| [Add New Asset] [Assign Asset] [Stock Operations]                                                              |
 |                                                                                                                |
-| [Assets Summary]     [Active Summary]     [Notifications Summary]                                              |
-| total count          assigned count       unread count                                                          |
-+----------------------------------------------------------------------------------------------------------------+
 | [Total Assets] [Available] [Assigned] [Maintenance] [Low Stock] [Overdue]                                      |
-+----------------------------------------------------------------------------------------------------------------+
-| RECENT ASSIGNMENTS                                                       | RIGHT COLUMN                         |
-|---------------------------------------------------------------------------|--------------------------------------|
-| Asset        | Receiver   | Department   | Date       | Status            | Quick Actions                        |
-| Radio        | Austin     | Test         | 4/24/2026  | Returned          | - View All Assets                    |
-| Radio        | Mary Jane  | Test         | 4/24/2026  | Active            | - Manage Users                       |
-| Phone Screen | KK         | IT Support   | 4/24/2026  | Returned          | - System Settings                    |
-| ...                                                                     |                                      |
-|                                                                         | Performance Note                      |
-|                                                                         | Slow Internet Friendly                |
+|                                                                                                                |
+| Recent Assignments                                                     | Quick Actions                          |
+|------------------------------------------------------------------------|----------------------------------------|
+| Asset | Receiver | Department | Date | Status                         | View Assets                            |
+| ...                                                                    | Manage Users                           |
+|                                                                        | System Settings                         |
 +----------------------------------------------------------------------------------------------------------------+
 ```
 
-**D. Inventory Page**
+D. Inventory Page
 ```text
 +----------------------------------------------------------------------------------------------------------------+
-| Inventory                                                                                     [Add Item] [Export]
-| Manage inventory records, stock levels, and item details in one place.                                          |
-| [Search inventory____________________] [Find]                                                                  |
-+----------------------------------------------------------------------------------------------------------------+
-| [All stock states v]   [All categories v]   [Clear Filters]                                                    |
-+----------------------------------------------------------------------------------------------------------------+
-| TABLE                                                                                                           |
-|---------------------------------------------------------------------------------------------------------------|
-| Name | Asset Tag | SKU | Brand | Category | Supplier | Quantity | Book Value | Stock State | Date Added | Act |
-|---------------------------------------------------------------------------------------------------------------|
-| ...                                                                                                           |
-| ...                                                                                                           |
-+----------------------------------------------------------------------------------------------------------------+
-| Page 1 of X                                                                                      [Prev] [Next] |
-+----------------------------------------------------------------------------------------------------------------+
-
-When Add/Edit Form is open:
-
-+----------------------------------------------------------------------------------------------------------------+
-| Add New Inventory Item                                                                                        |
+| Inventory                                                                             [Add Item] [Export CSV]  |
+| Manage inventory records, stock levels, lifecycle status, and depreciation.                                      |
+| [Search inventory____________________] [Find] [All stock states v] [All categories v] [Clear]                  |
 |----------------------------------------------------------------------------------------------------------------|
-| Tracking Mode                                                                                                  |
-| ( ) Bulk stock - one row with many units                                                                       |
-| ( ) Serialized asset - one item with serial number                                                             |
+| Name | Asset Tag | SKU | Brand | Category | Supplier | Quantity | Book Value | Stock State | Actions           |
+|----------------------------------------------------------------------------------------------------------------|
+| ...                                                                                                            |
++----------------------------------------------------------------------------------------------------------------+
+
+Inventory Form
++----------------------------------------------------------------------------------------------------------------+
+| Add / Edit Inventory Item                                                                                      |
+|----------------------------------------------------------------------------------------------------------------|
+| Item Tracking Mode                                                                                            |
+| [Bulk stock - one row with many units v]                                                                       |
+| Help text changes for bulk vs serialized asset.                                                                |
 |                                                                                                                |
-| Name *                         Brand                          SKU / Bulk Item Code                              |
+| Name *                         Brand                          SKU                                              |
 | [____________________]         [____________________]         [____________________]                            |
 |                                                                                                                |
 | Initial Quantity *             Reorder Level                  Unit Cost                                         |
 | [_________]                    [_________]                    [_________]                                       |
 |                                                                                                                |
+| Lifecycle Status *                                                                                             |
+| [Available v]                                                                                                  |
+|                                                                                                                |
 | Depreciation                                                                                                   |
 | [ ] Track depreciation for this item                                                                           |
-| Method                      Useful Life (Years) *      Salvage Value       Start Date *                        |
-| [Straight Line v]           [_________]                [_________]         [__/__/____]                        |
+| Method                      Useful Life (Years) *      Salvage Value       Depreciation Start Date *           |
+| [Straight Line v]           [_________]                [_________]         [YYYY-MM-DD] [calendar]             |
 |                                                                                                                |
-| Category *                    Supplier *                     Lifecycle Status *                                 |
-| [Select Category v]          [Select Supplier v]            [Available v]                                      |
+| Category *                    Supplier *                     Asset Tag                                         |
+| [Select Category v]          [Select Supplier v]            [____________________]                             |
 |                                                                                                                |
-| Asset Tag                     Serial Number                  Location                                           |
-| [____________________]        [____________________]         [____________________]                             |
+| Location                      Purchase Date                                                                  |
+| [____________________]        [YYYY-MM-DD] [calendar]                                                          |
 |                                                                                                                |
-| Purchase Date                 Description                                                                       |
-| [__/__/____]                  [______________________________________________]                                 |
-|                               [______________________________________________]                                 |
+| Description                                                                                                    |
+| [________________________________________________________________________________________]                     |
 |                                                                                                                |
-| [Create Inventory Item] [Cancel]                                                                               |
+| [Create/Save Inventory Item] [Cancel]                                                                          |
 +----------------------------------------------------------------------------------------------------------------+
 ```
 
-**E. Assignments Page**
+E. Assignments Page
 ```text
 +----------------------------------------------------------------------------------------------------------------+
-| Assignments                                                                                     [New Assignment]
-| [Search assignments________________] [Find] [Refresh] [Export]                                                   |
-+----------------------------------------------------------------------------------------------------------------+
-| Tabs: [Active Assignments] [New Assignment] [History / Report]                                                  |
-+----------------------------------------------------------------------------------------------------------------+
-
-Active Assignments
-+----------------------------------------------------------------------------------------------------------------+
-| Item | Receiver | Department | Quantity | Assigned Date | Returned Date | Status | Actions                    |
-| ...                                                                                                            |
-+----------------------------------------------------------------------------------------------------------------+
-
-New Assignment Form
-+----------------------------------------------------------------------------------------------------------------+
-| Item *                     Receiver Name *               Department *                                           |
-| [Select Item v]            [____________________]        [Select Department v]                                 |
+| Assignments                                                                                   [Refresh] [Give Out]|
+| Issue assets, confirm returns, check who holds items, and review assignment history.                           |
 |                                                                                                                |
-| Quantity *                 Linked User (optional)                                                                |
-| [_________]                [Select User v]                                                                       |
+| [Issued Out Now] [Returned] [People Holding Assets] [Total Issued Qty]                                         |
 |                                                                                                                |
-| [Assign Asset] [Reset]                                                                                           |
+| Assignment Work Area                                                                                           |
+| Current view: Issued Out                                                                                       |
+| [Issued Out] [Give Out] [Returned] [People] [Stock Check] [History]                                            |
+|                                                                                                                |
+| [Find person, asset, tag, SKU, or department________________] [Find] [Clear]                                   |
+|                                                                                                                |
+| REPORT PERIOD                                                                                                  |
+| [All time] [Today] [This month] [This year] [Choose dates]                                                     |
+| If custom: [From YYYY-MM-DD calendar] [To YYYY-MM-DD calendar]                                                  |
+| [Export CSV] [Export PDF]                                                                                      |
 +----------------------------------------------------------------------------------------------------------------+
 
-History / Report
+Issued Out View
 +----------------------------------------------------------------------------------------------------------------+
-| Filters: date range | receiver | department | item                                                              |
-| Report tables / export                                                                                           |
+| Asset | Given To | Department | Qty | Date Given | Status | Actions                                           |
+| ...   | ...      | ...        | ... | ...        | Issued out | View | Mark Returned                              |
++----------------------------------------------------------------------------------------------------------------+
+
+Give Out View
++----------------------------------------------------------------------------------------------------------------+
+| Give Out Asset                                                                                                 |
+| Choose the item, the department/person receiving it, and the quantity.                                         |
+|                                                                                                                |
+| Item to Give Out *                                                                                            |
+| [Choose an available item v]                                                                                   |
+|                                                                                                                |
+| Department / Person Receiving *                                      Quantity to Give                           |
+| [Department group -> receiver v]                                      [1]                                       |
+|                                                                                                                |
+| [Give Out Asset]                                                                                               |
++----------------------------------------------------------------------------------------------------------------+
+
+People View
++----------------------------------------------------------------------------------------------------------------+
+| Department | Person | Active Qty | Total Qty | Last Given | Export CSV                                          |
+| Group people by department so reports explain who has what.                                                     |
++----------------------------------------------------------------------------------------------------------------+
+
+Stock Check View
++----------------------------------------------------------------------------------------------------------------+
+| Item | Available Qty | Issued Qty | Total Qty | Unit | Export CSV                                           |
++----------------------------------------------------------------------------------------------------------------+
+
+History View
++----------------------------------------------------------------------------------------------------------------+
+| Asset | Given To | Department | Qty Given | Returned | Date Given | Date Returned | Status | Export CSV      |
 +----------------------------------------------------------------------------------------------------------------+
 ```
 
-**F. Settings Page**
+F. Departments Page
 ```text
 +----------------------------------------------------------------------------------------------------------------+
-| Settings                                                                                       [Save Changes]   |
+| Departments                                                                        [Search] [Cancel] [Export CSV]|
+| Add Department: Department Name | Description                                                                   |
 |----------------------------------------------------------------------------------------------------------------|
-| [System Logo Card]                               [Officer Profile Image Card]                                  |
-| Upload / remove                                  Upload / remove                                                |
-|----------------------------------------------------------------------------------------------------------------|
-| ORGANIZATION                     | OPERATIONS                         | FEATURE CONTROLS                       |
-| System Name                     | Low Stock Threshold                | Email Notifications                    |
-| System Tagline                  | Assignment Overdue Days            | Maintenance Alerts                     |
-| Company Name                    | Items Per Page                     | Switch User Access                     |
-| Company Website                 |                                    |                                        |
-| Support Email                   |                                    |                                        |
+| Department Name | Description | Total Assignments | Active Assignments | Actions                                |
 +----------------------------------------------------------------------------------------------------------------+
 ```
 
-**G. Users Page**
+G. Receivers Page
 ```text
 +----------------------------------------------------------------------------------------------------------------+
-| Users                                                                                           [Add User]      |
-| [Search users__________________________] [Find]                                                                |
-+----------------------------------------------------------------------------------------------------------------+
-| Name | Email | Role | Assignments | Activity Logs | Status | Actions                                         |
-| ...                                                                                                            |
-+----------------------------------------------------------------------------------------------------------------+
-
-User Form
-+----------------------------------------------------------------------------------------------------------------+
-| Name *                     Email *                     Role *                                                  |
-| [____________________]     [____________________]      [Select Role v]                                         |
+| Receivers                                                                          [Search] [Cancel] [Export CSV]|
+| Manage people who can receive assets. Every receiver belongs to one department.                                |
 |                                                                                                                |
-| Password                   Confirm Password            Profile Image                                            |
-| [____________________]     [____________________]      [Upload]                                                |
-|                                                                                                                |
-| [Save User] [Cancel]                                                                                           |
-+----------------------------------------------------------------------------------------------------------------+
-```
-
-**H. Notifications Page**
-```text
-+----------------------------------------------------------------------------------------------------------------+
-| Notifications                                                                        [Mark All Read] [Clear Read]
-| Filters: [Status v] [Priority v] [Type v] [Search________________] [Find]                                      |
-+----------------------------------------------------------------------------------------------------------------+
-| Notification Card/List                                                                                         |
-| [priority badge] Title                                                                                         |
-| message preview                                                                                                |
-| type | timestamp | Open                                                                                        |
-|---------------------------------------------------------------------------------------------------------------|
-| ...                                                                                                           |
-+----------------------------------------------------------------------------------------------------------------+
-```
-
-**I. Profile Page**
-```text
-+----------------------------------------------------------------------------------------------------------------+
-| Profile                                                                                                        |
+| Add Receiver                                                                                                   |
+| Receiver Name *                         Department *                                                           |
+| [____________________]                  [Select Department v]                                                   |
+| Email                                   Phone                                                                  |
+| [____________________]                  [____________________]                                                  |
+| [x] Active                              [Create] [Cancel]                                                      |
 |----------------------------------------------------------------------------------------------------------------|
-| LEFT: Profile Photo Card              | RIGHT: Profile Details                                                 |
-| Upload / remove image                 | Name                                                                    |
-|                                       | Email                                                                   |
-|                                       | Role                                                                    |
-|                                       | Password update                                                         |
-|                                       | [Save Changes]                                                          |
+| Receiver Name | Department | Email | Phone | Active | Assignments | Actions                                      |
 +----------------------------------------------------------------------------------------------------------------+
+```
+
+H. Users Page
+```text
++----------------------------------------------------------------------------------------------------------------+
+| Users                                                                                         [Add User]       |
+| Manage staff accounts, roles, assignment ownership, and safe switch-user access.                              |
+| [Total Users] [Admin] [Manager] [Asset Officer] [Procurement] [Auditor] [Staff]                              |
+| [Search name, email, or role____________________] [Find]                                                      |
+|----------------------------------------------------------------------------------------------------------------|
+| User | Role | Assignments | Activity Logs | Actions                                                           |
+| Role choices: Admin, Manager, Asset Officer, Procurement Officer, Auditor, Staff                              |
+| Impersonation banner appears when admin switches user. Non-admin cannot manage users.                         |
++----------------------------------------------------------------------------------------------------------------+
+```
+
+I. Notifications Page
+```text
++----------------------------------------------------------------------------------------------------------------+
+| Notifications                                                        [Mark All Read] [Clear Read]              |
+| [Status v] [Priority v] [Type v] [Search notifications____________________] [Find]                             |
+|----------------------------------------------------------------------------------------------------------------|
+| Priority | Title | Message | Type | Time | Open                                                                |
++----------------------------------------------------------------------------------------------------------------+
+```
+
+J. Activity Logs Page
+```text
++----------------------------------------------------------------------------------------------------------------+
+| Activity Logs                                                                                                  |
+| Audit trail of asset actions, stock operations, and assignment changes.                                        |
+| [Search by action, item, user, or notes_____________] [All actions v] [Refresh]                               |
+| [Export CSV] [Export PDF]                                                                                      |
+|----------------------------------------------------------------------------------------------------------------|
+| Date | Action | Item | User | Notes                                                                            |
+| Page X of Y                                                                                                    |
++----------------------------------------------------------------------------------------------------------------+
+```
+
+K. Settings and Profile
+```text
+Settings: Branding, Organization, Operations, Feature Controls, Save Changes.
+Profile: profile photo, name/email, account information, password update.
+```

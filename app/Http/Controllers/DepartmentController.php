@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
 
@@ -30,7 +31,7 @@ class DepartmentController extends Controller
         return response()->json($query->paginate($perPage)->withQueryString());
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:departments,name'],
@@ -42,7 +43,7 @@ class DepartmentController extends Controller
         return response()->json($department, 201);
     }
 
-    public function show(Department $department)
+    public function show(Department $department): JsonResponse
     {
         $department->loadCount([
             'assignments',
@@ -52,7 +53,7 @@ class DepartmentController extends Controller
         return response()->json($department);
     }
 
-    public function update(Request $request, Department $department)
+    public function update(Request $request, Department $department): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:departments,name,'.$department->id],
@@ -62,14 +63,14 @@ class DepartmentController extends Controller
         $department->update($validated);
 
         return response()->json(
-            $department->fresh()->loadCount([
+            $department->refresh()->loadCount([
                 'assignments',
                 'activeAssignments',
             ])
         );
     }
 
-    public function destroy(Department $department)
+    public function destroy(Department $department): JsonResponse
     {
         if ($department->assignments()->exists()) {
             return response()->json([

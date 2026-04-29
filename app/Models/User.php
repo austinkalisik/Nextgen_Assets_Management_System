@@ -11,6 +11,27 @@ class User extends Authenticatable
     use HasFactory;
     use Notifiable;
 
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_MANAGER = 'manager';
+
+    public const ROLE_ASSET_OFFICER = 'asset_officer';
+
+    public const ROLE_PROCUREMENT_OFFICER = 'procurement_officer';
+
+    public const ROLE_AUDITOR = 'auditor';
+
+    public const ROLE_STAFF = 'staff';
+
+    public const ROLE_VALUES = [
+        self::ROLE_ADMIN,
+        self::ROLE_MANAGER,
+        self::ROLE_ASSET_OFFICER,
+        self::ROLE_PROCUREMENT_OFFICER,
+        self::ROLE_AUDITOR,
+        self::ROLE_STAFF,
+    ];
+
     protected $fillable = [
         'name',
         'email',
@@ -68,6 +89,6 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === self::ROLE_ADMIN;
     }
 }

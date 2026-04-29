@@ -101,13 +101,15 @@ export function AuthProvider({ children }) {
     const impersonate = useCallback(
         async (userId) => {
             await apiClient.post(`/users/${userId}/impersonate`);
-            await fetchMe();
+            clearApiSessionCache();
+            return fetchMe();
         },
         [fetchMe]
     );
 
     const stopImpersonation = useCallback(async () => {
         const response = await apiClient.post('/users/stop-impersonation');
+        clearApiSessionCache();
         const restoredUser = response?.data?.user ?? (await fetchMe());
 
         if (restoredUser) {

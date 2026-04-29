@@ -1,38 +1,33 @@
 # Nextgen Assets Management System
 
-Nextgen Assets Management System is a Laravel + React web application for managing company assets, inventory quantities, staff handovers, returns, stock movements, departments, receivers, users, notifications, and asset lifecycle records.
+Nextgen Assets Management System is a Laravel + React application for managing inventory items, asset assignments, returns, departments, receivers, suppliers, users, notifications, activity logs, depreciation, and stock movement.
 
-The system is designed for office and IT teams that need to know:
+The system is owned by Nextgen Technology and is designed for office and IT teams that need to know what assets exist, how many are available, who is holding them, and which department each receiver belongs to.
 
-- what assets the company owns
-- how many items are available
-- who is holding issued assets
-- which department each receiver belongs to
-- when stock came in or went out
-- which items are low stock, in maintenance, lost, or retired
-- what happened in the system through logs and notifications
-
-## Technology Used
+## Technology
 
 - Backend: Laravel 13
 - Frontend: React 19, Vite, Tailwind CSS
 - Database: MySQL or MariaDB
-- Local server: Laravel Artisan
-- Recommended local stack on Windows: VS Code + XAMPP
+- Recommended Windows stack: XAMPP, Composer, Node.js, Git, VS Code
 
-## What You Need Installed
+## Requirements
 
-Install these before running the project:
+Install these first:
 
-1. XAMPP with PHP 8.3 or newer and MySQL/MariaDB
-2. Composer
-3. Node.js 20 or newer
-4. Git
-5. Visual Studio Code
+- PHP 8.3 or newer
+- Composer
+- Node.js 20 or newer
+- MySQL or MariaDB
+- Git
 
-After installing XAMPP, make sure PHP is available in your terminal.
+On Windows with XAMPP, add this folder to your PATH if `php` is not recognized:
 
-In PowerShell, check:
+```text
+C:\xampp\php
+```
+
+Check your tools:
 
 ```powershell
 php -v
@@ -42,67 +37,25 @@ npm -v
 git --version
 ```
 
-If `php` is not recognized, add your XAMPP PHP folder to your Windows PATH, usually:
-
-```text
-C:\xampp\php
-```
-
-Then close and reopen VS Code.
-
-## First Time Setup
-
-Open VS Code, then open a new terminal:
-
-```text
-Terminal > New Terminal
-```
-
-Clone the project:
+## Clone And First Setup
 
 ```powershell
 git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
 cd Nextgen_Assets_Management_System
+composer install
+npm install
+Copy-Item .env.example .env
+php artisan key:generate
+php artisan storage:link
 ```
 
-Open the project in VS Code:
-
-```powershell
-code .
-```
-
-## Create The Database In XAMPP
-
-1. Open XAMPP Control Panel.
-2. Start `MySQL`.
-3. Open phpMyAdmin:
-
-```text
-http://127.0.0.1/phpmyadmin
-```
-
-4. Click `New`.
-5. Create a database named:
-
-```text
-nextgen_assets
-```
-
-You can also run this SQL:
+Create a MySQL/MariaDB database:
 
 ```sql
 CREATE DATABASE nextgen_assets;
 ```
 
-## Create The Environment File
-
-In VS Code terminal:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Open `.env` and confirm these values:
+Set `.env` database values:
 
 ```env
 APP_NAME="Nextgen Assets Management System"
@@ -118,29 +71,21 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-For most XAMPP installs, the database username is `root` and the password is blank.
+For most XAMPP installs, `root` with a blank password is correct.
 
-## Install Project Files
-
-Run these commands one by one:
+Run database setup:
 
 ```powershell
-composer install
-npm install
-php artisan key:generate
-php artisan storage:link
 php artisan migrate --seed
 php artisan optimize:clear
 npm run build
 ```
 
-If all commands finish without errors, the project is ready.
+## Run On Localhost With Artisan And Vite
 
-## Daily Start Commands
+Use this for daily development.
 
-Every day, start XAMPP MySQL first.
-
-Then open the project in VS Code and use two terminals.
+Start MySQL first. Then open two terminals in the project folder.
 
 Terminal 1:
 
@@ -154,33 +99,25 @@ Terminal 2:
 npm run dev
 ```
 
-Open the system:
+Open:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-Keep both terminals open while using the system.
+Stop both terminals with `Ctrl + C`.
 
-Stop the system with:
+## Run On LAN From A Desktop Server
 
-```text
-Ctrl + C
-```
+Use this when other computers or phones on the same network need to open the system from your desktop.
 
-## Start On Office LAN
-
-Use this when another computer or phone on the same network needs to open the system.
-
-Find your desktop IP address:
+Find your desktop IP:
 
 ```powershell
 ipconfig
 ```
 
-Look for `IPv4 Address`.
-
-For this project setup, the desktop IP is:
+Example IP:
 
 ```text
 192.168.31.34
@@ -195,8 +132,6 @@ VITE_DEV_SERVER_HOST=192.168.31.34
 VITE_DEV_SERVER_PORT=5173
 ```
 
-Then run:
-
 Terminal 1:
 
 ```powershell
@@ -209,22 +144,63 @@ Terminal 2:
 npm run dev:lan
 ```
 
-Open:
+Open from the desktop or another device on the same network:
 
 ```text
 http://192.168.31.34:8000
 ```
 
-If another device cannot open it, allow Windows Firewall access for ports:
+If another device cannot connect, allow Windows Firewall access for ports `8000` and `5173`.
+
+## Run With XAMPP Apache Or Another Desktop Web Server
+
+Use this when you want Apache/Nginx to serve the Laravel app instead of `php artisan serve`.
+
+1. Build the frontend:
+
+```powershell
+npm run build
+```
+
+2. Point the web server document root to the Laravel `public` folder, not the project root.
+
+Example XAMPP Apache virtual host:
+
+```apache
+<VirtualHost *:80>
+    ServerName nextgen-assets.local
+    DocumentRoot "A:/NextGen Projects/ASM/Nextgen_Assets_Management_System/public"
+
+    <Directory "A:/NextGen Projects/ASM/Nextgen_Assets_Management_System/public">
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+3. Add a hosts entry if using `nextgen-assets.local`:
 
 ```text
-8000
-5173
+127.0.0.1 nextgen-assets.local
 ```
+
+4. Set `.env`:
+
+```env
+APP_URL=http://nextgen-assets.local
+```
+
+5. Restart Apache and open:
+
+```text
+http://nextgen-assets.local
+```
+
+For a plain localhost Apache setup, the rule is the same: the web server must serve the `public` folder.
 
 ## Pull Latest Changes
 
-If the project is already cloned and you only want the latest version:
+If the project is already cloned:
 
 ```powershell
 git pull origin main
@@ -235,11 +211,11 @@ php artisan optimize:clear
 npm run build
 ```
 
-Then start the app using the daily start commands.
+Then start the app with either the Artisan/Vite workflow or the desktop web server workflow above.
 
 ## Login Accounts
 
-After running migrations and seeders, use the seeded accounts.
+Seeded accounts are created by `php artisan migrate --seed`.
 
 Common demo password:
 
@@ -247,65 +223,36 @@ Common demo password:
 password
 ```
 
-If login details change, check `database/seeders/UserSeeder.php`.
+Check login emails in:
 
-## Main System Modules
+```text
+database/seeders/UserSeeder.php
+```
 
-Dashboard:
+## Main Modules
 
-- shows total assets, available items, assigned quantity, maintenance count, low stock count, overdue count, recent assignments, and recent items
+- Dashboard: system overview, metrics, quick actions, recent assignments
+- Inventory: item records, stock quantity, lifecycle status, depreciation, purchase date
+- Assignments: give out assets, mark returns, people reports, stock checks, history exports
+- Departments: office/business units for receivers and reports
+- Receivers: people or teams that receive assets; each receiver belongs to a department
+- Suppliers: vendor records
+- Categories: inventory grouping
+- Users: login accounts and roles
+- Notifications: user-facing alerts
+- Activity Logs: audit trail with filtered CSV/PDF exports
+- Settings: branding and system behavior
+- Profile: current user account details
+- User Guide: in-app plain-language help
 
-Inventory:
+## Current Role Types
 
-- shows available quantity, assigned quantity, managed quantity, unit cost, stock state, supplier, category, and UOM
-
-Items:
-
-- create and manage asset records
-- set category, supplier, quantity, unit of measurement, unit cost, status, location, depreciation, and retirement details
-
-Assignments:
-
-- give assets to receivers
-- return assets
-- review active assignments
-- review returned assignments
-- report by receiver
-- check available vs assigned stock
-
-Receivers:
-
-- manage people who can receive assets
-- each receiver belongs to a department
-- assignment dropdown uses receiver and department together
-
-Departments:
-
-- manage organizational departments
-
-Suppliers:
-
-- manage asset suppliers
-
-Categories:
-
-- group items such as laptops, printers, accessories, networking, or consumables
-
-Notifications:
-
-- system alerts for asset updates, assignments, returns, low stock, maintenance, and other events
-
-Activity Logs:
-
-- audit trail of important actions
-
-Settings:
-
-- system branding and behavior settings
-
-Users:
-
-- manage login accounts and roles
+- Admin: full system access
+- Manager: oversees operations
+- Asset Officer: manages inventory and assignments
+- Procurement Officer: manages suppliers and stock intake work
+- Auditor: read-only audit/report access
+- Staff: standard user access
 
 ## Important Business Logic
 
@@ -321,136 +268,50 @@ Assigned quantity is calculated from active assignments:
 active assignments = assignments where returned_at is empty
 ```
 
-Managed quantity is calculated as:
+Managed quantity:
 
 ```text
 managed quantity = available quantity + active assigned quantity
 ```
 
-Example:
+Receiver and department flow:
 
 ```text
-Dell Latitude 5440
-Available: 5 unit
-Assigned: 3 unit
-Managed: 8 unit
+Department -> Receiver -> Assignment
 ```
 
-This means 5 units are still in store, 3 units are issued to staff, and the company still manages 8 units in total.
+This means the assignment screen should make it clear which department the receiving person belongs to.
 
-## Receiver And Department Logic
+## Inventory Tracking
 
-Receivers are separate from departments.
-
-Example:
+Bulk stock:
 
 ```text
-Receiver: tech support
-Department: IT Support
-Assignment dropdown: tech support - IT Support
+One inventory row can represent many units.
 ```
 
-To add, edit, or delete receivers:
+Serialized asset:
 
 ```text
-Administration > Receivers
+One unique asset, normally quantity 1, with serial number or asset tag.
 ```
-
-The assignment form only shows active receivers.
-
-## Unit Of Measurement
-
-UOM explains what the quantity means.
-
-Examples:
-
-```text
-unit
-box
-pack
-roll
-meter
-ream
-liter
-```
-
-For laptops, printers, radios, and switches, use:
-
-```text
-unit
-```
-
-UOM does not change calculations. It only labels the quantity.
-
-## Stock And Assignment Flow
-
-When an item is created:
-
-1. Item record is created.
-2. Opening stock movement is created.
-3. Available quantity is set.
-
-When stock is added:
-
-1. Stock IN movement is created.
-2. Available quantity increases.
-
-When stock is removed:
-
-1. Stock OUT movement is created.
-2. Available quantity decreases.
-
-When an item is assigned:
-
-1. Assignment is created.
-2. Stock OUT movement is created.
-3. Available quantity decreases.
-4. Activity log is created.
-5. Notification may be created.
-
-When an item is returned:
-
-1. Assignment gets a return date.
-2. Stock IN movement is created.
-3. Available quantity increases.
-4. Activity log is created.
-5. Notification may be created.
-
-## Asset Statuses
-
-Items can have these statuses:
-
-```text
-available
-maintenance
-lost
-retired
-```
-
-Only available items with quantity above zero can be assigned.
-
-Maintenance, lost, and retired items cannot be assigned.
 
 ## Depreciation
 
-The system supports straight-line depreciation for assets.
+The system supports straight-line depreciation for fixed assets.
 
-Required depreciation fields:
+Fields:
 
 - unit cost
 - useful life in years
 - salvage value
 - depreciation start date
 
-Non-depreciable items use:
+Date fields use `YYYY-MM-DD`.
 
-```text
-depreciation_method = none
-```
+## Verify The Project
 
-## Run Tests
-
-To verify the system:
+Run:
 
 ```powershell
 php artisan test
@@ -465,88 +326,46 @@ composer verify
 
 ## Clear Cache
 
-If the system behaves strangely after changing `.env` or pulling new code:
+Run this after changing `.env`, pulling new code, or seeing stale behavior:
 
 ```powershell
 php artisan optimize:clear
 ```
 
-Then refresh the browser with:
+Then hard-refresh the browser with `Ctrl + F5`.
 
-```text
-Ctrl + F5
-```
+## Common Fixes
 
-## Common Problems And Fixes
-
-Problem: `php` is not recognized.
-
-Fix:
-
-- Add `C:\xampp\php` to Windows PATH.
-- Restart VS Code.
-
-Problem: database connection error.
-
-Fix:
-
-- Start MySQL in XAMPP.
-- Confirm database `nextgen_assets` exists.
-- Confirm `.env` database settings are correct.
-
-Problem: tables are missing.
-
-Fix:
+If tables are missing:
 
 ```powershell
 php artisan migrate --seed
 ```
 
-Problem: login does not work after fresh clone.
-
-Fix:
+If you want to reset demo data:
 
 ```powershell
 php artisan migrate:fresh --seed
 ```
 
-Warning: this deletes local database data and recreates demo data.
+Warning: this deletes local database data.
 
-Problem: frontend looks old or blank.
+If uploaded files or profile photos do not show:
 
-Fix:
+```powershell
+php artisan storage:link --force
+```
+
+If the frontend looks old:
 
 ```powershell
 npm run build
 php artisan optimize:clear
 ```
 
-Then press `Ctrl + F5` in the browser.
+## VS Code Tasks
 
-Problem: profile photos or uploaded files do not show.
-
-Fix:
-
-```powershell
-php artisan storage:link --force
-```
-
-## Useful VS Code Tasks
-
-The project includes VS Code tasks in:
-
-```text
-.vscode/tasks.json
-```
-
-Open:
-
-```text
-Ctrl + Shift + P
-Tasks: Run Task
-```
-
-Useful tasks:
+Available tasks:
 
 - NextGen: Bootstrap Project
 - NextGen: Start App Local
@@ -554,9 +373,16 @@ Useful tasks:
 - NextGen: Verify Project
 - NextGen: Clear Laravel Cache
 
-## Files That Should Not Be Uploaded
+Open them with:
 
-These are ignored by Git:
+```text
+Ctrl + Shift + P
+Tasks: Run Task
+```
+
+## Files Not Committed
+
+These are intentionally ignored:
 
 - `.env`
 - `vendor/`
@@ -565,17 +391,13 @@ These are ignored by Git:
 - `public/storage/`
 - Laravel logs and cache files
 
-This keeps the GitHub repository clean and safe.
-
 ## Project Structure
-
-Important folders:
 
 ```text
 app/Http/Controllers       Laravel API controllers
-app/Models                 Laravel database models
+app/Models                 Laravel models
 app/Services               Business services
-database/migrations        Database table changes
+database/migrations        Database schema
 database/seeders           Demo/setup data
 resources/js/pages         React pages
 resources/js/components    Shared React components
@@ -585,7 +407,7 @@ tests                      Automated tests
 wireframe                  Planning and design documents
 ```
 
-## GitHub Repository
+## GitHub
 
 Repository:
 
@@ -599,13 +421,8 @@ Clone:
 git clone https://github.com/austinkalisik/Nextgen_Assets_Management_System.git
 ```
 
-Pull latest:
+Pull:
 
 ```powershell
 git pull origin main
 ```
-
-## Final Notes
-
-For normal local testing, only XAMPP MySQL is needed. Do not start Apache unless you need phpMyAdmin. The Laravel backend runs through `php artisan serve`, and the React frontend runs through Vite.
-

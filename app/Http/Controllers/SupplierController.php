@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $perPage = max(5, min((int) $request->integer('per_page', 10), 50));
 
@@ -27,7 +28,7 @@ class SupplierController extends Controller
         return response()->json($query->paginate($perPage)->withQueryString());
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -41,14 +42,14 @@ class SupplierController extends Controller
         return response()->json($supplier, 201);
     }
 
-    public function show(Supplier $supplier)
+    public function show(Supplier $supplier): JsonResponse
     {
         $supplier->load('items.category', 'items.assignments.assignedDepartment');
 
         return response()->json($supplier);
     }
 
-    public function update(Request $request, Supplier $supplier)
+    public function update(Request $request, Supplier $supplier): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -59,10 +60,10 @@ class SupplierController extends Controller
 
         $supplier->update($validated);
 
-        return response()->json($supplier->fresh());
+        return response()->json($supplier->refresh());
     }
 
-    public function destroy(Supplier $supplier)
+    public function destroy(Supplier $supplier): JsonResponse
     {
         if ($supplier->items()->exists()) {
             return response()->json(['message' => 'Cannot delete supplier linked to assets.'], 422);
